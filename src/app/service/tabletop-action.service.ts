@@ -226,7 +226,7 @@ export class TabletopActionService {
 
   private getCreateTableMaskMenu(position: PointerCoordinate): ContextMenuAction {
     return {
-      name: 'マップマスクを作成', action: () => {
+      name: '新增地圖Mask', action: () => {
         this.createGameTableMask(position);
         SoundEffect.play(PresetSound.cardPut);
       }
@@ -235,7 +235,7 @@ export class TabletopActionService {
 
   private getCreateTerrainMenu(position: PointerCoordinate): ContextMenuAction {
     return {
-      name: '地形を作成', action: () => {
+      name: '新增地形', action: () => {
         this.createTerrain(position);
         SoundEffect.play(PresetSound.blockPut);
       }
@@ -244,7 +244,7 @@ export class TabletopActionService {
 
   private getCreateTextNoteMenu(position: PointerCoordinate): ContextMenuAction {
     return {
-      name: '共有メモを作成', action: () => {
+      name: '新增共有筆記', action: () => {
         this.createTextNote(position);
         SoundEffect.play(PresetSound.cardPut);
       }
@@ -253,7 +253,7 @@ export class TabletopActionService {
 
   private getCreateTrumpMenu(position: PointerCoordinate): ContextMenuAction {
     return {
-      name: 'トランプの山札を作成', action: () => {
+      name: '新增牌堆', action: () => {
         this.createTrump(position);
         SoundEffect.play(PresetSound.cardPut);
       }
@@ -281,7 +281,7 @@ export class TabletopActionService {
         }
       });
     });
-    return { name: 'ダイスを作成', action: null, subActions: subMenus };
+    return { name: '新增骰子', action: null, subActions: subMenus };
   }
 
   private getViewTable(): GameTable {

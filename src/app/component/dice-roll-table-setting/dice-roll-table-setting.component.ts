@@ -49,7 +49,7 @@ export class DiceRollTableSettingComponent implements OnInit, OnDestroy, AfterVi
   ) { }
 
   ngOnInit() {
-    Promise.resolve().then(() => this.modalService.title = this.panelService.title = 'ダイスボット表設定');
+    Promise.resolve().then(() => this.modalService.title = this.panelService.title = '簡易骰子表設定');
     EventSystem.register(this)
       .on('DELETE_GAME_OBJECT', 1000, event => {
         if (!this.selectedDiceRollTable || event.data.identifier !== this.selectedDiceRollTable.identifier) return;
@@ -79,12 +79,12 @@ export class DiceRollTableSettingComponent implements OnInit, OnDestroy, AfterVi
     this.selectedDiceRollTableXml = '';
   }
 
-  create(name: string = 'ダイスボット表'): DiceRollTable {
+  create(name: string = '簡易骰子表'): DiceRollTable {
     return DiceRollTableList.instance.addDiceRollTable(name)
   }
 
   add() {
-    const diceRollTable = this.create('ダイスボット表');
+    const diceRollTable = this.create('簡易骰子表');
     setTimeout(() => {
       this.onChangeDiceRollTable(diceRollTable.identifier);
       this.diceRollTableSelecter.nativeElement.value = diceRollTable.identifier;
@@ -147,7 +147,7 @@ export class DiceRollTableSettingComponent implements OnInit, OnDestroy, AfterVi
     let coordinate = this.pointerDeviceService.pointers[0];
     let option: PanelOption = { left: coordinate.x, top: coordinate.y, width: 600, height: 460 };
     let textView = this.panelService.open(TextViewComponent, option);
-    textView.title = 'ダイスボット表ヘルプ';
+    textView.title = '簡易骰子表幫助';
     textView.text = 
 `　名前、コマンド、振るダイスを設定し、ダイスの数字で表を参照し、表示します。
 　チャットでコマンドを送信することにより、ダイスボットと同様に結果が送信されます、なおコマンドには英数、記号のみ使用可能です。

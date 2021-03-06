@@ -61,7 +61,7 @@ export class GameCharacter extends TabletopObject {
       this.imageDataElement.getFirstElementByName('imageIdentifier').value = imageIdentifier;
     }
 
-    let resourceElement: DataElement = DataElement.create('リソース', '', {}, 'リソース' + this.identifier);
+    let resourceElement: DataElement = DataElement.create('資源', '', {}, '資源' + this.identifier);
     let hpElement: DataElement = DataElement.create('HP', 200, { 'type': 'numberResource', 'currentValue': '200' }, 'HP_' + this.identifier);
     let mpElement: DataElement = DataElement.create('MP', 100, { 'type': 'numberResource', 'currentValue': '100' }, 'MP_' + this.identifier);
 
@@ -77,8 +77,8 @@ export class GameCharacter extends TabletopObject {
     let testElement: DataElement = DataElement.create('情報', '', {}, '情報' + this.identifier);
     this.detailDataElement.appendChild(testElement);
     testElement.appendChild(DataElement.create('説明', 'ここに説明を書く\nあいうえお', { 'type': 'note' }, '説明' + this.identifier));
-    testElement.appendChild(DataElement.create('メモ', '任意の文字列\n１\n２\n３\n４\n５', { 'type': 'note' }, 'メモ' + this.identifier));
-    testElement.appendChild(DataElement.create('参照URL', 'https://www.example.com', { 'type': 'url' }, '参照URL' + this.identifier));
+    testElement.appendChild(DataElement.create('筆記', '任意の文字列\n１\n２\n３\n４\n５', { 'type': 'note' }, '筆記' + this.identifier));
+    testElement.appendChild(DataElement.create('参考URL', 'https://www.example.com', { 'type': 'url' }, '参考URL' + this.identifier));
 
     //TEST
     testElement = DataElement.create('能力', '', {}, '能力' + this.identifier);

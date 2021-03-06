@@ -41,6 +41,8 @@ export class DiceBot extends GameObject {
   public static apiUrl: string = null;
 
   public static diceBotInfos: DiceBotInfo[] = [
+    { script: 'Cthulhu_ChineseTraditional', game: '克蘇魯的呼喚', lang: '正體中文' },
+    { script: 'Cthulhu7th_ChineseTraditional', game: '克蘇魯的呼喚 第七版', lang: '正體中文' },
     { script: 'EarthDawn', game: 'アースドーン' },
     { script: 'EarthDawn3', game: 'アースドーン3版' },
     { script: 'EarthDawn4', game: 'アースドーン4版' },
@@ -89,7 +91,7 @@ export class DiceBot extends GameObject {
     { script: 'GranCrest', game: 'グランクレストRPG' },
     { script: 'GeishaGirlwithKatana', game: 'ゲイシャ・ガール・ウィズ・カタナ' },
     { script: 'GehennaAn', game: 'ゲヘナ・アナスタシス' },
-    { script: 'KemonoNoMori', game: '獸ノ森' }, 
+    { script: 'KemonoNoMori', game: '獸ノ森' },
     { script: 'Illusio', game: '晃天のイルージオ' },
     { script: 'CodeLayerd', game: 'コード：レイヤード' },
     { script: 'Avandner', game: '黒絢のアヴァンドナー' },
@@ -209,24 +211,7 @@ export class DiceBot extends GameObject {
     { script: 'WaresBlade', game: 'ワースブレイド' },
     { script: 'WARPS', game: 'ワープス' },
     { script: 'WorldOfDarkness', game: 'ワールド・オブ・ダークネス' },
-    { script: 'Cthulhu_ChineseTraditional', game: '克蘇魯的呼喚', lang: '正體中文' },
-    { script: 'Cthulhu7th_ChineseTraditional', game: '克蘇魯的呼喚 第七版', lang: '正體中文' },
-    { script: 'KillDeathBusiness_Korean', game: 'Kill Death Business (한국어)', lang: '한국어' },
-    { script: 'Nechronica_Korean', game: '네크로니카', lang: '한국어' },
-    { script: 'DoubleCross_Korean', game: '더블크로스2nd, 3rd', lang: '한국어' },
-    { script: 'DetatokoSaga_Korean', game: '데타토코 사가', lang: '한국어' },
-    { script: 'FutariSousa_Korean', game: '둘이서 수사(후타리소우사)', lang: '한국어' },
-    { script: 'Dracurouge_Korean', game: '드라크루주', lang: '한국어' },
-    { script: 'LogHorizon_Korean', game: '로그 호라이즌', lang: '한국어' },
-    { script: 'MonotoneMuseum_Korean', game: '모노톤 뮤지엄', lang: '한국어' },
-    { script: 'BeginningIdol_Korean', game: '비기닝 아이돌', lang: '한국어' },
-    { script: 'StratoShout_Korean', game: '스트라토 샤우트', lang: '한국어' },
-    { script: 'Amadeus_Korean', game: '아마데우스', lang: '한국어' },
-    { script: 'Insane_Korean', game: '인세인', lang: '한국어' },
-    { script: 'Kamigakari_Korean', game: '카미가카리', lang: '한국어' },
-    { script: 'Cthulhu7th_Korean', game: '크툴루의 부름 7판', lang: '한국어' },
-    { script: 'Cthulhu_Korean', game: '크툴루', lang: '한국어' },
-    { script: 'Fiasco_Korean', game: '피아스코', lang: '한국어' },
+
   ];
 
   public static diceBotInfosIndexed: DiceBotInfosIndexed[] = [];
@@ -341,10 +326,10 @@ export class DiceBot extends GameObject {
   ];
 
   public static replaceData: [string, string, string?][] = [
-    ['新クトゥルフ', 'シンクトウルフシンワTRPG', '新クトゥルフ神話TRPG'],
-    ['クトゥルフ神話TRPG', 'クトウルフシンワTRPG', '(旧) クトゥルフ神話TRPG'],
     ['克蘇魯神話', '克蘇魯的呼喚', '克蘇魯的呼喚'],
     ['克蘇魯神話第7版', '克蘇魯的呼喚 第七版', '克蘇魯的呼喚 第七版'],
+    ['新クトゥルフ', 'シンクトウルフシンワTRPG', '新クトゥルフ神話TRPG'],
+    ['クトゥルフ神話TRPG', 'クトウルフシンワTRPG', '(旧) クトゥルフ神話TRPG'],
     ['トーグ', 'トオク', 'TORG'],
     ['ワープス', 'ワアフス', 'WARPS'],
     ['トーグ1.5版', 'トオク1.5ハン', 'TORG 1.5版'],
@@ -448,7 +433,7 @@ export class DiceBot extends GameObject {
     ['ャ', 'ヤ'],
     ['ュ', 'ユ'],
     ['ョ', 'ヨ'],
-    ['ッ', 'ツ'],  
+    ['ッ', 'ツ'],
     ['ヲ', 'オ'],
     ['ガ', 'カ'],
     ['ギ', 'キ'],
@@ -497,7 +482,7 @@ export class DiceBot extends GameObject {
             return;
           }
           let finalResult: DiceRollResult = { result: '', isSecret: false, isDiceRollTable: false };
-          
+
           //ダイスボット表
           let isDiceRollTableMatch = false;
           for (const diceRollTable of DiceRollTableList.instance.diceRollTables) {
@@ -510,7 +495,7 @@ export class DiceBot extends GameObject {
             }
             if (isDiceRollTableMatch) {
               finalResult.isDiceRollTable = true;
-              finalResult.tableName = (diceRollTable.name && diceRollTable.name.length > 0) ? diceRollTable.name : '(無名のダイスボット表)';
+              finalResult.tableName = (diceRollTable.name && diceRollTable.name.length > 0) ? diceRollTable.name : '(無名骰子機械人列表)';
               finalResult.isSecret = isSecret;
               const diceRollTableRows = diceRollTable.parseText();
               for (let i = 0; i < repeat && i < 32; i++) {
@@ -523,7 +508,7 @@ export class DiceBot extends GameObject {
                 }
                 let isRowMatch = false;
                 for (const diceRollTableRow of diceRollTableRows) {
-                  if ((diceRollTableRow.range.start === null || diceRollTableRow.range.start <= rollResultNumber) 
+                  if ((diceRollTableRow.range.start === null || diceRollTableRow.range.start <= rollResultNumber)
                     && (diceRollTableRow.range.end === null || rollResultNumber <= diceRollTableRow.range.end)) {
                     //finalResult.result += (`[${rollResultNumber}] ` + StringUtil.cr(diceRollTableRow.result));
                     finalResult.result += ('🎲 ' + rollResult.result + "\n" + StringUtil.cr(diceRollTableRow.result));
@@ -531,7 +516,7 @@ export class DiceBot extends GameObject {
                     break;
                   }
                 }
-                if (!isRowMatch) finalResult.result += ('🎲 ' + rollResult.result + "\n" + '(結果なし)');
+                if (!isRowMatch) finalResult.result += ('🎲 ' + rollResult.result + "\n" + '(沒結果)');
                 if (1 < repeat) finalResult.result += ` #${i + 1}\n`;
               }
               break;
@@ -581,9 +566,9 @@ export class DiceBot extends GameObject {
       timestamp: originalMessage.timestamp + 1,
       imageIdentifier: '',
       tag: isSecret ? 'system secret' : 'system',
-      name: rollResult.isDiceRollTable ? 
+      name: rollResult.isDiceRollTable ?
         isSecret ? '<' + rollResult.tableName + ' (Secret)：' + originalMessage.name + '>' : '<' + rollResult.tableName + '：' + originalMessage.name + '>' :
-        isSecret ? '<Secret-BCDice：' + originalMessage.name + '>' : '<BCDice：' + originalMessage.name + '>' ,
+        isSecret ? '<Secret-BCDice：' + originalMessage.name + '>' : '<BCDice：' + originalMessage.name + '>',
       text: result,
       color: originalMessage.color,
       isUseStandImage: originalMessage.isUseStandImage
@@ -613,11 +598,11 @@ export class DiceBot extends GameObject {
             const conditionType = +diceBotMatch.getFirstElementByName('conditionType').value;
             if (conditionType == StandConditionType.Postfix || conditionType == StandConditionType.PostfixOrImage || conditionType == StandConditionType.PostfixAndImage) {
               const sendObj = {
-                characterIdentifier: gameCharacter.identifier, 
-                standIdentifier: standInfo.standElementIdentifier, 
+                characterIdentifier: gameCharacter.identifier,
+                standIdentifier: standInfo.standElementIdentifier,
                 color: originalMessage.color,
                 secret: originalMessage.to ? true : false
-              };              
+              };
               if (sendObj.secret) {
                 const targetPeer = PeerCursor.findByUserId(originalMessage.to);
                 if (targetPeer) {
@@ -652,7 +637,7 @@ export class DiceBot extends GameObject {
       const promisise = [];
       for (let i = 1; i <= repeat; i++) {
         promisise.push(
-          fetch(request, {mode: 'cors'})
+          fetch(request, { mode: 'cors' })
             .then(response => {
               if (response.ok) {
                 return response.json();
@@ -670,59 +655,61 @@ export class DiceBot extends GameObject {
       }
       return DiceBot.queue.add(
         Promise.all(promisise)
-          .then(results => { return results.reduce((ac, cv) => {
-            let result = ac.result + cv.result;
-            let isSecret = ac.isSecret || cv.isSecret;
-            return { result: result, isSecret: isSecret };
-          }, { result: '', isSecret: false }) })
+          .then(results => {
+            return results.reduce((ac, cv) => {
+              let result = ac.result + cv.result;
+              let isSecret = ac.isSecret || cv.isSecret;
+              return { result: result, isSecret: isSecret };
+            }, { result: '', isSecret: false })
+          })
       );
     } else {
       DiceBot.queue.add(DiceBot.loadDiceBotAsync(gameType));
       return DiceBot.queue.add(() => {
-          if ('Opal' in window === false) {
-            console.warn('Opal is not loaded...');
-            return { result: '', isSecret: false };
-          }
-          let result = [];
-          let dir = [];
-          let diceBotTablePrefix = 'diceBotTable_';
-          let isNeedResult = true;
-          try {
-            Opal.gvars.isDebug = false;
-            let cgiDiceBot = Opal.CgiDiceBot.$new();
-            result = cgiDiceBot.$roll(message, gameType, dir, diceBotTablePrefix, isNeedResult);
-            console.log('diceRoll!!!', result);
-            console.log('isSecret!!!', cgiDiceBot.isSecret);
-            return { result: result[0], isSecret: cgiDiceBot.isSecret };
-          } catch (e) {
-            console.error(e);
-          }
+        if ('Opal' in window === false) {
+          console.warn('Opal is not loaded...');
           return { result: '', isSecret: false };
+        }
+        let result = [];
+        let dir = [];
+        let diceBotTablePrefix = 'diceBotTable_';
+        let isNeedResult = true;
+        try {
+          Opal.gvars.isDebug = false;
+          let cgiDiceBot = Opal.CgiDiceBot.$new();
+          result = cgiDiceBot.$roll(message, gameType, dir, diceBotTablePrefix, isNeedResult);
+          console.log('diceRoll!!!', result);
+          console.log('isSecret!!!', cgiDiceBot.isSecret);
+          return { result: result[0], isSecret: cgiDiceBot.isSecret };
+        } catch (e) {
+          console.error(e);
+        }
+        return { result: '', isSecret: false };
       });
     }
   }
 
-  static getHelpMessage(gameType: string): Promise<string|string[]> {
+  static getHelpMessage(gameType: string): Promise<string | string[]> {
     if (DiceBot.apiUrl) {
       const promisise = [
-        fetch(DiceBot.apiUrl + '/v1/systeminfo?system=DiceBot', {mode: 'cors'})
+        fetch(DiceBot.apiUrl + '/v1/systeminfo?system=DiceBot', { mode: 'cors' })
           .then(response => { return response.json() })
       ];
       if (gameType && gameType != 'DiceBot') {
         promisise.push(
-          fetch(DiceBot.apiUrl + '/v1/systeminfo?system=' + encodeURIComponent(gameType), {mode: 'cors'})
+          fetch(DiceBot.apiUrl + '/v1/systeminfo?system=' + encodeURIComponent(gameType), { mode: 'cors' })
             .then(response => { return response.json() })
         );
       }
       return Promise.all(promisise)
-        .then(jsons => { 
+        .then(jsons => {
           return jsons.map(json => {
             if (json.systeminfo && json.systeminfo.info) {
               return json.systeminfo.info.replace('このダイスボットは部屋のシステム名表示用となります', 'このダイスボットはチャットパレットなどのシステム名表示用となります');
             } else {
               return 'ダイスボット情報がありません。';
-            }                
-          }) 
+            }
+          })
         });
     } else {
       DiceBot.queue.add(DiceBot.loadDiceBotAsync(gameType));

@@ -190,16 +190,16 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
       ContextMenuSeparator,
       (this.isAltitudeIndicate
         ? {
-          name: '☑ 高度の表示', action: () => {
+          name: '☑ 顯示高度', action: () => {
             this.isAltitudeIndicate = false;
           }
         } : {
-          name: '☐ 高度の表示', action: () => {
+          name: '☐ 顯示高度', action: () => {
             this.isAltitudeIndicate = true;
           }
         }),
       {
-        name: '高度を0にする', action: () => {
+        name: '將高度設為0', action: () => {
           if (this.altitude != 0) {
             this.altitude = 0;
             SoundEffect.play(PresetSound.sweep);
@@ -210,21 +210,21 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
       ContextMenuSeparator,
       { name: 'メモを編集', action: () => { this.showDetail(this.textNote); } },
       (this.textNote.getUrls().length <= 0 ? null : {
-        name: '参照URLを開く', action: null,
+        name: '打開參考網址', action: null,
         subActions: this.textNote.getUrls().map((urlElement) => {
           const url = urlElement.value.toString();
           return {
             name: urlElement.name ? urlElement.name : url,
             action: () => { this.modalService.open(OpenUrlComponent, { url: url, title: this.textNote.title, subTitle: urlElement.name }); },
             disabled: !StringUtil.validUrl(url),
-            error: !StringUtil.validUrl(url) ? 'URLが不正です' : null,
+            error: !StringUtil.validUrl(url) ? '網址無效' : null,
             materialIcon: 'open_in_new'
           };
         })
       }),
       (this.textNote.getUrls().length <= 0 ? null : ContextMenuSeparator),
       {
-        name: 'コピーを作る', action: () => {
+        name: '製作副本', action: () => {
           let cloneObject = this.textNote.clone();
           cloneObject.isLocked = false;
           console.log('コピー', cloneObject);
@@ -235,7 +235,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       },
       {
-        name: '削除する', action: () => {
+        name: '刪除', action: () => {
           this.textNote.destroy();
           SoundEffect.play(PresetSound.sweep);
         }
@@ -284,7 +284,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   private showDetail(gameObject: TextNote) {
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];
-    let title = '共有メモ設定';
+    let title = '共有筆記設定';
     if (gameObject.title.length) title += ' - ' + gameObject.title;
     let option: PanelOption = { title: title, left: coordinate.x - 350, top: coordinate.y - 200, width: 700, height: 400 };
     let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
