@@ -51,14 +51,6 @@ export class NoteInventoryComponent implements OnInit, AfterViewInit, OnDestroy 
   set dataTag(dataTag: string) { this.inventoryService.dataTag = dataTag; }
   get dataTags(): string[] { return this.inventoryService.dataTags; }
   get diceBotInfos() { return DiceBot.diceBotInfos }
-  get gameType(): string { return this.inventoryService.gameType; }
-  set gameType(gameType: string) { this.inventoryService.gameType = gameType; }
-  //GM
-  get GM(): string { return this.gameCharacter.GM; }
-  set GM(GM: string) { this.gameCharacter.GM = GM; }
-  get isMine(): boolean { return this.gameCharacter.isMine; }
-  get hasGM(): boolean { return this.gameCharacter.hasGM; }
-  get GMName(): string { return this.gameCharacter.GMName; }
   isDisabled(gameObject) {
     return gameObject.GM && !(PeerCursor.myCursor.name === gameObject.GM);
   }
