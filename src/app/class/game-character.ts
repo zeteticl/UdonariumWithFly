@@ -3,7 +3,7 @@ import { SyncObject, SyncVar } from './core/synchronize-object/decorator';
 import { DataElement } from './data-element';
 import { TabletopObject } from './tabletop-object';
 import { UUID } from '@udonarium/core/system/util/uuid';
-
+import { PeerCursor } from './peer-cursor';
 import { StandList } from './stand-list';
 
 @SyncObject('character')
@@ -12,7 +12,7 @@ export class GameCharacter extends TabletopObject {
     super(identifier);
     this.isAltitudeIndicate = true;
   }
-
+  @SyncVar() GM: string = '';
   @SyncVar() rotate: number = 0;
   @SyncVar() roll: number = 0;
   @SyncVar() isDropShadow: boolean = true;
@@ -23,6 +23,16 @@ export class GameCharacter extends TabletopObject {
 
   get name(): string { return this.getCommonValue('name', ''); }
   get size(): number { return this.getCommonValue('size', 1); }
+  get hasGM(): boolean {
+    if (this.GM) return true
+    else return false
+  }
+  get isMine(): boolean { return PeerCursor.myCursor.name === this.GM; }
+  get isDisabled(): boolean {
+    console.log('hasGM', this.hasGM)
+    console.log('isMine', this.isMine)
+    return this.hasGM && !this.isMine;
+  }
 
   get chatPalette(): ChatPalette {
     for (let child of this.children) {
