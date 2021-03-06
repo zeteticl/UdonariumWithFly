@@ -28,8 +28,8 @@
 </div>
 <ng-template #visible>
   <span [style.color]="!chatMessage.isSpecialColor && chatMessage.color && chatMessage.color != '#ffffff' ? chatMessage.color : ''">{{chatMessage.text}}</span>
-  <button *ngIf="chatMessage.isSecret" (click)="discloseMessage()">結果を公開</button>
+  <button *ngIf="chatMessage.isSecret" (click)="discloseMessage()">公布結果</button>
 </ng-template>
 <ng-template #secret>
-  <span>（シークレットダイス）</span>
+  <span>（秘密骰子）</span>
 </ng-template>

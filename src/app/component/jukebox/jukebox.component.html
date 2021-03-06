@@ -1,17 +1,17 @@
-<div>試聴音量：<i class="material-icons">{{ auditionVolume == 0 ? 'volume_off' : auditionVolume <= 0.5 ? 'volume_down' : 'volume_up' }}</i> <input [(ngModel)]="auditionVolume" type="range" title="{{math.floor(auditionVolume * 100) + '%'}}" min="0" max="1" step="0.01" style="width:60%" /> <span class="volume">{{math.floor(auditionVolume * 100) + '%'}}</span></div>
-<div>再生音量：<i class="material-icons">{{ volume == 0 ? 'volume_off' : volume <= 0.5 ? 'volume_down' : 'volume_up' }}</i> <input [(ngModel)]="volume" type="range" min="0" title="{{math.floor(volume * 100) + '%'}}" max="1" step="0.01" style="width:60%" /> <span class="volume">{{math.floor(volume * 100) + '%'}}</span></div>
+<div>試聽音量：<i class="material-icons">{{ auditionVolume == 0 ? 'volume_off' : auditionVolume <= 0.5 ? 'volume_down' : 'volume_up' }}</i> <input [(ngModel)]="auditionVolume" type="range" title="{{math.floor(auditionVolume * 100) + '%'}}" min="0" max="1" step="0.01" style="width:60%" /> <span class="volume">{{math.floor(auditionVolume * 100) + '%'}}</span></div>
+<div>播放音量：<i class="material-icons">{{ volume == 0 ? 'volume_off' : volume <= 0.5 ? 'volume_down' : 'volume_up' }}</i> <input [(ngModel)]="volume" type="range" min="0" title="{{math.floor(volume * 100) + '%'}}" max="1" step="0.01" style="width:60%" /> <span class="volume">{{math.floor(volume * 100) + '%'}}</span></div>
 <hr/>
 <div>
   <div *ngFor="let audio of audios" class="box">
-    <button *ngIf="audio !== auditionPlayer?.audio || auditionPlayer?.paused" (click)="play(audio)" [disabled]="!audio.isReady" >試聴/再生</button>
-    <button *ngIf="audio === auditionPlayer?.audio && !auditionPlayer?.paused" (click)="stop()" [disabled]="!audio.isReady" >試聴/停止</button>
+    <button *ngIf="audio !== auditionPlayer?.audio || auditionPlayer?.paused" (click)="play(audio)" [disabled]="!audio.isReady" >試聽/播放</button>
+    <button *ngIf="audio === auditionPlayer?.audio && !auditionPlayer?.paused" (click)="stop()" [disabled]="!audio.isReady" >試聽/停止</button>
     <button *ngIf="audio !== jukebox?.audio" (click)="playBGM(audio)" [disabled]="!audio.isReady" >BGM/再生</button>
     <button *ngIf="audio === jukebox?.audio" (click)="stopBGM(audio)" [disabled]="!audio.isReady" >BGM/停止</button>
-    <span *ngIf="audio === auditionPlayer?.audio && !auditionPlayer?.paused">【試聴中】</span>
+    <span *ngIf="audio === auditionPlayer?.audio && !auditionPlayer?.paused">【試聽中】</span>
     <span *ngIf="audio === jukebox?.audio">【BGM】</span>
     <span>{{audio.name}}</span>
   </div>
-  <div *ngIf="audios.length < 1" >アップロードされた音楽ファイルはここに表示されます。</div>
+  <div *ngIf="audios.length < 1" >上傳的音樂文件將顯示在此處。</div>
 </div>
 
 <label>
@@ -19,13 +19,13 @@
     <div>
       <i class="material-icons large-font">playlist_add</i>
     </div>
-    <div>ここに音楽をドロップ</div>
-    <div class="small-font">またはここをクリックして選択</div>
+    <div>拉音樂到此處</div>
+    <div class="small-font">或點擊這裡選擇</div>
     <input type="file" style="display: none;" (change)="handleFileSelect($event)" multiple accept="audio/*"/>
     <div class="small-font">
-      <br>１ファイルにつき10MBまで</div>
+      <br>每個文件最大10MB</div>
   </div>
 </label>
-<div style="font-size: 12px;">※「試聴」は自分のスピーカーだけで音楽を1回再生します。</div>
-<div style="font-size: 12px;">※「BGM」はルーム内の全員で1つの音楽をループ再生します。</div>
-<div style="font-size: 12px;">※現行バージョンのセーブデータ（zip）には音楽ファイルは含まれません。（毎回アップロードが必要です）</div>
+<div style="font-size: 12px;">*「試聽」僅用您自己的揚聲器播放一次音樂。</div>
+<div style="font-size: 12px;">*「 BGM」與房間中的每個人循環播放一種音樂。</div>
+<div style="font-size: 12px;">*音樂文件不包含在當前版本的保存數據（zip）中。（每次都需要上傳）</div>
