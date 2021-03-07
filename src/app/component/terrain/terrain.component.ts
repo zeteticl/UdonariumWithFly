@@ -29,7 +29,7 @@ import { ImageService } from 'service/image.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopActionService } from 'service/tabletop-action.service';
-
+import { PeerCursor } from '@udonarium/peer-cursor';
 @Component({
   selector: 'terrain',
   templateUrl: './terrain.component.html',
@@ -48,6 +48,15 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
   set isLocked(isLocked: boolean) { this.terrain.isLocked = isLocked; }
   get hasWall(): boolean { return this.terrain.hasWall; }
   get hasFloor(): boolean { return this.terrain.hasFloor; }
+
+
+  get GM(): string { return this.terrain.GM; }
+  set GM(GM: string) { this.terrain.GM = GM; }
+  get isMine(): boolean { return this.terrain.isMine; }
+  get hasGM(): boolean { return this.terrain.hasGM; }
+  get isDisabled(): boolean {
+    return this.terrain.isDisabled;
+  }
 
   get wallImage(): ImageFile { return this.imageService.getSkeletonOr(this.terrain.wallImage); }
   get floorImage(): ImageFile { return this.imageService.getSkeletonOr(this.terrain.floorImage); }
@@ -68,7 +77,7 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
 
   get isSlope(): boolean { return this.terrain.isSlope; }
   set isSlope(isSlope: boolean) { this.terrain.isSlope = isSlope; }
-  
+
   get isAltitudeIndicate(): boolean { return this.terrain.isAltitudeIndicate; }
   set isAltitudeIndicate(isAltitudeIndicate: boolean) { this.terrain.isAltitudeIndicate = isAltitudeIndicate; }
 
@@ -190,6 +199,21 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
           }
         }),
       ContextMenuSeparator,
+      (!this.isMine
+        ? {
+          name: 'GM圖層-只供自己看見', action: () => {
+            this.GM = PeerCursor.myCursor.name;
+            this.terrain.setLocation('table')
+            SoundEffect.play(PresetSound.lock);
+          }
+        } : {
+          name: '回到普通圖層', action: () => {
+            this.GM = '';
+            this.terrain.setLocation('table')
+            SoundEffect.play(PresetSound.unlock);
+          }
+        }),
+      ContextMenuSeparator,
       (this.isSlope
         ? {
           name: '☑ 傾斜', action: () => {
@@ -200,29 +224,31 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
             this.isSlope = true;
           }
         }),
-      { name: '壁の表示', action: null, subActions: [
-        {
-          name: `${ this.hasWall && this.isSurfaceShading ? '◉' : '○' } 通常`, action: () => {
-            this.mode = TerrainViewState.ALL;
-            this.isSurfaceShading = true;
-          }
-        },
-        {
-          name: `${ this.hasWall && !this.isSurfaceShading ? '◉' : '○' } 陰影なし`, action: () => {
-            this.mode = TerrainViewState.ALL;
-            this.isSurfaceShading = false;
-          }
-        },
-        {
-          name: `${ !this.hasWall ? '◉' : '○' } 非表示`, action: () => {
-            this.mode = TerrainViewState.FLOOR;
-            if (this.depth * this.width === 0) {
-              this.terrain.width = this.width <= 0 ? 1 : this.width;
-              this.terrain.depth = this.depth <= 0 ? 1 : this.depth;
+      {
+        name: '壁の表示', action: null, subActions: [
+          {
+            name: `${this.hasWall && this.isSurfaceShading ? '◉' : '○'} 通常`, action: () => {
+              this.mode = TerrainViewState.ALL;
+              this.isSurfaceShading = true;
             }
-          }
-        },
-      ]},
+          },
+          {
+            name: `${this.hasWall && !this.isSurfaceShading ? '◉' : '○'} 陰影なし`, action: () => {
+              this.mode = TerrainViewState.ALL;
+              this.isSurfaceShading = false;
+            }
+          },
+          {
+            name: `${!this.hasWall ? '◉' : '○'} 非表示`, action: () => {
+              this.mode = TerrainViewState.FLOOR;
+              if (this.depth * this.width === 0) {
+                this.terrain.width = this.width <= 0 ? 1 : this.width;
+                this.terrain.depth = this.depth <= 0 ? 1 : this.depth;
+              }
+            }
+          },
+        ]
+      },
       ContextMenuSeparator,
       /*
       (this.isInteract

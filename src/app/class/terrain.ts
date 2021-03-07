@@ -2,7 +2,7 @@ import { ImageFile } from './core/file-storage/image-file';
 import { SyncObject, SyncVar } from './core/synchronize-object/decorator';
 import { DataElement } from './data-element';
 import { TabletopObject } from './tabletop-object';
-
+import { PeerCursor } from './peer-cursor';
 export enum TerrainViewState {
   NULL = 0,
   FLOOR = 1,
@@ -19,7 +19,7 @@ export class Terrain extends TabletopObject {
   @SyncVar() isSurfaceShading: boolean = true
   @SyncVar() isInteract: boolean = true;
   @SyncVar() isSlope: boolean = false;
-
+  @SyncVar() GM: string = '';
   get width(): number { return this.getCommonValue('width', 1); }
   set width(width: number) { this.setCommonValue('width', width); }
   get height(): number { return this.getCommonValue('height', 1); }
@@ -34,7 +34,14 @@ export class Terrain extends TabletopObject {
 
   get hasWall(): boolean { return this.mode & TerrainViewState.WALL ? true : false; }
   get hasFloor(): boolean { return this.mode & TerrainViewState.FLOOR ? true : false; }
-
+  get hasGM(): boolean {
+    if (this.GM) return true
+    else return false
+  }
+  get isMine(): boolean { return PeerCursor.myCursor.name === this.GM; }
+  get isDisabled(): boolean {
+    return this.hasGM && !this.isMine;
+  }
   static create(name: string, width: number, depth: number, height: number, wall: string, floor: string, identifier?: string): Terrain {
     let object: Terrain = null;
 

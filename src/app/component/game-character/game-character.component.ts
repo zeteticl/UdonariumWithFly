@@ -385,6 +385,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
           };
         }),
       }),
+      ContextMenuSeparator,
       (!this.isMine
         ? {
           name: 'GM圖層-只供自己看見', action: () => {

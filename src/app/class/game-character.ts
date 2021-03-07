@@ -29,8 +29,6 @@ export class GameCharacter extends TabletopObject {
   }
   get isMine(): boolean { return PeerCursor.myCursor.name === this.GM; }
   get isDisabled(): boolean {
-    console.log('hasGM', this.hasGM)
-    console.log('isMine', this.isMine)
     return this.hasGM && !this.isMine;
   }
 
