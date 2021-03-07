@@ -27,7 +27,7 @@ import { CoordinateService } from 'service/coordinate.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopActionService } from 'service/tabletop-action.service';
-
+import { PeerCursor } from '@udonarium/peer-cursor';
 @Component({
   selector: 'game-table-mask',
   templateUrl: './game-table-mask.component.html',
@@ -45,7 +45,17 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
   get imageFile(): ImageFile { return this.gameTableMask.imageFile; }
   get isLock(): boolean { return this.gameTableMask.isLock; }
   set isLock(isLock: boolean) { this.gameTableMask.isLock = isLock; }
-
+  get GM(): string { return this.gameTableMask.GM; }
+  set GM(GM: string) { this.gameTableMask.GM = GM; }
+  get isMine(): boolean { return this.gameTableMask.isMine; }
+  get hasGM(): boolean { return this.gameTableMask.hasGM; }
+  get isDisabled(): boolean {
+    console.log('PeerCursor.myCursor.name', PeerCursor.myCursor.name)
+    console.log('GM', this.GM)
+    console.log('isDisabled', this.gameTableMask.isDisabled)
+    console.log('isMine', this.gameTableMask.isMine)
+    return this.gameTableMask.isDisabled;
+  }
   gridSize: number = 50;
 
   movableOption: MovableOption = {};
@@ -69,7 +79,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
       .on('UPDATE_GAME_OBJECT', -1000, event => {
         let object = ObjectStore.instance.get(event.data.identifier);
         if (!this.gameTableMask || !object) return;
-        if (this.gameTableMask === object || (object instanceof ObjectNode && this.gameTableMask.contains(object))) {
+        if (this.gameTableMask === object || (object instanceof ObjectNode && this.gameTableMask.contains(object)|| (object instanceof PeerCursor && object.peerId === this.gameTableMask.GM))) {
           this.changeDetector.markForCheck();
         }
       })
@@ -135,7 +145,21 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
             SoundEffect.play(PresetSound.lock);
           }
         }
-      ),
+      ), ContextMenuSeparator,
+      (!this.isMine
+        ? {
+          name: 'GM圖層-只供自己看見', action: () => {
+            this.GM = PeerCursor.myCursor.name;
+            this.gameTableMask.setLocation('table')
+            SoundEffect.play(PresetSound.lock);
+          }
+        } : {
+          name: '回到普通圖層', action: () => {
+            this.GM = '';
+            this.gameTableMask.setLocation('table')
+            SoundEffect.play(PresetSound.unlock);
+          }
+        }),
       ContextMenuSeparator,
       { name: 'マップマスクを編集', action: () => { this.showDetail(this.gameTableMask); } },
       (this.gameTableMask.getUrls().length <= 0 ? null : {
