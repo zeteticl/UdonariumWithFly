@@ -385,7 +385,6 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
           };
         }),
       }),
-      ContextMenuSeparator,
       (!this.isMine
         ? {
           name: 'GM圖層-只供自己看見', action: () => {
@@ -400,6 +399,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
             SoundEffect.play(PresetSound.unlock);
           }
         }),
+      ContextMenuSeparator,
       (this.gameCharacter.imageFiles.length <= 1 ? null : ContextMenuSeparator),
       (this.isUseIconToOverviewImage
         ? {
