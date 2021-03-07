@@ -50,10 +50,6 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
   get isMine(): boolean { return this.gameTableMask.isMine; }
   get hasGM(): boolean { return this.gameTableMask.hasGM; }
   get isDisabled(): boolean {
-    console.log('PeerCursor.myCursor.name', PeerCursor.myCursor.name)
-    console.log('GM', this.GM)
-    console.log('isDisabled', this.gameTableMask.isDisabled)
-    console.log('isMine', this.gameTableMask.isMine)
     return this.gameTableMask.isDisabled;
   }
   gridSize: number = 50;
