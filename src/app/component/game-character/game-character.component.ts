@@ -582,7 +582,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     return value < min ? min : value;
   }
 
-  private showDetail(gameObject: GameCharacter) {
+  public showDetail(gameObject: GameCharacter) {
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = 'キャラクターシート';
     if (gameObject.name.length) title += ' - ' + gameObject.name;

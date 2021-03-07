@@ -281,7 +281,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
     document.body.removeEventListener('mouseup', this.callbackOnMouseUp, false);
   }
 
-  private showDetail(gameObject: TextNote) {
+  public showDetail(gameObject: TextNote) {
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '共有メモ設定';

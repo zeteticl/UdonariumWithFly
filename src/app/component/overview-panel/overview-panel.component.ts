@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { DataElement } from '@udonarium/data-element';
 import { TabletopObject } from '@udonarium/tabletop-object';
 import { GameObjectInventoryService } from 'service/game-object-inventory.service';
@@ -19,7 +19,7 @@ import { PointerDeviceService } from 'service/pointer-device.service';
 import { GameCharacter } from '@udonarium/game-character';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
-
+import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 @Component({
   selector: 'overview-panel',
   templateUrl: './overview-panel.component.html',
@@ -172,6 +172,18 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
     EventSystem.unregister(this);
   }
 
+  movetocommon() {
+    this.tabletopObject.setLocation('common');
+    SoundEffect.play(PresetSound.lock);
+  }
+  movetoid() {
+    this.tabletopObject.setLocation(Network.peerId);
+    SoundEffect.play(PresetSound.lock);
+  }
+  movetograveyard() {
+    this.tabletopObject.setLocation('graveyard');
+    SoundEffect.play(PresetSound.lock);
+  }
   private initPanelPosition() {
     let panel: HTMLElement = this.draggablePanel.nativeElement;
     let outerWidth = panel.offsetWidth;
