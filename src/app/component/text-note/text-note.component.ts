@@ -43,8 +43,15 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   get isMine(): boolean { return this.textNote.isMine; }
   get hasGM(): boolean { return this.textNote.hasGM; }
   get isDisabled(): boolean {
-    return this.textNote.isDisabled;
+    if (this.textNote.location.name == 'common') return true
+    else
+      return this.textNote.isDisabled;
   }
+
+
+  //STORE
+  get location(): string { return this.textNote.location.name; }
+  set location(location: string) { this.textNote.location.name = location; }
 
 
   get altitude(): number { return this.textNote.altitude; }
@@ -201,6 +208,12 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
             SoundEffect.play(PresetSound.unlock);
           }
         }),
+      ContextMenuSeparator,
+      {
+        name: '移動到共有倉庫', action: () => {
+          this.textNote.setLocation('common')
+        }
+      },
       ContextMenuSeparator,
       (this.isUpright
         ? {
