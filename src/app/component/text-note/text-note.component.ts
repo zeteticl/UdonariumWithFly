@@ -14,7 +14,7 @@ import { ContextMenuSeparator, ContextMenuService } from 'service/context-menu.s
 import { ModalService } from 'service/modal.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
-
+import { PeerCursor } from '@udonarium/peer-cursor';
 @Component({
   selector: 'text-note',
   templateUrl: './text-note.component.html',
@@ -37,6 +37,16 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   get height(): number { return this.adjustMinBounds(this.textNote.height); }
   get width(): number { return this.adjustMinBounds(this.textNote.width); }
 
+
+  get GM(): string { return this.textNote.GM; }
+  set GM(GM: string) { this.textNote.GM = GM; }
+  get isMine(): boolean { return this.textNote.isMine; }
+  get hasGM(): boolean { return this.textNote.hasGM; }
+  get isDisabled(): boolean {
+    return this.textNote.isDisabled;
+  }
+
+
   get altitude(): number { return this.textNote.altitude; }
   set altitude(altitude: number) { this.textNote.altitude = altitude; }
 
@@ -46,7 +56,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
       if (-this.height <= this.altitude) return 0;
       ret += this.height;
     }
-    return +ret.toFixed(1); 
+    return +ret.toFixed(1);
   }
 
   get isUpright(): boolean { return this.textNote.isUpright; }
@@ -174,6 +184,21 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
           name: '☐ 固定', action: () => {
             this.isLocked = true;
             SoundEffect.play(PresetSound.lock);
+          }
+        }),
+      ContextMenuSeparator,
+      (!this.isMine
+        ? {
+          name: 'GM圖層-只供自己看見', action: () => {
+            this.GM = PeerCursor.myCursor.name;
+            this.textNote.setLocation('table')
+            SoundEffect.play(PresetSound.lock);
+          }
+        } : {
+          name: '回到普通圖層', action: () => {
+            this.GM = '';
+            this.textNote.setLocation('table')
+            SoundEffect.play(PresetSound.unlock);
           }
         }),
       ContextMenuSeparator,
