@@ -224,25 +224,29 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
             this.isSlope = true;
           }
         }),
-      { name: '顯示牆壁', action: null, subActions: [
-        {
-          name: `${ this.hasWall && this.isSurfaceShading ? '◉' : '○' } 通常`, action: () => {
-            this.mode = TerrainViewState.ALL;
-            this.isSurfaceShading = true;
+      {
+        name: '顯示牆壁', action: null, subActions: [
+          {
+            name: `${this.hasWall && this.isSurfaceShading ? '◉' : '○'} 通常`, action: () => {
+              this.mode = TerrainViewState.ALL;
+              this.isSurfaceShading = true;
+            }
+          },
+          {
+            name: `${this.hasWall && !this.isSurfaceShading ? '◉' : '○'} 無陰影`, action: () => {
+              this.mode = TerrainViewState.ALL;
+              this.isSurfaceShading = false;
+            }
+          },
+          {
+            name: `${!this.hasWall ? '◉' : '○'} 不表示`, action: () => {
+              this.mode = TerrainViewState.FLOOR;
+              if (this.depth * this.width === 0) {
+                this.terrain.width = this.width <= 0 ? 1 : this.width;
+                this.terrain.depth = this.depth <= 0 ? 1 : this.depth;
+              }
+            }
           }
-        },
-        {
-          name: `${ this.hasWall && !this.isSurfaceShading ? '◉' : '○' } 無陰影`, action: () => {
-            this.mode = TerrainViewState.ALL;
-            this.isSurfaceShading = false;
-          }
-        },
-        {
-          name: `${ !this.hasWall ? '◉' : '○' } 不表示`, action: () => {
-            this.mode = TerrainViewState.FLOOR;
-            if (this.depth * this.width === 0) {
-              this.terrain.width = this.width <= 0 ? 1 : this.width;
-              this.terrain.depth = this.depth <= 0 ? 1 : this.depth;
         ]
       },
       ContextMenuSeparator,
@@ -338,7 +342,7 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
   private adjustMinBounds(value: number, min: number = 0): number {
     return value < min ? min : value;
   }
-  
+
   GuestMode() {
     return Network.GuestMode();
   }
