@@ -21,7 +21,7 @@ import { ChatPaletteComponent } from 'component/chat-palette/chat-palette.compon
 import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
 import { MovableOption } from 'directive/movable.directive';
 import { RotableOption } from 'directive/rotable.directive';
-import { ContextMenuSeparator, ContextMenuService } from 'service/context-menu.service';
+import { ContextMenuSeparator, ContextMenuService, ContextMenuAction } from 'service/context-menu.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { PeerCursor } from '@udonarium/peer-cursor';
@@ -81,7 +81,7 @@ import { StandSettingComponent } from 'component/stand-setting/stand-setting.com
     trigger('fadeAndScaleInOut', [
       transition('void => *, true => false', [
         animate('200ms ease-in-out', keyframes([
-          style({ transform: 'scale3d(0, 0, 0)', opacity: 0  }),
+          style({ transform: 'scale3d(0, 0, 0)', opacity: 0 }),
           style({ transform: 'scale3d(1.0, 1.0, 1.0)', opacity: 0.8 }),
         ]))
       ]),
@@ -104,6 +104,18 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   set rotate(rotate: number) { this.gameCharacter.rotate = rotate; }
   get roll(): number { return this.gameCharacter.roll; }
   set roll(roll: number) { this.gameCharacter.roll = roll; }
+  //GM
+  get GM(): string { return this.gameCharacter.GM; }
+  set GM(GM: string) { this.gameCharacter.GM = GM; }
+  get isMine(): boolean { return this.gameCharacter.isMine; }
+  get hasGM(): boolean { return this.gameCharacter.hasGM; }
+  get isDisabled(): boolean {
+    console.log('PeerCursor.myCursor.name', PeerCursor.myCursor.name)
+    console.log('GM', this.GM)
+    console.log('isDisabled', this.gameCharacter.isDisabled)
+    console.log('isMine', this.gameCharacter.isMine)
+    return this.gameCharacter.isDisabled;
+  }
   get isDropShadow(): boolean { return this.gameCharacter.isDropShadow; }
   set isDropShadow(isDropShadow: boolean) { this.gameCharacter.isDropShadow = isDropShadow; }
   get isAltitudeIndicate(): boolean { return this.gameCharacter.isAltitudeIndicate; }
@@ -123,7 +135,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   set isUseIconToOverviewImage(isUseIconToOverviewImage: boolean) { this.gameCharacter.isUseIconToOverviewImage = isUseIconToOverviewImage; }
 
   get faceIcon(): ImageFile { return this.gameCharacter.faceIcon; }
-  
+
   get dialogFaceIcon(): ImageFile {
     if (!this.dialog || !this.dialog.faceIconIdentifier) return null;
     return ImageStorage.instance.get(<string>this.dialog.faceIconIdentifier);
@@ -134,7 +146,9 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   get elevation(): number {
     return +((this.gameCharacter.posZ + (this.altitude * this.gridSize)) / this.gridSize).toFixed(1);
   }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   gridSize: number = 50;
   math = Math;
   stringUtil = StringUtil;
@@ -143,6 +157,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   heightWidthRatio = 1.5;
 
   set dialog(dialog) {
+    if (this.GuestMode()) return;
     if (!this.gameCharacter) return;
     clearTimeout(this.dialogTimeOutId);
     clearInterval(this.chatIntervalId);
@@ -155,9 +170,9 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     this.dialogTimeOutId = setTimeout(() => {
       this._dialog = null;
       this.gameCharacter.text = '';
-      this.gameCharacter.isEmote = false; 
+      this.gameCharacter.isEmote = false;
       this.changeDetector.markForCheck();
-    //}, text.length * speechDelay + 6000 > 12000 ? text.length * speechDelay + 6000 : 12000);
+      //}, text.length * speechDelay + 6000 > 12000 ? text.length * speechDelay + 6000 : 12000);
     }, text.length * speechDelay + 6000);
     this._dialog = dialog;
     this.gameCharacter.isEmote = isEmote;
@@ -165,7 +180,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     if (isEmote) {
       this.gameCharacter.text = text;
       this.changeDetector.markForCheck();
-    }  else {
+    } else {
       this.chatIntervalId = setInterval(() => {
         count++;
         this.gameCharacter.text = text.slice(0, count);
@@ -187,7 +202,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     const max = (this.gameCharacter.size + 1.8) * this.gridSize;
     const existIcon = this.isUseFaceIcon && this.dialogFaceIcon && this.dialogFaceIcon.url;
     const dynamic = this.dialogText.length * 11 + 52 + (existIcon ? 32 : 0);
-    return max < dynamic ? max : dynamic; 
+    return max < dynamic ? max : dynamic;
   }
 
   get dialog() {
@@ -198,7 +213,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   private dialogTimeOutId = null;
   private chatIntervalId = null;
 
-  get chatBubbleXDeg():number {
+  get chatBubbleXDeg(): number {
     //console.log(this.viewRotateX)
     let ret = 90 - this.viewRotateX;
     if (ret < 0) ret = 360 + ret;
@@ -213,7 +228,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
 
   @ViewChild('characterImage') characterImage: ElementRef;
   @ViewChild('chatBubble') chatBubble: ElementRef;
-  
+
   get characterImageHeight(): number {
     if (!this.characterImage) return 0;
     let ratio = this.characterImage.nativeElement.naturalHeight / this.characterImage.nativeElement.naturalWidth;
@@ -222,7 +237,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   get chatBubbleAltitude(): number {
-    let cos =  Math.cos(this.roll * Math.PI / 180);
+    let cos = Math.cos(this.roll * Math.PI / 180);
     let sin = Math.abs(Math.sin(this.roll * Math.PI / 180));
     if (cos < 0.5) cos = 0.5;
     if (sin < 0.5) sin = 0.5;
@@ -278,13 +293,13 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     private ngZone: NgZone,
     private modalService: ModalService
   ) { }
-  
+
   ngOnInit() {
     EventSystem.register(this)
       .on('UPDATE_GAME_OBJECT', -1000, event => {
         let object = ObjectStore.instance.get(event.data.identifier);
         if (!this.gameCharacter || !object) return;
-        if (this.gameCharacter === object || (object instanceof ObjectNode && this.gameCharacter.contains(object))) {
+        if (this.gameCharacter === object || (object instanceof ObjectNode && this.gameCharacter.contains(object) || (object instanceof PeerCursor && object.peerId === this.gameCharacter.GM))) {
           this.changeDetector.markForCheck();
         }
       })
@@ -322,7 +337,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
         }
       })
       ;
-      
+
     this.movableOption = {
       tabletopObject: this.gameCharacter,
       transformCssOffset: 'translateZ(1.0px)',
@@ -356,7 +371,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   onContextMenu(e: Event) {
     e.stopPropagation();
     e.preventDefault();
-
+    if (this.GuestMode()) return;
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
 
     let position = this.pointerDeviceService.pointers[0];
@@ -365,14 +380,29 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
         name: '画像切り替え',
         action: null,
         subActions: this.gameCharacter.imageFiles.map((image, i) => {
-          return { 
-            name: `${this.gameCharacter.currntImageIndex == i ? '◉' : '○'}`, 
-            action: () => { this.changeImage(i); }, 
+          return {
+            name: `${this.gameCharacter.currntImageIndex == i ? '◉' : '○'}`,
+            action: () => { this.changeImage(i); },
             default: this.gameCharacter.currntImageIndex == i,
             icon: image
           };
         }),
       }),
+      (!this.isMine
+        ? {
+          name: 'GM圖層-只供自己看見', action: () => {
+            this.GM = PeerCursor.myCursor.name;
+            this.gameCharacter.setLocation('table')
+            SoundEffect.play(PresetSound.lock);
+          }
+        } : {
+          name: '回到普通圖層', action: () => {
+            this.GM = '';
+            this.gameCharacter.setLocation('table')
+            SoundEffect.play(PresetSound.unlock);
+          }
+        }),
+      ContextMenuSeparator,
       (this.gameCharacter.imageFiles.length <= 1 ? null : ContextMenuSeparator),
       (this.isUseIconToOverviewImage
         ? {
@@ -408,46 +438,49 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
             EventSystem.trigger('UPDATE_INVENTORY', null);
           }
         }),
-      { name: '画像効果', action: null, subActions: [
-        (this.isInverse
-          ? {
-            name: '☑ 反転', action: () => {
-              this.isInverse = false;
-              EventSystem.trigger('UPDATE_INVENTORY', null);
-            }
-          } : {
-            name: '☐ 反転', action: () => {
-              this.isInverse = true;
-              EventSystem.trigger('UPDATE_INVENTORY', null);
-            }
-          }),
-        (this.isHollow
-          ? {
-            name: '☑ ぼかし', action: () => {
-              this.isHollow = false;
-              EventSystem.trigger('UPDATE_INVENTORY', null);
-            }
-          } : {
-            name: '☐ ぼかし', action: () => {
-              this.isHollow = true;
-              EventSystem.trigger('UPDATE_INVENTORY', null);
-            }
-          }),
-        (this.isBlackPaint
-          ? {
-            name: '☑ 黒塗り', action: () => {
-              this.isBlackPaint = false;
-              EventSystem.trigger('UPDATE_INVENTORY', null);
-            }
-          } : {
-            name: '☐ 黒塗り', action: () => {
-              this.isBlackPaint = true;
-              EventSystem.trigger('UPDATE_INVENTORY', null);
-            }
-          }),
-          { name: 'オーラ', action: null, subActions: [{ name: `${this.aura == -1 ? '◉' : '○'} なし`, action: () => { this.aura = -1; EventSystem.trigger('UPDATE_INVENTORY', null) } }, ContextMenuSeparator].concat(['ブラック', 'ブルー', 'グリーン', 'シアン', 'レッド', 'マゼンタ', 'イエロー', 'ホワイト'].map((color, i) => {  
-            return { name: `${this.aura == i ? '◉' : '○'} ${color}`, action: () => { this.aura = i; EventSystem.trigger('UPDATE_INVENTORY', null) } };
-          })) },
+      {
+        name: '画像効果', action: null, subActions: [
+          (this.isInverse
+            ? {
+              name: '☑ 反転', action: () => {
+                this.isInverse = false;
+                EventSystem.trigger('UPDATE_INVENTORY', null);
+              }
+            } : {
+              name: '☐ 反転', action: () => {
+                this.isInverse = true;
+                EventSystem.trigger('UPDATE_INVENTORY', null);
+              }
+            }),
+          (this.isHollow
+            ? {
+              name: '☑ ぼかし', action: () => {
+                this.isHollow = false;
+                EventSystem.trigger('UPDATE_INVENTORY', null);
+              }
+            } : {
+              name: '☐ ぼかし', action: () => {
+                this.isHollow = true;
+                EventSystem.trigger('UPDATE_INVENTORY', null);
+              }
+            }),
+          (this.isBlackPaint
+            ? {
+              name: '☑ 黒塗り', action: () => {
+                this.isBlackPaint = false;
+                EventSystem.trigger('UPDATE_INVENTORY', null);
+              }
+            } : {
+              name: '☐ 黒塗り', action: () => {
+                this.isBlackPaint = true;
+                EventSystem.trigger('UPDATE_INVENTORY', null);
+              }
+            }),
+          {
+            name: 'オーラ', action: null, subActions: [{ name: `${this.aura == -1 ? '◉' : '○'} なし`, action: () => { this.aura = -1; EventSystem.trigger('UPDATE_INVENTORY', null) } }, ContextMenuSeparator].concat(['ブラック', 'ブルー', 'グリーン', 'シアン', 'レッド', 'マゼンタ', 'イエロー', 'ホワイト'].map((color, i) => {
+              return { name: `${this.aura == i ? '◉' : '○'} ${color}`, action: () => { this.aura = i; EventSystem.trigger('UPDATE_INVENTORY', null) } };
+            }))
+          },
           ContextMenuSeparator,
           {
             name: 'リセット', action: () => {
@@ -459,7 +492,8 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
             },
             disabled: !this.isInverse && !this.isHollow && !this.isBlackPaint && this.aura == -1
           }
-      ]},
+        ]
+      },
       ContextMenuSeparator,
       (!this.isNotRide
         ? {
@@ -526,29 +560,31 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
             EventSystem.trigger('UPDATE_INVENTORY', null);
           }
         }),
-      { name: 'テーブルから移動', action: null, subActions: [
-        {
-          name: '共有インベントリ', action: () => {
-            EventSystem.call('FAREWELL_STAND_IMAGE', { characterIdentifier: this.gameCharacter.identifier });
-            this.gameCharacter.setLocation('common');
-            SoundEffect.play(PresetSound.piecePut);
-          }
-        },
-        {
-          name: '個人インベントリ', action: () => {
-            EventSystem.call('FAREWELL_STAND_IMAGE', { characterIdentifier: this.gameCharacter.identifier });
-            this.gameCharacter.setLocation(Network.peerId);
-            SoundEffect.play(PresetSound.piecePut);
-          }
-        },
-        {
-          name: '墓場', action: () => {
-            EventSystem.call('FAREWELL_STAND_IMAGE', { characterIdentifier: this.gameCharacter.identifier });
-            this.gameCharacter.setLocation('graveyard');
-            SoundEffect.play(PresetSound.sweep);
-          }
-        },
-      ]},
+      {
+        name: 'テーブルから移動', action: null, subActions: [
+          {
+            name: '共有インベントリ', action: () => {
+              EventSystem.call('FAREWELL_STAND_IMAGE', { characterIdentifier: this.gameCharacter.identifier });
+              this.gameCharacter.setLocation('common');
+              SoundEffect.play(PresetSound.piecePut);
+            }
+          },
+          {
+            name: '個人インベントリ', action: () => {
+              EventSystem.call('FAREWELL_STAND_IMAGE', { characterIdentifier: this.gameCharacter.identifier });
+              this.gameCharacter.setLocation(Network.peerId);
+              SoundEffect.play(PresetSound.piecePut);
+            }
+          },
+          {
+            name: '墓場', action: () => {
+              EventSystem.call('FAREWELL_STAND_IMAGE', { characterIdentifier: this.gameCharacter.identifier });
+              this.gameCharacter.setLocation('graveyard');
+              SoundEffect.play(PresetSound.sweep);
+            }
+          },
+        ]
+      },
       ContextMenuSeparator,
       {
         name: 'コピーを作る', action: () => {
@@ -582,7 +618,9 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     return value < min ? min : value;
   }
 
-  private showDetail(gameObject: GameCharacter) {
+
+  public showDetail(gameObject: GameCharacter) {
+    if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = 'キャラクターシート';
     if (gameObject.name.length) title += ' - ' + gameObject.name;
@@ -599,6 +637,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private showStandSetting(gameObject: GameCharacter) {
+    if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
     let option: PanelOption = { left: coordinate.x - 400, top: coordinate.y - 175, width: 730, height: 572 };
     let component = this.panelService.open<StandSettingComponent>(StandSettingComponent, option);
@@ -607,6 +646,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
 
 
   changeImage(index: number) {
+    if (this.GuestMode()) return;
     if (this.gameCharacter.currntImageIndex != index) {
       this.gameCharacter.currntImageIndex = index;
       SoundEffect.play(PresetSound.surprise);

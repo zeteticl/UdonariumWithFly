@@ -1,15 +1,15 @@
 <div class="component is-3d is-pointer-events-none"
-  appMovable [movable.option]="movableOption" [movable.disable]="isSelected || isLocked" (movable.ondragstart)="onMove()" (movable.ondragend)="onMoved()">
-  <div class="is-3d" appRotable [rotable.option]="rotableOption" [rotable.disable]="isLocked" (rotable.ondragstart)="onMove()" (rotable.ondragend)="onMoved()">
+  appMovable [movable.option]="movableOption" [movable.disable]="isSelected || isLocked" (movable.ondragstart)="onMove()" (movable.ondragend)="onMoved()"[ngClass]="{'is-disabled': isDisabled}">
+  <div class="is-3d" appRotable [rotable.option]="rotableOption" [rotable.disable]="isLocked" (rotable.ondragstart)="onMove()" (rotable.ondragend)="onMoved()"(dblclick)="showDetail(this.textNote)" [ngClass]="{'is-Yellow-border': isMine}">
     <div class="component-content is-3d is-pointer-events-auto"
       [style.width.px]="width * gridSize">
       <div class="upright-transform is-3d is-bg-color is-bg-texture" [ngStyle]="{'transform': 'translateZ(' + (altitude * gridSize) + 'px) rotateY(90deg) rotateZ(' + (isUpright ? -90 : 0) + 'deg) rotateY(-90deg)'}"
         [style.background-image]="'url(' + imageFile?.url + ')' | safe: 'style'" [style.width.px]="width * gridSize" [style.min-height.px]="height * gridSize">
         <div *ngIf="title.length" class="title is-black-background is-pointer-events-none">{{title}}</div>
-        <textarea (input)="calcFitHeight();" class="textarea" #textArea [ngClass]="{'is-pointer-events-none': !isSelected, 'is-pointer-events-auto': isSelected, 'is-outline-text': !isSelected}"
-          [style.font-size.px]="fontSize + 9" [(ngModel)]="text" spellcheck="false"></textarea>
+        <textarea (input)="calcFitHeight();" class="textarea" #textArea [ngClass]="{'is-pointer-events-none': !isSelected, 'is-pointer-events-auto': isSelected, 'is-outline-text': !isSelected,'is-Yellow-border': isMine}"
+          [style.font-size.px]="fontSize + 9" [(ngModel)]="text" [disabled]="GuestMode()" spellcheck="false"></textarea>
       </div>
-      <div *ngIf="!isLocked" [ngClass]="{'is-grab': !isLocked}" class="grand-grabing-area" style="position: absolute"
+      <div *ngIf="!isLocked" [ngClass]="{'is-grab': !isLocked,'is-Yellow-border': isMine}" class="grand-grabing-area" style="position: absolute"
         [ngStyle]="{'transform': 'translateX(' + gridSize / 2 + 'px) translateY(' + (-gridSize / 4) + 'px)'}" 
         [style.width.px]="(width - 1) * gridSize" 
         [style.min-height.px]="gridSize / 2"></div>

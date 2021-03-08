@@ -89,7 +89,7 @@ export class DiceBot extends GameObject {
     { script: 'GranCrest', game: 'グランクレストRPG' },
     { script: 'GeishaGirlwithKatana', game: 'ゲイシャ・ガール・ウィズ・カタナ' },
     { script: 'GehennaAn', game: 'ゲヘナ・アナスタシス' },
-    { script: 'KemonoNoMori', game: '獸ノ森' }, 
+    { script: 'KemonoNoMori', game: '獸ノ森' },
     { script: 'Illusio', game: '晃天のイルージオ' },
     { script: 'CodeLayerd', game: 'コード：レイヤード' },
     { script: 'Avandner', game: '黒絢のアヴァンドナー' },
@@ -97,7 +97,6 @@ export class DiceBot extends GameObject {
     { script: 'Gorilla', game: 'ゴリラTRPG' },
     { script: 'ColossalHunter', game: 'コロッサルハンター' },
     { script: 'Postman', game: '壊れた世界のポストマン' },
-    { script: 'Satasupe', game: 'サタスペ' },
     { script: 'SamsaraBallad', game: 'サンサーラ・バラッド' },
     { script: 'SharedFantasia', game: 'Shared†Fantasia' },
     { script: 'JamesBond', game: 'ジェームズ・ボンド007' },
@@ -211,6 +210,7 @@ export class DiceBot extends GameObject {
     { script: 'WorldOfDarkness', game: 'ワールド・オブ・ダークネス' },
     { script: 'Cthulhu_ChineseTraditional', game: '克蘇魯的呼喚', lang: '正體中文' },
     { script: 'Cthulhu7th_ChineseTraditional', game: '克蘇魯的呼喚 第七版', lang: '正體中文' },
+    { script: 'Satasupe', game: '亞俠', lang: '正體中文' },
     { script: 'KillDeathBusiness_Korean', game: 'Kill Death Business (한국어)', lang: '한국어' },
     { script: 'Nechronica_Korean', game: '네크로니카', lang: '한국어' },
     { script: 'DoubleCross_Korean', game: '더블크로스2nd, 3rd', lang: '한국어' },
@@ -448,7 +448,7 @@ export class DiceBot extends GameObject {
     ['ャ', 'ヤ'],
     ['ュ', 'ユ'],
     ['ョ', 'ヨ'],
-    ['ッ', 'ツ'],  
+    ['ッ', 'ツ'],
     ['ヲ', 'オ'],
     ['ガ', 'カ'],
     ['ギ', 'キ'],
@@ -497,7 +497,7 @@ export class DiceBot extends GameObject {
             return;
           }
           let finalResult: DiceRollResult = { result: '', isSecret: false, isDiceRollTable: false };
-          
+
           //ダイスボット表
           let isDiceRollTableMatch = false;
           for (const diceRollTable of DiceRollTableList.instance.diceRollTables) {
@@ -523,7 +523,7 @@ export class DiceBot extends GameObject {
                 }
                 let isRowMatch = false;
                 for (const diceRollTableRow of diceRollTableRows) {
-                  if ((diceRollTableRow.range.start === null || diceRollTableRow.range.start <= rollResultNumber) 
+                  if ((diceRollTableRow.range.start === null || diceRollTableRow.range.start <= rollResultNumber)
                     && (diceRollTableRow.range.end === null || rollResultNumber <= diceRollTableRow.range.end)) {
                     //finalResult.result += (`[${rollResultNumber}] ` + StringUtil.cr(diceRollTableRow.result));
                     finalResult.result += ('🎲 ' + rollResult.result + "\n" + StringUtil.cr(diceRollTableRow.result));
@@ -581,9 +581,9 @@ export class DiceBot extends GameObject {
       timestamp: originalMessage.timestamp + 1,
       imageIdentifier: '',
       tag: isSecret ? 'system secret' : 'system',
-      name: rollResult.isDiceRollTable ? 
+      name: rollResult.isDiceRollTable ?
         isSecret ? '<' + rollResult.tableName + ' (Secret)：' + originalMessage.name + '>' : '<' + rollResult.tableName + '：' + originalMessage.name + '>' :
-        isSecret ? '<Secret-BCDice：' + originalMessage.name + '>' : '<BCDice：' + originalMessage.name + '>' ,
+        isSecret ? '<Secret-BCDice：' + originalMessage.name + '>' : '<BCDice：' + originalMessage.name + '>',
       text: result,
       color: originalMessage.color,
       isUseStandImage: originalMessage.isUseStandImage
@@ -613,11 +613,11 @@ export class DiceBot extends GameObject {
             const conditionType = +diceBotMatch.getFirstElementByName('conditionType').value;
             if (conditionType == StandConditionType.Postfix || conditionType == StandConditionType.PostfixOrImage || conditionType == StandConditionType.PostfixAndImage) {
               const sendObj = {
-                characterIdentifier: gameCharacter.identifier, 
-                standIdentifier: standInfo.standElementIdentifier, 
+                characterIdentifier: gameCharacter.identifier,
+                standIdentifier: standInfo.standElementIdentifier,
                 color: originalMessage.color,
                 secret: originalMessage.to ? true : false
-              };              
+              };
               if (sendObj.secret) {
                 const targetPeer = PeerCursor.findByUserId(originalMessage.to);
                 if (targetPeer) {
@@ -652,7 +652,7 @@ export class DiceBot extends GameObject {
       const promisise = [];
       for (let i = 1; i <= repeat; i++) {
         promisise.push(
-          fetch(request, {mode: 'cors'})
+          fetch(request, { mode: 'cors' })
             .then(response => {
               if (response.ok) {
                 return response.json();
@@ -670,59 +670,61 @@ export class DiceBot extends GameObject {
       }
       return DiceBot.queue.add(
         Promise.all(promisise)
-          .then(results => { return results.reduce((ac, cv) => {
-            let result = ac.result + cv.result;
-            let isSecret = ac.isSecret || cv.isSecret;
-            return { result: result, isSecret: isSecret };
-          }, { result: '', isSecret: false }) })
+          .then(results => {
+            return results.reduce((ac, cv) => {
+              let result = ac.result + cv.result;
+              let isSecret = ac.isSecret || cv.isSecret;
+              return { result: result, isSecret: isSecret };
+            }, { result: '', isSecret: false })
+          })
       );
     } else {
       DiceBot.queue.add(DiceBot.loadDiceBotAsync(gameType));
       return DiceBot.queue.add(() => {
-          if ('Opal' in window === false) {
-            console.warn('Opal is not loaded...');
-            return { result: '', isSecret: false };
-          }
-          let result = [];
-          let dir = [];
-          let diceBotTablePrefix = 'diceBotTable_';
-          let isNeedResult = true;
-          try {
-            Opal.gvars.isDebug = false;
-            let cgiDiceBot = Opal.CgiDiceBot.$new();
-            result = cgiDiceBot.$roll(message, gameType, dir, diceBotTablePrefix, isNeedResult);
-            console.log('diceRoll!!!', result);
-            console.log('isSecret!!!', cgiDiceBot.isSecret);
-            return { result: result[0], isSecret: cgiDiceBot.isSecret };
-          } catch (e) {
-            console.error(e);
-          }
+        if ('Opal' in window === false) {
+          console.warn('Opal is not loaded...');
           return { result: '', isSecret: false };
+        }
+        let result = [];
+        let dir = [];
+        let diceBotTablePrefix = 'diceBotTable_';
+        let isNeedResult = true;
+        try {
+          Opal.gvars.isDebug = false;
+          let cgiDiceBot = Opal.CgiDiceBot.$new();
+          result = cgiDiceBot.$roll(message, gameType, dir, diceBotTablePrefix, isNeedResult);
+          console.log('diceRoll!!!', result);
+          console.log('isSecret!!!', cgiDiceBot.isSecret);
+          return { result: result[0], isSecret: cgiDiceBot.isSecret };
+        } catch (e) {
+          console.error(e);
+        }
+        return { result: '', isSecret: false };
       });
     }
   }
 
-  static getHelpMessage(gameType: string): Promise<string|string[]> {
+  static getHelpMessage(gameType: string): Promise<string | string[]> {
     if (DiceBot.apiUrl) {
       const promisise = [
-        fetch(DiceBot.apiUrl + '/v1/systeminfo?system=DiceBot', {mode: 'cors'})
+        fetch(DiceBot.apiUrl + '/v1/systeminfo?system=DiceBot', { mode: 'cors' })
           .then(response => { return response.json() })
       ];
       if (gameType && gameType != 'DiceBot') {
         promisise.push(
-          fetch(DiceBot.apiUrl + '/v1/systeminfo?system=' + encodeURIComponent(gameType), {mode: 'cors'})
+          fetch(DiceBot.apiUrl + '/v1/systeminfo?system=' + encodeURIComponent(gameType), { mode: 'cors' })
             .then(response => { return response.json() })
         );
       }
       return Promise.all(promisise)
-        .then(jsons => { 
+        .then(jsons => {
           return jsons.map(json => {
             if (json.systeminfo && json.systeminfo.info) {
               return json.systeminfo.info.replace('このダイスボットは部屋のシステム名表示用となります', 'このダイスボットはチャットパレットなどのシステム名表示用となります');
             } else {
               return 'ダイスボット情報がありません。';
-            }                
-          }) 
+            }
+          })
         });
     } else {
       DiceBot.queue.add(DiceBot.loadDiceBotAsync(gameType));

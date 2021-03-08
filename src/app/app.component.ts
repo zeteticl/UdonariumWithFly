@@ -157,7 +157,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     AudioStorage.instance.get(PresetSound.surprise).isHidden = true;
 
     PeerCursor.createMyCursor();
-    if (!PeerCursor.myCursor.name) PeerCursor.myCursor.name = 'プレイヤー';
+    if (!PeerCursor.myCursor.name) PeerCursor.myCursor.name = 'プレイヤー'+ ('000' + (Math.floor(Math.random() * 1000))).slice(-3);
     PeerCursor.myCursor.imageIdentifier = noneIconImage.identifier;
 
     EventSystem.register(this)
@@ -396,7 +396,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     if (files.length) FileArchiver.instance.load(files);
     input.value = '';
   }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   private lazyNgZoneUpdate(isImmediate: boolean) {
     if (isImmediate) {
       if (this.immediateUpdateTimer !== null) return;

@@ -4,7 +4,7 @@ import { CardStack } from '@udonarium/card-stack';
 import { ImageContext, ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { DiceSymbol, DiceType } from '@udonarium/dice-symbol';
 import { GameCharacter } from '@udonarium/game-character';
 import { GameTable } from '@udonarium/game-table';
@@ -23,8 +23,11 @@ import { PointerCoordinate } from './pointer-device.service';
 export class TabletopActionService {
 
   constructor() { }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   createGameCharacter(position: PointerCoordinate): GameCharacter {
+    if (this.GuestMode()) return;
     let character = GameCharacter.create('新しいキャラクター', 1, '');
     character.location.x = position.x - 25;
     character.location.y = position.y - 25;
@@ -33,6 +36,7 @@ export class TabletopActionService {
   }
 
   createGameTableMask(position: PointerCoordinate): GameTableMask {
+    if (this.GuestMode()) return;
     let viewTable = this.getViewTable();
     if (!viewTable) return;
 
@@ -46,6 +50,7 @@ export class TabletopActionService {
   }
 
   createTerrain(position: PointerCoordinate): Terrain {
+    if (this.GuestMode()) return;
     let url: string = './assets/images/tex.jpg';
     let image: ImageFile = ImageStorage.instance.get(url)
     if (!image) image = ImageStorage.instance.add(url);
@@ -63,6 +68,7 @@ export class TabletopActionService {
   }
 
   createTextNote(position: PointerCoordinate): TextNote {
+    if (this.GuestMode()) return;
     let textNote = TextNote.create('共有メモ', 'テキストを入力してください', 5, 4, 3);
     textNote.location.x = position.x;
     textNote.location.y = position.y;
@@ -71,6 +77,7 @@ export class TabletopActionService {
   }
 
   createDiceSymbol(position: PointerCoordinate, name: string, diceType: DiceType, imagePathPrefix: string): DiceSymbol {
+    if (this.GuestMode()) return;
     let diceSymbol = DiceSymbol.create(name, diceType, 1);
     let image: ImageFile = null;
 
@@ -80,7 +87,7 @@ export class TabletopActionService {
       if (!image) { image = ImageStorage.instance.add(url); }
       diceSymbol.imageDataElement.getFirstElementByName(face).value = image.identifier;
     });
-    
+
     diceSymbol.faces.forEach(face => {
       let url: string = `./assets/images/dice/${imagePathPrefix}/${imagePathPrefix}[${face}].png`;
       image = ImageStorage.instance.get(url);
@@ -95,6 +102,7 @@ export class TabletopActionService {
   }
 
   createTrump(position: PointerCoordinate): CardStack {
+    if (this.GuestMode()) return;
     let cardStack = CardStack.create('トランプ山札');
     cardStack.location.x = position.x - 25;
     cardStack.location.y = position.y - 25;
@@ -204,6 +212,7 @@ export class TabletopActionService {
   }
 
   makeDefaultContextMenuActions(position: PointerCoordinate): ContextMenuAction[] {
+    if (this.GuestMode()) return;
     return [
       this.getCreateCharacterMenu(position),
       this.getCreateTableMaskMenu(position),
@@ -215,6 +224,7 @@ export class TabletopActionService {
   }
 
   private getCreateCharacterMenu(position: PointerCoordinate): ContextMenuAction {
+    if (this.GuestMode()) return;
     return {
       name: 'キャラクターを作成', action: () => {
         let character = this.createGameCharacter(position);
@@ -225,6 +235,7 @@ export class TabletopActionService {
   }
 
   private getCreateTableMaskMenu(position: PointerCoordinate): ContextMenuAction {
+    if (this.GuestMode()) return;
     return {
       name: 'マップマスクを作成', action: () => {
         this.createGameTableMask(position);
@@ -234,6 +245,7 @@ export class TabletopActionService {
   }
 
   private getCreateTerrainMenu(position: PointerCoordinate): ContextMenuAction {
+    if (this.GuestMode()) return;
     return {
       name: '地形を作成', action: () => {
         this.createTerrain(position);
@@ -243,6 +255,7 @@ export class TabletopActionService {
   }
 
   private getCreateTextNoteMenu(position: PointerCoordinate): ContextMenuAction {
+    if (this.GuestMode()) return;
     return {
       name: '共有メモを作成', action: () => {
         this.createTextNote(position);
@@ -252,6 +265,7 @@ export class TabletopActionService {
   }
 
   private getCreateTrumpMenu(position: PointerCoordinate): ContextMenuAction {
+    if (this.GuestMode()) return;
     return {
       name: 'トランプの山札を作成', action: () => {
         this.createTrump(position);
@@ -261,6 +275,7 @@ export class TabletopActionService {
   }
 
   private getCreateDiceSymbolMenu(position: PointerCoordinate): ContextMenuAction {
+    if (this.GuestMode()) return;
     let dices: { menuName: string, diceName: string, type: DiceType, imagePathPrefix: string }[] = [
       { menuName: 'D4', diceName: 'D4', type: DiceType.D4, imagePathPrefix: '4_dice' },
       { menuName: 'D6', diceName: 'D6', type: DiceType.D6, imagePathPrefix: '6_dice' },
@@ -285,6 +300,7 @@ export class TabletopActionService {
   }
 
   private getViewTable(): GameTable {
+    if (this.GuestMode()) return;
     let tableSelecter = ObjectStore.instance.get<TableSelecter>('tableSelecter');
     return tableSelecter ? tableSelecter.viewTable : null;
   }
