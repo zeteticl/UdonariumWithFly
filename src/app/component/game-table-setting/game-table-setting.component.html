@@ -1,9 +1,10 @@
-<div class="flex-container">
+<div class="flex-container" *ngIf="!GuestMode()">
   <div class="flex-item no-grow">
     <div>
       <button (click)="createGameTable()">新しいテーブルを作る</button>
     </div>
-    <select style="width: 10em;" size="10" (change)="selectGameTable($event.target.value)" [ngModel]="selectedTable?.identifier">
+    <select style="width: 10em;" size="10" (change)="selectGameTable($event.target.value)"
+      [ngModel]="selectedTable?.identifier">
       <option *ngFor="let gameTable of getGameTables()" value="{{gameTable.identifier}}">{{gameTable.name}}</option>
     </select>
   </div>
@@ -30,14 +31,16 @@
         <input [(ngModel)]="tableName" placeholder="Name" [attr.disabled]="!isEditable ? '' : null" />
       </div>
       <div>
-        <input [(ngModel)]="tableWidth" type="range" title="{{tableWidth}}" min="{{minSize}}" max="{{maxSize}}" name="tableWidth" [attr.disabled]="!isEditable ? '' : null"
-        /> Width :
-        <input [(ngModel)]="tableWidth" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;" [attr.disabled]="!isEditable ? '' : null">
+        <input [(ngModel)]="tableWidth" type="range" title="{{tableWidth}}" min="{{minSize}}" max="{{maxSize}}"
+          name="tableWidth" [attr.disabled]="!isEditable ? '' : null" /> Width :
+        <input [(ngModel)]="tableWidth" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;"
+          [attr.disabled]="!isEditable ? '' : null">
       </div>
       <div>
-        <input [(ngModel)]="tableHeight" title="{{tableHeight}}" type="range" min="{{minSize}}" max="{{maxSize}}" name="tableHeight" [attr.disabled]="!isEditable ? '' : null"
-        /> Height :
-        <input [(ngModel)]="tableHeight" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;" [attr.disabled]="!isEditable ? '' : null">
+        <input [(ngModel)]="tableHeight" title="{{tableHeight}}" type="range" min="{{minSize}}" max="{{maxSize}}"
+          name="tableHeight" [attr.disabled]="!isEditable ? '' : null" /> Height :
+        <input [(ngModel)]="tableHeight" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;"
+          [attr.disabled]="!isEditable ? '' : null">
       </div>
       <div>
         グリッド:
@@ -55,13 +58,14 @@
       </div>
       <div>
         背景フィルタ
-        <select [(ngModel)]="tableDistanceviewFilter" name="tableDistanceviewFilter" [attr.disabled]="!isEditable ? '' : null">
+        <select [(ngModel)]="tableDistanceviewFilter" name="tableDistanceviewFilter"
+          [attr.disabled]="!isEditable ? '' : null">
           <option value="">なし</option>
           <option value="white">ホワイト</option>
           <option value="black">ブラック</option>
         </select>
       </div>
-      <hr/>
+      <hr />
       <div>
         <label>グリッドを常に表示:
           <input type="checkbox" [(ngModel)]="tableGridShow" name="tableGridShow" />
@@ -76,7 +80,8 @@
               <div *ngIf="isSaveing" class="progress">{{progresPercent}}%</div>
             </div>
           </button>
-          <button class="danger" (click)="delete()" [attr.disabled]="getGameTables().length <= 1 ? '' : null">削除</button>
+          <button class="danger" (click)="delete()"
+            [attr.disabled]="getGameTables().length <= 1 ? '' : null">削除</button>
         </ng-container>
         <ng-container *ngIf="isDeleted">
           <button (click)="restore()">元に戻す</button>

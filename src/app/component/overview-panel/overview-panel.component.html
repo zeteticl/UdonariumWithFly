@@ -64,7 +64,7 @@
     <div class="component-background text-note-container">
       <div style="position: relative;">
         <div class="is-fill">
-          <textarea class="textarea" [(ngModel)]="note.text" spellcheck="false"></textarea>
+          <textarea class="textarea" [(ngModel)]="note.text" [disabled]="GuestMode()" spellcheck="false"></textarea>
         </div>
         <div class="textarea-spacer">{{note.text}}</div>
       </div>
@@ -82,8 +82,10 @@
       <ng-container *ngIf="!isUseIcon">
         <div [ngStyle]="{'transform': ('rotate(' + roll + 'deg)') }">
           <div class="inverser" [ngClass]="{inverse: isInverse, hollow: isHollow}">
-            <span class="aura" [ngClass]="{black: aura == 0, blue: aura == 1, green: aura == 2, cyan: aura == 3, red: aura == 4, magenta: aura == 5, yellow: aura == 6, white: aura == 7}">
-              <img class="character-image" [ngClass]="{'black-paint': isBlackPaint}" [src]="imageUrl | safe: 'resourceUrl'">
+            <span class="aura"
+              [ngClass]="{black: aura == 0, blue: aura == 1, green: aura == 2, cyan: aura == 3, red: aura == 4, magenta: aura == 5, yellow: aura == 6, white: aura == 7}">
+              <img class="character-image" [ngClass]="{'black-paint': isBlackPaint}"
+                [src]="imageUrl | safe: 'resourceUrl'">
             </span>
           </div>
         </div>
@@ -154,7 +156,8 @@
   <ng-container *ngIf="0 < dataElm.children.length; then thenBlock; else elseBlock"></ng-container>
   <ng-template #thenBlock>
     <div class="section" style="padding-top: 0.5em;">
-      <div *ngIf="0 < dataElm.name.trim().length" class="section-text" [attr.title]="dataElm.name">{{dataElm.name}}</div>
+      <div *ngIf="0 < dataElm.name.trim().length" class="section-text" [attr.title]="dataElm.name">{{dataElm.name}}
+      </div>
       <div class="grid-container indetnt">
         <ng-container *ngFor="let childElm of dataElm.children">
           <ng-container *ngTemplateOutlet="dataElement; context: { dataElm: childElm }"></ng-container>
@@ -169,7 +172,8 @@
           <div [attr.title]="dataElm.name">{{dataElm.name}}</div>
           <div class="note" style="position: relative;">
             <div class="is-fill">
-              <textarea class="textarea" [(ngModel)]="dataElm.value" spellcheck="false"></textarea>
+              <textarea class="textarea" [(ngModel)]="dataElm.value" [disabled]="GuestMode()"
+                spellcheck="false"></textarea>
             </div>
             <div class="textarea-spacer">{{dataElm.value}}</div>
           </div>
@@ -179,7 +183,9 @@
         <div class="tag" [attr.title]="dataElm.name">{{dataElm.name}}</div>
         <div class="value">
           <div class="hidden-spacer">{{dataElm.value}}</div>
-          <input class="input" style="width:4em" type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1" [(ngModel)]="dataElm.value" />
+          <input class="input" style="width:4em" 
+            type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1"
+            [(ngModel)]="dataElm.value" />
         </div>
       </ng-container>
       <ng-container *ngSwitchCase="'numberResource'">
@@ -187,35 +193,47 @@
         <div class="value">
           <div style="display: inline-block; width: min-content;">
             <div class="hidden-spacer" style="margin-right: 2em;">{{dataElm.currentValue}}</div>
-            <input class="input" style="width:4em" type="number" size="1" [(ngModel)]="dataElm.currentValue" />
+            <input class="input" style="width:4em" type="number" size="1" [(ngModel)]="dataElm.currentValue"
+              [disabled]="GuestMode()" />
           </div>
           <div style="display: inline;"> / {{!+dataElm.value ? '???' : dataElm.value}}</div>
         </div>
         <div class="section" style="line-height: 1em;">
           <input type="range" title="{{dataElm.currentValue}}"
             [style]="'font-size: 0.8em; width: 100%; --min: 0; --max:' + dataElm.value + '; --val:' + dataElm.currentValue +';' | safe: 'style'"
-            min="0" max="{{!+dataElm.value ? 1000 : dataElm.value}}" [(ngModel)]="dataElm.currentValue" />
+            min="0" max="{{!+dataElm.value ? 1000 : dataElm.value}}" [(ngModel)]="dataElm.currentValue"
+            [disabled]="GuestMode()" />
         </div>
       </ng-container>
       <ng-container *ngSwitchCase="'checkProperty'">
-        <div class="tag" [attr.title]="dataElm.name"><span [style.textDecoration]="dataElm.value ? 'none' : 'line-through'">{{dataElm.name}}</span> {{ dataElm.currentValue.split(checkRegExp)[ dataElm.value ? 0 : 1 ] }}</div>
+        <div class="tag" [attr.title]="dataElm.name"><span
+            [style.textDecoration]="dataElm.value ? 'none' : 'line-through'">{{dataElm.name}}</span>
+          {{ dataElm.currentValue.split(checkRegExp)[ dataElm.value ? 0 : 1 ] }}</div>
         <div class="value">
-          <input type="checkbox" style="width: 2em; margin-right:1em" [(ngModel)]="dataElm.value" checked="{{dataElm.value ? 'checked' : ''}}" (change)="dataElm.value = (dataElm.value ? dataElm.name : '')">
+          <input type="checkbox" style="width: 2em; margin-right:1em" [(ngModel)]="dataElm.value"
+            [disabled]="GuestMode()" checked="{{dataElm.value ? 'checked' : ''}}"
+            (change)="dataElm.value = (dataElm.value ? dataElm.name : '')">
         </div>
       </ng-container>
       <ng-container *ngSwitchCase="'abilityScore'">
         <div class="tag" [attr.title]="dataElm.name">{{dataElm.name}}</div>
         <div class="value">
           <div class="hidden-spacer">{{dataElm.value}}</div>
-            <input class="input" style="width:4em" type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1" [(ngModel)]="dataElm.value" />
-            <span style="font-size: smaller;">({{ (dataElm.calcAbilityScore() >= 0 ? '+' : '') + dataElm.calcAbilityScore() }})</span>
+          <input class="input" style="width:4em" [disabled]="GuestMode()"
+            type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1"
+            [(ngModel)]="dataElm.value" />
+          <span
+            style="font-size: smaller;">({{ (dataElm.calcAbilityScore() >= 0 ? '+' : '') + dataElm.calcAbilityScore() }})</span>
         </div>
       </ng-container>
       <ng-container *ngSwitchDefault>
         <div *ngIf="dataElm.name" class="tag" [attr.title]="dataElm.name">{{dataElm.name}}</div>
         <div class="value">
           <div *ngIf="dataElm.name" class="hidden-spacer">{{dataElm.value}}</div>
-          <input class="input" [ngStyle]="{'min-width': dataElm.name ? '8em' : '100%'}" type="{{dataElm.name === 'size' || dataElm.name === 'altitude' ? 'number' : 'text'}}" min="{{dataElm.name === 'size' ? '0' : ''}}" size="1" [(ngModel)]="dataElm.value" />
+          <input class="input" [ngStyle]="{'min-width': dataElm.name ? '8em' : '100%'}"
+            type="{{dataElm.name === 'size' || dataElm.name === 'altitude' ? 'number' : 'text'}}"
+            min="{{dataElm.name === 'size' ? '0' : ''}}" size="1" [(ngModel)]="dataElm.value"
+            [disabled]="GuestMode()" />
         </div>
       </ng-container>
     </ng-container>

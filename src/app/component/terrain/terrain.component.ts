@@ -13,7 +13,7 @@ import {
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { Terrain, TerrainViewState } from '@udonarium/terrain';
@@ -68,7 +68,7 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
 
   get isSlope(): boolean { return this.terrain.isSlope; }
   set isSlope(isSlope: boolean) { this.terrain.isSlope = isSlope; }
-  
+
   get isAltitudeIndicate(): boolean { return this.terrain.isAltitudeIndicate; }
   set isAltitudeIndicate(isAltitudeIndicate: boolean) { this.terrain.isAltitudeIndicate = isAltitudeIndicate; }
 
@@ -171,7 +171,7 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
   onContextMenu(e: Event) {
     e.stopPropagation();
     e.preventDefault();
-
+    if (this.GuestMode()) return;
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
 
     let menuPosition = this.pointerDeviceService.pointers[0];
@@ -200,29 +200,31 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
             this.isSlope = true;
           }
         }),
-      { name: '壁の表示', action: null, subActions: [
-        {
-          name: `${ this.hasWall && this.isSurfaceShading ? '◉' : '○' } 通常`, action: () => {
-            this.mode = TerrainViewState.ALL;
-            this.isSurfaceShading = true;
-          }
-        },
-        {
-          name: `${ this.hasWall && !this.isSurfaceShading ? '◉' : '○' } 陰影なし`, action: () => {
-            this.mode = TerrainViewState.ALL;
-            this.isSurfaceShading = false;
-          }
-        },
-        {
-          name: `${ !this.hasWall ? '◉' : '○' } 非表示`, action: () => {
-            this.mode = TerrainViewState.FLOOR;
-            if (this.depth * this.width === 0) {
-              this.terrain.width = this.width <= 0 ? 1 : this.width;
-              this.terrain.depth = this.depth <= 0 ? 1 : this.depth;
+      {
+        name: '壁の表示', action: null, subActions: [
+          {
+            name: `${this.hasWall && this.isSurfaceShading ? '◉' : '○'} 通常`, action: () => {
+              this.mode = TerrainViewState.ALL;
+              this.isSurfaceShading = true;
             }
-          }
-        },
-      ]},
+          },
+          {
+            name: `${this.hasWall && !this.isSurfaceShading ? '◉' : '○'} 陰影なし`, action: () => {
+              this.mode = TerrainViewState.ALL;
+              this.isSurfaceShading = false;
+            }
+          },
+          {
+            name: `${!this.hasWall ? '◉' : '○'} 非表示`, action: () => {
+              this.mode = TerrainViewState.FLOOR;
+              if (this.depth * this.width === 0) {
+                this.terrain.width = this.width <= 0 ? 1 : this.width;
+                this.terrain.depth = this.depth <= 0 ? 1 : this.depth;
+              }
+            }
+          },
+        ]
+      },
       ContextMenuSeparator,
       /*
       (this.isInteract
@@ -316,8 +318,11 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
   private adjustMinBounds(value: number, min: number = 0): number {
     return value < min ? min : value;
   }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   private showDetail(gameObject: Terrain) {
+    if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '地形設定';
