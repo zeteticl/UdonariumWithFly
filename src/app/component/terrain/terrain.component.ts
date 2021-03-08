@@ -224,29 +224,25 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
             this.isSlope = true;
           }
         }),
-      {
-        name: '壁の表示', action: null, subActions: [
-          {
-            name: `${this.hasWall && this.isSurfaceShading ? '◉' : '○'} 通常`, action: () => {
-              this.mode = TerrainViewState.ALL;
-              this.isSurfaceShading = true;
-            }
-          },
-          {
-            name: `${this.hasWall && !this.isSurfaceShading ? '◉' : '○'} 陰影なし`, action: () => {
-              this.mode = TerrainViewState.ALL;
-              this.isSurfaceShading = false;
-            }
-          },
-          {
-            name: `${!this.hasWall ? '◉' : '○'} 非表示`, action: () => {
-              this.mode = TerrainViewState.FLOOR;
-              if (this.depth * this.width === 0) {
-                this.terrain.width = this.width <= 0 ? 1 : this.width;
-                this.terrain.depth = this.depth <= 0 ? 1 : this.depth;
-              }
-            }
-          },
+      { name: '顯示牆壁', action: null, subActions: [
+        {
+          name: `${ this.hasWall && this.isSurfaceShading ? '◉' : '○' } 通常`, action: () => {
+            this.mode = TerrainViewState.ALL;
+            this.isSurfaceShading = true;
+          }
+        },
+        {
+          name: `${ this.hasWall && !this.isSurfaceShading ? '◉' : '○' } 無陰影`, action: () => {
+            this.mode = TerrainViewState.ALL;
+            this.isSurfaceShading = false;
+          }
+        },
+        {
+          name: `${ !this.hasWall ? '◉' : '○' } 不表示`, action: () => {
+            this.mode = TerrainViewState.FLOOR;
+            if (this.depth * this.width === 0) {
+              this.terrain.width = this.width <= 0 ? 1 : this.width;
+              this.terrain.depth = this.depth <= 0 ? 1 : this.depth;
         ]
       },
       ContextMenuSeparator,
@@ -267,26 +263,26 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
       */
       (this.isDropShadow
         ? {
-          name: '☑ 影を落とす', action: () => {
+          name: '☑ 加上陰影', action: () => {
             this.isDropShadow = false;
           }
         } : {
-          name: '☐ 影を落とす', action: () => {
+          name: '☐ 加上陰影', action: () => {
             this.isDropShadow = true;
           }
         }),
       (this.isAltitudeIndicate
         ? {
-          name: '☑ 高度の表示', action: () => {
+          name: '☑ 顯示高度', action: () => {
             this.isAltitudeIndicate = false;
           }
         } : {
-          name: '☐ 高度の表示', action: () => {
+          name: '☐ 顯示高度', action: () => {
             this.isAltitudeIndicate = true;
           }
         }),
       {
-        name: '高度を0にする', action: () => {
+        name: '將高度設為0', action: () => {
           if (this.altitude != 0) {
             this.altitude = 0;
             SoundEffect.play(PresetSound.sweep);
@@ -295,23 +291,23 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
         altitudeHande: this.terrain
       },
       ContextMenuSeparator,
-      { name: '地形設定を編集', action: () => { this.showDetail(this.terrain); } },
+      { name: '編輯地形設置', action: () => { this.showDetail(this.terrain); } },
       (this.terrain.getUrls().length <= 0 ? null : {
-        name: '参照URLを開く', action: null,
+        name: '打開參考網址', action: null,
         subActions: this.terrain.getUrls().map((urlElement) => {
           const url = urlElement.value.toString();
           return {
             name: urlElement.name ? urlElement.name : url,
             action: () => { this.modalService.open(OpenUrlComponent, { url: url, title: this.terrain.name, subTitle: urlElement.name }); },
             disabled: !StringUtil.validUrl(url),
-            error: !StringUtil.validUrl(url) ? 'URLが不正です' : null,
+            error: !StringUtil.validUrl(url) ? '網址無效' : null,
             materialIcon: 'open_in_new'
           };
         })
       }),
       (this.terrain.getUrls().length <= 0 ? null : ContextMenuSeparator),
       {
-        name: 'コピーを作る', action: () => {
+        name: '製作副本', action: () => {
           let cloneObject = this.terrain.clone();
           cloneObject.location.x += this.gridSize;
           cloneObject.location.y += this.gridSize;
@@ -321,13 +317,13 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       },
       {
-        name: '削除する', action: () => {
+        name: '刪除', action: () => {
           this.terrain.destroy();
           SoundEffect.play(PresetSound.sweep);
         }
       },
       ContextMenuSeparator,
-      { name: 'オブジェクト作成', action: null, subActions: this.tabletopActionService.makeDefaultContextMenuActions(objectPosition) }
+      { name: '新增物件', action: null, subActions: this.tabletopActionService.makeDefaultContextMenuActions(objectPosition) }
     ], this.name);
   }
 

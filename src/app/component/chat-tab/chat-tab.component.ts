@@ -37,12 +37,30 @@ const isiOS = ua.indexOf('iphone') > -1 || ua.indexOf('ipad') > -1 || ua.indexOf
 })
 export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges, AfterViewChecked {
   sampleMessages: ChatMessageContext[] = [
-    { from: 'System', timestamp: 0, imageIdentifier: '', tag: '', name: 'チュートリアル', text: 'サーバーを使用しないTRPGオンセツールです。参加者同士で接続し、コマや画像ファイルなどを同期します。' },
-    { from: 'System', timestamp: 0, imageIdentifier: '', tag: '', name: 'チュートリアル', text: '全てのデータが各参加者のブラウザ内にあるため、ルームの状態を次回に持ち越したい場合は、必ず「保存」を実行してセーブデータ（zip）を生成してください。保存したzipの読み込みはブラウザ画面へのファイルドロップで行えます。' },
-    { from: 'System', to: '???', timestamp: 0, imageIdentifier: '', tag: '', name: 'チュートリアル ➡ プレイヤー', text: 'ダイレクトメッセージ（秘密会話）はセーブデータに記録されません。' },
-    { from: 'System', to: '???', timestamp: 0, imageIdentifier: '', tag: '', name: 'チュートリアル ➡ プレイヤー', text: 'また、過去のダイレクトメッセージはあなたのIDが更新されると同じルーム内であっても見えなくなります。注意してください。' },
-    { from: 'System', timestamp: 0, imageIdentifier: '', tag: '', name: 'チュートリアル', text: '動作推奨環境はデスクトップChromeです。今のところ、スマホからだと上手く操作できません。' },
-    { from: 'System', timestamp: 0, imageIdentifier: '', tag: '', name: 'チュートリアル', text: 'チュートリアルは以上です。このチュートリアルは最初のチャットを入力すると非表示になります。' },
+    {
+      from: "System",
+      timestamp: 0,
+      imageIdentifier: "",
+      tag: "",
+      name: "教學Zzzzzz",
+      text: "烏冬說明: 這是由日本作者TK11235 所開發的開源TRPG跑團平台，使用MIT授權方式。特點是地圖顯示使用2.5D的方式，架構簡單，容易擴充。原版地址在底下。\n在這個平台中，主要的資料由使用者之間彼此傳送及處理，HKTRPG只是提供一個中文化的平台，棋子圖片等等都是儲存在使用者的電腦之中，所以離開前，請大家先按《保存房間》生成ZIP檔案，下次再使用時按《讀取房間》上傳檔案，不然房間就會像煙火一樣燒光。"
+    },  {
+      from: "System",
+      to: "???",
+      timestamp: 0,
+      imageIdentifier: "",
+      tag: "",
+      name: "教學Zzzzzz > 玩家",
+      text: "密語並不會儲存到ZIP中。而當你的ID更新之後，你將無法再看見之前傳給您的密語，還請多加注意。"
+    }
+    , {
+      from: "System",
+      timestamp: 2445551999,
+      imageIdentifier: "",
+      tag: "",
+      name: "連結:",
+      text: "https://udonarium.app/ \n原版連結 https://nanasunana.github.io/\n 改版連結\nhttps://discord.gg/vx4kcm7 意見留言DISCORD群\nhttps://www.facebook.com/groups/HKTRPG 香港TRPG研究社\nhttps://www.hktrpg.com/ TRPG百科\nhttps://www.patreon.com/HKTRPG HKTPRG開發支援"
+    }
   ];
 
   private topTimestamp = 0;

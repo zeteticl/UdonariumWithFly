@@ -85,7 +85,7 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
     return Network.GuestMode();
   }
   ngOnInit() {
-    Promise.resolve().then(() => { this.modalService.title = this.panelService.title = 'テーブル設定'; this.panelService.isAbleFullScreenButton = false });
+    Promise.resolve().then(() => { this.modalService.title = this.panelService.title = '桌面設定'; this.panelService.isAbleFullScreenButton = false });
     this.selectedTable = this.tableSelecter.viewTable;
     EventSystem.register(this)
       .on('DELETE_GAME_OBJECT', 1000, event => {
@@ -117,7 +117,7 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
   createGameTable() {
     if (this.GuestMode()) return;
     let gameTable = new GameTable();
-    gameTable.name = '白紙のテーブル';
+    gameTable.name = '空白的桌面';
     gameTable.imageIdentifier = 'testTableBackgroundImage_image';
     gameTable.initialize();
     this.selectGameTable(gameTable.identifier);

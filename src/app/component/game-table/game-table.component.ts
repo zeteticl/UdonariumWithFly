@@ -265,7 +265,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     Array.prototype.push.apply(menuActions, this.tabletopActionService.makeDefaultContextMenuActions(objectPosition));
     menuActions.push(ContextMenuSeparator);
     menuActions.push({
-      name: 'テーブル設定', action: () => {
+      name: '桌面設定', action: () => {
         this.modalService.open(GameTableSettingComponent);
       }
     });

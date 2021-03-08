@@ -1,7 +1,7 @@
 <div class="flex-container" *ngIf="!GuestMode()">
   <div class="flex-item no-grow">
     <div>
-      <button style="font-size: smaller; margin-bottom: 3px" (click)="add()">ダイスボット表の追加</button>
+      <button style="font-size: smaller; margin-bottom: 3px" (click)="add()">添加骰子機械人表</button>
     </div>
     <select #diceRollTableSelecter style="width: 14em;" size="15" (change)="onChangeDiceRollTable($event.target.value)">
       <option *ngFor="let diceRollTable of diceRollTables" value="{{ diceRollTable.identifier }}">
@@ -32,7 +32,7 @@
       </div>
       <div>
         <textarea style="width: 100%; height: 20em; margin-top: 3px; resize: vertical;"
-          placeholder="1:数字を結果を:（コロン）で区切って記述&#13;&#10;2:結果２&#13;&#10;3:結果３&#13;&#10;4:…"
+          placeholder="1：描述數字和結果，並用:（冒號）分隔&#13;&#10;2:結果２&#13;&#10;3:結果３&#13;&#10;4:…"
           [(ngModel)]="diceRollTableText"></textarea>
       </div>
       <hr />
@@ -46,15 +46,15 @@
               <div *ngIf="isSaveing" class="progress">{{progresPercent}}%</div>
             </div>
           </button>
-          <button class="danger" (click)="delete()">削除</button>
+          <button class="danger" (click)="delete()">刪除</button>
         </ng-container>
         <ng-container *ngIf="isDeleted">
-          <button (click)="restore()">元に戻す</button>
+          <button (click)="restore()">Undo</button>
         </ng-container>
       </div>
     </ng-container>
   </div>
 </div>
 <ng-container *ngIf="isEmpty">
-  <div style="font-size: 12px;">※ダイスボット表がありません。</div>
+  <div style="font-size: 12px;">※沒有骰子機械人表。</div>
 </ng-container>

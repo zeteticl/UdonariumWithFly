@@ -1,36 +1,35 @@
 <div *ngIf="!isConnected;else other_content">
   <div>ルーム名 : <input class="input" (input)="calcPeerId($event.target.value, password)" [(ngModel)]="roomName" required
-      minlength="1" maxlength="128" #roomNameValidation="ngModel" placeholder="ルームの名前は必須" /></div>
+      minlength="1" maxlength="128" #roomNameValidation="ngModel" placeholder="需要房間名稱" /></div>
   <div>パスワード: <input class="input" (input)="calcPeerId(roomName, $event.target.value)" [(ngModel)]="password"
-      maxlength="12" #passwordValidation="ngModel" placeholder="空ならパスワードなし" /></div>
+      maxlength="12" #passwordValidation="ngModel" placeholder="如果填寫密碼，則沒有密碼" /></div>
   <div><input type="checkbox" [(ngModel)]="allowGuest" />允許訪客</div>
   <hr />
   <div *ngIf="roomNameValidation.errors && (roomNameValidation.dirty || roomNameValidation.touched)">
     <div [hidden]="!roomNameValidation.errors.required">
-      ルームの名前は必須です。
+      房間名稱是必填項目。
     </div>
     <div [hidden]="!roomNameValidation.errors.minlength">
-      ルームの名前は必須です。
+      房間名稱是必填項目。
     </div>
     <div [hidden]="!roomNameValidation.errors.maxlength">
-      ルーム名前の長さは128以内にしてください。
+      房間名稱的長度應小於或等於128。
     </div>
   </div>
   <div *ngIf="passwordValidation.errors && (passwordValidation.dirty || passwordValidation.touched)">
     <div [hidden]="!passwordValidation.errors.maxlength">
-      パスワードの長さは12以内にしてください。
+      密碼長度應小於等於12。
     </div>
   </div>
   <div *ngIf="!validateLength">
-    ルームの名前とパスワードの合計が長すぎるようです。どちらかを少し短くしてみてください。
+    房間名稱和密碼的總和似乎太長。 嘗試將兩者之一都縮短一點。
   </div>
   <div>
     <button [disabled]="!roomNameValidation.valid || !passwordValidation.valid || !validateLength"
-      (click)="createRoom()">新しいルームを作成</button>
+      (click)="createRoom()">新增一個房間</button>
   </div>
 </div>
-<div><span style="font-size: 12px;">※作成したルームは参加者が0人になった時点で解散します。ルームの状態を次回に持ち越したい場合は必ず「保存」してください。</span></div>
+<div><span style="font-size: 12px;">※當參加人數達到0時，新增房間將被清除。 如果您想將房間狀態延續到下一次，請確保「保存」它。</span></div>
 <ng-template #other_content>
-  <span
-    style="font-size: 12px;">他の参加者と接続したままではルーム作成を行えません。<br>別のルームに接続したい場合は、他の参加者との接続を切ってください。<br>（※ページリロードで切断できます。）</span>
+  <span style="font-size: 12px;">與其他參與者建立連接後，您將無法新增房間。 <br>如果要連接到另一個房間，請斷開與其他與會者的連接。 <br>（※您可以通過重新加載頁面來斷開連接。）</span>
 </ng-template>

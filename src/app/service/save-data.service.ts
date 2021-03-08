@@ -26,11 +26,11 @@ export class SaveDataService {
     private ngZone: NgZone
   ) { }
 
-  saveRoomAsync(fileName: string = 'ルームデータ', updateCallback?: UpdateCallback): Promise<void> {
+  saveRoomAsync(fileName: string = 'HKTRPG', updateCallback?: UpdateCallback): Promise<void> {
     return SaveDataService.queue.add((resolve, reject) => resolve(this._saveRoomAsync(fileName, updateCallback)));
   }
 
-  private _saveRoomAsync(fileName: string = 'ルームデータ', updateCallback?: UpdateCallback): Promise<void> {
+  private _saveRoomAsync(fileName: string = 'HKTRPG', updateCallback?: UpdateCallback): Promise<void> {
     let files: File[] = [];
     let roomXml = this.convertToXml(new Room());
     let chatXml = this.convertToXml(ChatTabList.instance);
