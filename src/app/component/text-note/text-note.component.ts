@@ -14,7 +14,7 @@ import { ContextMenuSeparator, ContextMenuService } from 'service/context-menu.s
 import { ModalService } from 'service/modal.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
-
+import { PeerCursor } from '@udonarium/peer-cursor';
 @Component({
   selector: 'text-note',
   templateUrl: './text-note.component.html',
@@ -36,6 +36,23 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   set rotate(rotate: number) { this.textNote.rotate = rotate; }
   get height(): number { return this.adjustMinBounds(this.textNote.height); }
   get width(): number { return this.adjustMinBounds(this.textNote.width); }
+
+
+  get GM(): string { return this.textNote.GM; }
+  set GM(GM: string) { this.textNote.GM = GM; }
+  get isMine(): boolean { return this.textNote.isMine; }
+  get hasGM(): boolean { return this.textNote.hasGM; }
+  get isDisabled(): boolean {
+    if (this.textNote.location.name == 'common') return true
+    else
+      return this.textNote.isDisabled;
+  }
+
+
+  //STORE
+  get location(): string { return this.textNote.location.name; }
+  set location(location: string) { this.textNote.location.name = location; }
+
 
   get altitude(): number { return this.textNote.altitude; }
   set altitude(altitude: number) { this.textNote.altitude = altitude; }
@@ -178,6 +195,27 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
             SoundEffect.play(PresetSound.lock);
           }
         }),
+      ContextMenuSeparator,
+      (!this.isMine
+        ? {
+          name: 'GM圖層-只供自己看見', action: () => {
+            this.GM = PeerCursor.myCursor.name;
+            this.textNote.setLocation('table')
+            SoundEffect.play(PresetSound.lock);
+          }
+        } : {
+          name: '回到普通圖層', action: () => {
+            this.GM = '';
+            this.textNote.setLocation('table')
+            SoundEffect.play(PresetSound.unlock);
+          }
+        }),
+      ContextMenuSeparator,
+      {
+        name: '移動到共有倉庫', action: () => {
+          this.textNote.setLocation('common')
+        }
+      },
       ContextMenuSeparator,
       (this.isUpright
         ? {
