@@ -134,7 +134,9 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   get elevation(): number {
     return +((this.gameCharacter.posZ + (this.altitude * this.gridSize)) / this.gridSize).toFixed(1);
   }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   gridSize: number = 50;
   math = Math;
   stringUtil = StringUtil;
@@ -143,6 +145,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   heightWidthRatio = 1.5;
 
   set dialog(dialog) {
+    if (this.GuestMode()) return;
     if (!this.gameCharacter) return;
     clearTimeout(this.dialogTimeOutId);
     clearInterval(this.chatIntervalId);
@@ -356,7 +359,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   onContextMenu(e: Event) {
     e.stopPropagation();
     e.preventDefault();
-
+    if (this.GuestMode()) return;
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
 
     let position = this.pointerDeviceService.pointers[0];
@@ -582,7 +585,9 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     return value < min ? min : value;
   }
 
+
   public showDetail(gameObject: GameCharacter) {
+    if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = 'キャラクターシート';
     if (gameObject.name.length) title += ' - ' + gameObject.name;
@@ -599,6 +604,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private showStandSetting(gameObject: GameCharacter) {
+    if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
     let option: PanelOption = { left: coordinate.x - 400, top: coordinate.y - 175, width: 730, height: 572 };
     let component = this.panelService.open<StandSettingComponent>(StandSettingComponent, option);
@@ -607,6 +613,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
 
 
   changeImage(index: number) {
+    if (this.GuestMode()) return;
     if (this.gameCharacter.currntImageIndex != index) {
       this.gameCharacter.currntImageIndex = index;
       SoundEffect.play(PresetSound.surprise);

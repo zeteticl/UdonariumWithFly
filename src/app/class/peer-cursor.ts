@@ -8,7 +8,7 @@ import { EventSystem, Network } from './core/system';
 type UserId = string;
 type PeerId = string;
 type ObjectIdentifier = string;
-
+type isGuest = boolean;
 @SyncObject('PeerCursor')
 export class PeerCursor extends GameObject {
   @SyncVar() userId: UserId = '';
@@ -16,10 +16,11 @@ export class PeerCursor extends GameObject {
   @SyncVar() name: string = '';
   @SyncVar() imageIdentifier: string = '';
   @SyncVar() color: string = PeerCursor.CHAT_DEFAULT_COLOR;
+  @SyncVar() isGuest: boolean = false;
 
   static readonly CHAT_MY_NAME_LOCAL_STORAGE_KEY = 'udonanaumu-chat-my-name-local-storage';
   static readonly CHAT_MY_COLOR_LOCAL_STORAGE_KEY = 'udonanaumu-chat-my-color-local-storage';
-  
+
   static readonly CHAT_DEFAULT_COLOR = '#444444';
   static readonly CHAT_TRANSPARENT_COLOR = '#ffffff';
 

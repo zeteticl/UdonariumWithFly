@@ -146,7 +146,6 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
     private changeDetector: ChangeDetectorRef,
     private pointerDeviceService: PointerDeviceService
   ) { }
-
   ngAfterViewInit() {
     this.initPanelPosition();
     setTimeout(() => {
@@ -248,5 +247,8 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
 
   private getInventoryTags(gameObject: TabletopObject): DataElement[] {
     return this.inventoryService.tableInventory.dataElementMap.get(gameObject.identifier);
+  }
+  GuestMode() {
+    return Network.GuestMode();
   }
 }

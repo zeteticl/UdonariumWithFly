@@ -3,7 +3,7 @@ import { ContextMenuAction, ContextMenuService } from 'service/context-menu.serv
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopObject } from '@udonarium/tabletop-object';
 import { PeerCursor } from '@udonarium/peer-cursor';
-
+import { Network } from '@udonarium/core/system';
 @Component({
   selector: 'context-menu',
   templateUrl: './context-menu.component.html',
@@ -29,7 +29,7 @@ export class ContextMenuComponent implements OnInit, OnDestroy, AfterViewInit {
   private callbackOnOutsideClick = (e) => this.onOutsideClick(e);
 
   get isPointerDragging(): boolean { return this.pointerDeviceService.isDragging; }
-  get altitudeHande(): TabletopObject { 
+  get altitudeHande(): TabletopObject {
     for (let action of this.actions) {
       if (action && action.altitudeHande) return action.altitudeHande;
     }
@@ -38,7 +38,7 @@ export class ContextMenuComponent implements OnInit, OnDestroy, AfterViewInit {
 
   get isIconsMenu(): boolean {
     for (let action of this.actions) {
-      if(!action || !action.icon) return false;
+      if (!action || !action.icon) return false;
     }
     return true;
   }
@@ -48,7 +48,9 @@ export class ContextMenuComponent implements OnInit, OnDestroy, AfterViewInit {
     public contextMenuService: ContextMenuService,
     private pointerDeviceService: PointerDeviceService
   ) { }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnInit() {
     if (!this.isSubmenu) {
       this.title = this.contextMenuService.title;
@@ -81,6 +83,7 @@ export class ContextMenuComponent implements OnInit, OnDestroy, AfterViewInit {
 
   @HostListener('contextmenu', ['$event'])
   onContextMenu(e: Event) {
+    if (this.GuestMode()) return;
     e.stopPropagation();
     e.preventDefault();
   }
@@ -156,6 +159,7 @@ export class ContextMenuComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   showSubMenu(action: ContextMenuAction) {
+    if (this.GuestMode()) return;
     this.hideSubMenu();
     clearTimeout(this.showSubMenuTimer);
     if (action.subActions == null || action.subActions.length < 1) return;
