@@ -1,5 +1,5 @@
 <div class="component is-3d is-grab is-pointer-events-none" [style.width.px]="size * gridSize"
-  [style.height.px]="size * gridSize" appMovable [movable.option]="movableOption" (movable.ondragstart)="onMove()"
+  [style.height.px]="gridSize" appMovable [movable.option]="movableOption" (movable.ondragstart)="onMove()"
   (movable.ondragend)="onMoved()">
   <div class="component-content is-3d" [@bounceInOut]="'in'">
     <div class="component-content is-3d is-pointer-events-auto" appRotable [rotable.option]="rotableOption"
@@ -14,7 +14,7 @@
       </div>
       <div class="is-pointer-events-none" >
         <div class="image-box is-3d" [style.width.px]="size * gridSize" [style.height.px]="size * gridSize * heightWidthRatio" style="pointer-events: none;"
-          [ngStyle]="{'transform-origin': '50% ' + ((size * gridSize) + 'px'), 'transform': 'translateY(-10%) scale(1.0,' + (1.0 / heightWidthRatio) + ') translateY(-' + (99 / heightWidthRatio) + '%) rotateZ(' + roll + 'deg)'}">
+          [ngStyle]="{'transform-origin': '50% ' + ((gridSize) + 'px'), 'transform': 'translateY(-10%) scale(1.0,' + (1.0 / heightWidthRatio) + ') translateY(-' + (99 / heightWidthRatio) + '%) rotateZ(' + roll + 'deg)'}">
           <div class="aura is-3d" style="pointer-events: none;" [ngClass]="{black: aura == 0, blue: aura == 1, green: aura == 2, cyan: aura == 3, red: aura == 4, magenta: aura == 5, yellow: aura == 6, white: aura == 7}">
             <div style="pointer-events: none; transition: transform 132ms 0s ease;"
               [ngStyle]="{'transform': 'scaleX(' + (isInverse ? '-1' : '1') + ')'}">  
@@ -27,7 +27,7 @@
       </div>
       <div class="upright-transform is-fit-width is-3d" [ngClass]="{fall: altitude == 0}" (dblclick)="nextImage()"
         [ngStyle]="{'transform': 'rotateY(90deg) rotateZ(-90deg) rotateY(-90deg) translateY(-50%) translateY(' + (-altitude) * gridSize +'px)'}">
-        <div class="rotate-frame is-3d" [style.width.px]="size * gridSize" [style.height.px]="size * gridSize"
+        <div class="rotate-frame is-3d" [style.width.px]="size * gridSize" [style.height.px]="gridSize"
           appRotable [(rotable.value)]="roll" (rotable.ondragstart)="onMove()" (rotable.ondragend)="onMoved()">
           <div class="rotate-inner is-3d">
             <div *ngIf="0 < name.length" class="name-tag is-nowrap is-black-background is-3d"
