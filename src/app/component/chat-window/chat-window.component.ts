@@ -8,7 +8,7 @@ import { ChatTabSettingComponent } from 'component/chat-tab-setting/chat-tab-set
 import { ChatMessageService } from 'service/chat-message.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
-
+import { ContextMenuService } from 'service/context-menu.service';
 @Component({
   selector: 'chat-window',
   templateUrl: './chat-window.component.html',
@@ -30,7 +30,15 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
       this.scrollToBottom(true);
     }
   }
-
+  public static SoundEffectSwitch: boolean = true;
+  public onSoundEffectSwitchChanged() {
+    if (ChatWindowComponent.SoundEffectSwitch)
+      ChatWindowComponent.SoundEffectSwitch = false
+    else ChatWindowComponent.SoundEffectSwitch = true
+  }
+  public SoundEffectSwitch2() {
+    return ChatWindowComponent.SoundEffectSwitch;
+  }
   get chatTab(): ChatTab { return ObjectStore.instance.get<ChatTab>(this.chatTabidentifier); }
   isAutoScroll: boolean = true;
   scrollToBottomTimer: NodeJS.Timer = null;
@@ -38,6 +46,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor(
     public chatMessageService: ChatMessageService,
     private panelService: PanelService,
+    private contextMenuService: ContextMenuService,
     private pointerDeviceService: PointerDeviceService
   ) { }
 
@@ -93,7 +102,18 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
       this.isAutoScroll = false;
     }
   }
+  diceAllOpne() {
+    if (confirm('「一斉公開しない」設定ではないダイスをすべて公開します。\nよろしいですか？')) {
+      EventSystem.trigger('DICE_ALL_OPEN', null);
+    }
+  }
 
+  resetPointOfView() {
+    this.contextMenuService.open(this.pointerDeviceService.pointers[0], [
+      { name: '回到初期視點', action: () => EventSystem.trigger('RESET_POINT_OF_VIEW', null) },
+      { name: '使用最上方視點', action: () => EventSystem.trigger('RESET_POINT_OF_VIEW', 'top') }
+    ], '改變視点');
+  }
   updatePanelTitle() {
     if (this.chatTab) {
       this.panelService.title = 'チャットウィンドウ - ' + this.chatTab.name;
@@ -113,16 +133,18 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
     component.selectedTab = this.chatTab;
   }
 
-  sendChat(value: { text: string, gameType: string, sendFrom: string, sendTo: string,
-    color?: string, isInverse?:boolean, isHollow?: boolean, isBlackPaint?: boolean, aura?: number, isUseFaceIcon?: boolean, characterIdentifier?: string, standIdentifier?: string, standName?: string, isUseStandImage?: boolean }) {
+  sendChat(value: {
+    text: string, gameType: string, sendFrom: string, sendTo: string,
+    color?: string, isInverse?: boolean, isHollow?: boolean, isBlackPaint?: boolean, aura?: number, isUseFaceIcon?: boolean, characterIdentifier?: string, standIdentifier?: string, standName?: string, isUseStandImage?: boolean
+  }) {
     if (this.chatTab) {
       this.chatMessageService.sendMessage(
-        this.chatTab, 
-        value.text, 
-        value.gameType, 
-        value.sendFrom, 
+        this.chatTab,
+        value.text,
+        value.gameType,
+        value.sendFrom,
         value.sendTo,
-        value.color, 
+        value.color,
         value.isInverse,
         value.isHollow,
         value.isBlackPaint,
