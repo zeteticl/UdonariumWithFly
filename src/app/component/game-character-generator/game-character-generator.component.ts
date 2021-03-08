@@ -4,7 +4,7 @@ import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { ObjectSerializer } from '@udonarium/core/synchronize-object/object-serializer';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { GameCharacter } from '@udonarium/game-character';
 import { GameTableMask } from '@udonarium/game-table-mask';
 import { TableSelecter } from '@udonarium/table-selecter';
@@ -50,17 +50,20 @@ export class GameCharacterGeneratorComponent implements OnInit, OnDestroy, After
   }
 
   ngAfterViewInit() { }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnDestroy() {
     EventSystem.unregister(this);
   }
 
   createGameCharacter() {
-    GameCharacter.create(this.name, this.size, this.tableBackgroundImage.identifier);
+    if (!this.GuestMode())
+      GameCharacter.create(this.name, this.size, this.tableBackgroundImage.identifier);
   }
   createGameTableMask() {
     let viewTable = ObjectStore.instance.get<TableSelecter>('tableSelecter').viewTable;
-    if (!viewTable) return;
+    if (!viewTable || !this.GuestMode()) return;
     let tableMask = GameTableMask.create('マップマスク', 5, 5, 100);
     viewTable.appendChild(tableMask);
   }

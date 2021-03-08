@@ -13,7 +13,7 @@ import {
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { Terrain, TerrainViewState } from '@udonarium/terrain';
@@ -180,7 +180,7 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
   onContextMenu(e: Event) {
     e.stopPropagation();
     e.preventDefault();
-
+    if (this.GuestMode()) return;
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
 
     let menuPosition = this.pointerDeviceService.pointers[0];
@@ -342,8 +342,12 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
   private adjustMinBounds(value: number, min: number = 0): number {
     return value < min ? min : value;
   }
-
-  private showDetail(gameObject: Terrain) {
+  
+  GuestMode() {
+    return Network.GuestMode();
+  }
+  public showDetail(gameObject: Terrain) {
+    if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '地形設定';

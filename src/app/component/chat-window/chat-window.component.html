@@ -1,19 +1,35 @@
 <!--<h2>チャットシステム</h2>-->
 <div class="component">
-<div class="log">
-  <chat-tab *ngIf="chatTab" [chatTab]="chatTab" (onAddMessage)="scrollToBottom()"></chat-tab>
-  <div *ngIf="!chatTab">※チャットタブの内容が更新されました。チャットタブを選択しなおすか、このチャットウィンドウを開きなおしてください。</div>
-</div>
-<div class="sticky-bottom">
-  <form>
-    <div class="chat-tab">
-      <label *ngFor="let chatTab of chatMessageService.chatTabs; trackBy: trackByChatTab">
-        <input name="chat-tab" type="radio" value="{{chatTab.identifier}}" ng-control="options" [(ngModel)]="chatTabidentifier">
-        <div>{{chatTab.name}}<badge *ngIf="chatTab.hasUnread" class="badge" [count]="chatTab.unreadLength"></badge></div>
-      </label>
-      <button class="tab-setting small-font" (click)="showTabSetting()"><i class="material-icons small-font">settings</i>タブ設定</button>
-    </div>
-  </form>
-  <chat-input [chatTabidentifier]="chatTabidentifier" [(gameType)]="gameType" [(sendFrom)]="sendFrom" (chat)="sendChat($event)"></chat-input>
-</div>
-<!--<div style="white-space:pre-wrap; font-size: 8px;"><span>{{gameHelp}}</span></div>-->
+  <div class="log">
+    <chat-tab *ngIf="chatTab" [chatTab]="chatTab" (onAddMessage)="scrollToBottom()"></chat-tab>
+    <div *ngIf="!chatTab">※チャットタブの内容が更新されました。チャットタブを選択しなおすか、このチャットウィンドウを開きなおしてください。</div>
+  </div>
+  <div class="sticky-bottom">
+    <form>
+      <div class="chat-tab">
+        <label *ngFor="let chatTab of chatMessageService.chatTabs; trackBy: trackByChatTab">
+          <input name="chat-tab" type="radio" value="{{chatTab.identifier}}" ng-control="options"
+            [(ngModel)]="chatTabidentifier">
+          <div>{{chatTab.name}}<badge *ngIf="chatTab.hasUnread" class="badge" [count]="chatTab.unreadLength"></badge>
+          </div>
+        </label>
+        <button class="tab-setting small-font" (click)="showTabSetting()"><i
+            class="material-icons small-font">settings</i>タブ設定</button>
+        <button class="tab-setting small-font" (click)="onSoundEffectSwitchChanged()">
+          <i *ngIf="!SoundEffectSwitch2()" class="material-icons icon-size">toggle_on</i>
+          <i *ngIf="SoundEffectSwitch2()" class="material-icons icon-size">toggle_off</i>
+          效果音
+        </button>
+        <button class="tab-setting small-font" (click)="diceAllOpne()">
+          <i class="material-icons icon-size">all_out</i>
+          公開骰子
+        </button>
+        <button class="tab-setting small-font" (click)="resetPointOfView()">
+          <div><i class="material-icons icon-size">remove_red_eye</i>改變視點</div>
+        </button>
+      </div>
+    </form>
+    <chat-input [chatTabidentifier]="chatTabidentifier" [(gameType)]="gameType" [(sendFrom)]="sendFrom"
+      (chat)="sendChat($event)"></chat-input>
+  </div>
+  <!--<div style="white-space:pre-wrap; font-size: 8px;"><span>{{gameHelp}}</span></div>-->

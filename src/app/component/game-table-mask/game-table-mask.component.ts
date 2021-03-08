@@ -13,7 +13,7 @@ import {
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { GameTableMask } from '@udonarium/game-table-mask';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
@@ -69,7 +69,9 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
     private modalService: ModalService,
     private coordinateService: CoordinateService
   ) { }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnInit() {
     EventSystem.register(this)
       .on('UPDATE_GAME_OBJECT', -1000, event => {
@@ -123,7 +125,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
   onContextMenu(e: Event) {
     e.stopPropagation();
     e.preventDefault();
-
+    if (this.GuestMode()) return;
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
     let menuPosition = this.pointerDeviceService.pointers[0];
     let objectPosition = this.coordinateService.calcTabletopLocalCoordinate();
@@ -206,7 +208,8 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
     return value < min ? min : value;
   }
 
-  private showDetail(gameObject: GameTableMask) {
+  public showDetail(gameObject: GameTableMask) {
+    if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = 'マップマスク設定';
     if (gameObject.name.length) title += ' - ' + gameObject.name;

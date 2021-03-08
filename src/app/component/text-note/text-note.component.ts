@@ -2,7 +2,7 @@ import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, E
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { TextNote } from '@udonarium/text-note';
@@ -144,6 +144,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   @HostListener('mousedown', ['$event'])
   onMouseDown(e: any) {
     if (this.isSelected) return;
+    if (this.GuestMode()) return;
     e.preventDefault();
     this.textNote.toTopmost();
 
@@ -174,6 +175,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   @HostListener('contextmenu', ['$event'])
   onContextMenu(e: Event) {
     this.removeMouseEventListeners();
+    if (this.GuestMode()) return;
     if (this.isSelected) return;
     e.stopPropagation();
     e.preventDefault();
@@ -318,8 +320,12 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   private removeMouseEventListeners() {
     document.body.removeEventListener('mouseup', this.callbackOnMouseUp, false);
   }
+  GuestMode() {
+    return Network.GuestMode();
+  }
 
-  private showDetail(gameObject: TextNote) {
+  public showDetail(gameObject: TextNote) {
+    if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '共有メモ設定';
