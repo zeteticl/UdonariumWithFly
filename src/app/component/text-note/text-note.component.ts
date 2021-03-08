@@ -286,7 +286,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
     return Network.GuestMode();
   }
 
-  private showDetail(gameObject: TextNote) {
+  public showDetail(gameObject: TextNote) {
     if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];

@@ -1,6 +1,6 @@
 <div class="component is-3d is-pointer-events-none"
   appMovable [movable.option]="movableOption" [movable.disable]="isSelected || isLocked" (movable.ondragstart)="onMove()" (movable.ondragend)="onMoved()">
-  <div class="is-3d" appRotable [rotable.option]="rotableOption" [rotable.disable]="isLocked" (rotable.ondragstart)="onMove()" (rotable.ondragend)="onMoved()">
+  <div class="is-3d" appRotable [rotable.option]="rotableOption" [rotable.disable]="isLocked" (rotable.ondragstart)="onMove()" (rotable.ondragend)="onMoved()"(dblclick)="showDetail(this.textNote)">
     <div class="component-content is-3d is-pointer-events-auto"
       [style.width.px]="width * gridSize">
       <div class="upright-transform is-3d is-bg-color is-bg-texture" [ngStyle]="{'transform': 'translateZ(' + (altitude * gridSize) + 'px) rotateY(90deg) rotateZ(' + (isUpright ? -90 : 0) + 'deg) rotateY(-90deg)'}"

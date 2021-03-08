@@ -102,6 +102,10 @@
       [ngClass]="{ 'is-pointer-events-auto': !this.isPointerDragging, 'pointer-events-none': this.isPointerDragging }">
       <div class="grid-container-root" *ngIf="hasDataElms">
         <!--<ng-container *ngFor="let dataElm of dataElms">-->
+        <div><button type="submit" (click)="movetocommon()">共有</button>
+          <button type="submit" (click)="movetoid()">個人</button>
+          <button type="submit" (click)="movetograveyard()">墓場</button>
+        </div>
         <ng-container *ngFor="let dataElm of inventoryDataElms">
           <ng-container *ngIf="dataElm && dataElm.name !== newLineString">
             <div class="grid-container">
@@ -183,7 +187,7 @@
         <div class="tag" [attr.title]="dataElm.name">{{dataElm.name}}</div>
         <div class="value">
           <div class="hidden-spacer">{{dataElm.value}}</div>
-          <input class="input" style="width:4em" 
+          <input class="input" style="width:4em"
             type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1"
             [(ngModel)]="dataElm.value" />
         </div>

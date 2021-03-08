@@ -318,10 +318,11 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
   private adjustMinBounds(value: number, min: number = 0): number {
     return value < min ? min : value;
   }
+  
   GuestMode() {
     return Network.GuestMode();
   }
-  private showDetail(gameObject: Terrain) {
+  public showDetail(gameObject: Terrain) {
     if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];

@@ -585,7 +585,8 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     return value < min ? min : value;
   }
 
-  private showDetail(gameObject: GameCharacter) {
+
+  public showDetail(gameObject: GameCharacter) {
     if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = 'キャラクターシート';

@@ -19,7 +19,7 @@ import { PointerDeviceService } from 'service/pointer-device.service';
 import { GameCharacter } from '@udonarium/game-character';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
-
+import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 @Component({
   selector: 'overview-panel',
   templateUrl: './overview-panel.component.html',
@@ -171,6 +171,18 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
     EventSystem.unregister(this);
   }
 
+  movetocommon() {
+    this.tabletopObject.setLocation('common');
+    SoundEffect.play(PresetSound.lock);
+  }
+  movetoid() {
+    this.tabletopObject.setLocation(Network.peerId);
+    SoundEffect.play(PresetSound.lock);
+  }
+  movetograveyard() {
+    this.tabletopObject.setLocation('graveyard');
+    SoundEffect.play(PresetSound.lock);
+  }
   private initPanelPosition() {
     let panel: HTMLElement = this.draggablePanel.nativeElement;
     let outerWidth = panel.offsetWidth;
