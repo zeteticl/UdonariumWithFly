@@ -1,9 +1,11 @@
 @supports (-moz-user-select: -moz-none) {
+
   /* 汚いけどとりあえず */
   .chat-bubble p:after {
     bottom: -28px !important;
   }
-   /*
+
+  /*
   .chat-bubble p.is-whisper:after {
     bottom: -11px !important; 
   }
@@ -22,10 +24,23 @@
   cursor: grabbing;
 }
 
+.is-Yellow-border {
+  border: solid 6px #FFCC80;
+}
+
+.is-opacity {
+  opacity: 0.6;
+}
+
+.is-disabled {
+  display: none;
+}
+
 .is-3d {
   -webkit-transform-style: preserve-3d;
   transform-style: preserve-3d;
 }
+
 /*
 .is-transition {
   -webkit-transition: -webkit-transform 132ms linear;
@@ -38,8 +53,8 @@
 }
 */
 .upright-transform.fall {
-  -webkit-transition: -webkit-transform 132ms cubic-bezier(.21,.97,.75,1.25);
-  transition: transform 132ms cubic-bezier(.21,.97,.75,1.25);
+  -webkit-transition: -webkit-transform 132ms cubic-bezier(.21, .97, .75, 1.25);
+  transition: transform 132ms cubic-bezier(.21, .97, .75, 1.25);
 }
 
 .is-pointer-events-none {
@@ -101,6 +116,7 @@
   border: solid 6px #FFCC80;
   border-radius: 25px;
 }
+
 .pedestal-inner.not-inventory {
   border-color: #80CCEE;
 }
@@ -145,10 +161,12 @@
   height: auto;
   vertical-align: bottom;
 }
+
 .image-box {
   display: inline-block;
   text-align: center;
 }
+
 .image-box img {
   object-fit: contain;
   object-position: 50% 100%;
@@ -159,13 +177,16 @@
 .inverse {
   transform: scaleX(-1);
 }
+
 .inverser {
   transition: transform 132ms 0s ease;
 }
+
 .hollow {
   opacity: 0.6;
   filter: blur(1px);
 }
+
 .black-paint {
   filter: brightness(0);
 }
@@ -177,24 +198,31 @@
 .aura.black {
   filter: drop-shadow(0 -4px 4px black);
 }
+
 .aura.blue {
   filter: drop-shadow(0 -4px 4px #33f);
 }
+
 .aura.green {
   filter: drop-shadow(0 -4px 4px #3f3);
 }
+
 .aura.cyan {
   filter: drop-shadow(0 -4px 4px #3ff);
 }
+
 .aura.red {
   filter: drop-shadow(0 -4px 4px #f00);
 }
+
 .aura.magenta {
   filter: drop-shadow(0 -4px 4px #f0f);
 }
+
 .aura.yellow {
   filter: drop-shadow(0 -4px 4px #ff3);
 }
+
 .aura.white {
   filter: drop-shadow(0 -4px 4px #fff);
 }
@@ -212,7 +240,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  
+
   overflow: visible;
 }
 
@@ -238,7 +266,7 @@
 }
 
 .fornt-tag {
- backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .back-tag {
@@ -311,7 +339,8 @@
   opacity: 0;
 }
 
-.component .rotate-grab:hover, .component .rotate-grab:active {
+.component .rotate-grab:hover,
+.component .rotate-grab:active {
   opacity: 1;
 }
 
@@ -319,19 +348,23 @@
   display: none;
 }
 
-.component:hover .material-icons, .component:active .material-icons {
+.component:hover .material-icons,
+.component:active .material-icons {
   display: inline;
 }
 
 .altitude-indicator {
   font-size: 10px;
 }
-.elevation-indicator, .altitude-indicator {
+
+.elevation-indicator,
+.altitude-indicator {
   padding-left: 2px;
   color: black;
   text-shadow: whitesmoke 0px 0px 3px;
   backface-visibility: hidden;
 }
+
 .elevation-indicator {
   font-weight: bolder;
   font-size: 12px;
@@ -373,7 +406,7 @@
 
 .chat-bubble p.is-whisper {
   border-radius: 24px 12px;
-  font-size: 11px; 
+  font-size: 11px;
   background: rgba(85, 85, 85, 0.8);
   box-shadow: 0px 0px 2px 0px #ccc;
 }
@@ -395,7 +428,7 @@
   margin: 0px;
   padding: 0px;
   line-height: 1;
-	vertical-align: baseline;
+  vertical-align: baseline;
   left: 50%;
   margin-left: -8px;
   bottom: -17px;
@@ -406,6 +439,7 @@
 .chat-bubble p.emote:after {
   border: 0px none transparent;
 }
+
 /*
 .chat-bubble p.emote:after {
   border-top-color: transparent;
@@ -431,12 +465,14 @@
   animation: chat-bubble-buyo 1.2s ease-in-out 0.1s infinite alternate;
   transform: scale3d(0.9, 0.9, 0.9);
 }
+
 .chat-bubble-buyo.back {
   transform-origin: center calc(100% + 8px);
   transition: all .2s ease;
   animation: chat-bubble-buyo-back 1.2s ease-in-out 0.1s infinite alternate;
   transform: rotateY(-180deg) scale3d(0.9, 0.9, 0.9);
 }
+
 .chat-bubble-buyo.emote {
   animation-duration: .6s;
 }
@@ -445,6 +481,7 @@
   0% {
     transform: scale3d(0.9, 0.9, 0.9);
   }
+
   100% {
     transform: scale3d(1, 1, 1);
   }
@@ -454,6 +491,7 @@
   0% {
     transform: rotateY(-180deg) scale3d(0.9, 0.9, 0.9);
   }
+
   100% {
     transform: rotateY(-180deg) scale3d(1, 1, 1);
   }
@@ -478,6 +516,7 @@
   margin-bottom: -22px;
   /* background: linear-gradient(-30deg, rgb(240, 218, 189), rgb(255, 244, 232)); */
 }
+
 .face-icon-box img {
   width: 100%;
   height: 100%;
@@ -486,6 +525,7 @@
   object-position: 50% 0%;
   border-radius: 0.4em;
 }
+
 /*
 p.is-wisper .face-icon {
   background: rgb(48, 45, 45);

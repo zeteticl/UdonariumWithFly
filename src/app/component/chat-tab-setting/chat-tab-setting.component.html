@@ -21,6 +21,7 @@
       <hr/>
       <div>
         <ng-container *ngIf="!isDeleted">
+          <button (click)="save_log()">Export Log(.HTML)</button>
           <button (click)="upTabIndex()">↑</button>
           <button (click)="downTabIndex()">↓</button>
           <button [disabled]="isSaveing" (click)="save()">

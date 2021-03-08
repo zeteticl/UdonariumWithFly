@@ -4,7 +4,7 @@ import { Card } from '@udonarium/card';
 import { CardStack } from '@udonarium/card-stack';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { GameObject } from '@udonarium/core/synchronize-object/game-object';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { DiceSymbol } from '@udonarium/dice-symbol';
 import { GameCharacter } from '@udonarium/game-character';
 import { FilterType, GameTable, GridType } from '@udonarium/game-table';
@@ -88,7 +88,9 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     private tabletopActionService: TabletopActionService,
     private modalService: ModalService,
   ) { }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnInit() {
     EventSystem.register(this)
       .on('UPDATE_GAME_OBJECT', -1000, event => {
@@ -128,7 +130,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     this.tabletopActionService.makeDefaultTabletopObjects();
   }
 
-  private _rightRotate(rotate: number, just: boolean=false): number {
+  private _rightRotate(rotate: number, just: boolean = false): number {
     let tmp = rotate % 360;
     if (!just) {
       if (tmp > 180) {
@@ -255,7 +257,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     e.preventDefault();
 
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
-
+    if (this.GuestMode()) return;
     let menuPosition = this.pointerDeviceService.pointers[0];
     let objectPosition = this.coordinateService.calcTabletopLocalCoordinate();
     let menuActions: ContextMenuAction[] = [];
@@ -270,7 +272,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
     this.contextMenuService.open(menuPosition, menuActions, this.currentTable.name);
   }
 
-  private setTransform(transformX: number, transformY: number, transformZ: number, rotateX: number, rotateY: number, rotateZ: number, isAbsolute: boolean=false) {
+  private setTransform(transformX: number, transformY: number, transformZ: number, rotateX: number, rotateY: number, rotateZ: number, isAbsolute: boolean = false) {
     if (isAbsolute) {
       this.viewRotateX = rotateX;
       this.viewRotateY = rotateY;

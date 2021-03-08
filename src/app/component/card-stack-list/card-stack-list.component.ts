@@ -26,7 +26,9 @@ export class CardStackListComponent implements OnInit, OnDestroy {
     private panelService: PanelService,
     private changeDetector: ChangeDetectorRef,
   ) { }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnInit() {
     Promise.resolve().then(() => this.panelService.title = this.cardStack.name + ' 的卡牌清單');
     EventSystem.register(this)
@@ -56,6 +58,7 @@ export class CardStackListComponent implements OnInit, OnDestroy {
   }
 
   drawCard(card: Card) {
+    if (this.GuestMode()) return;
     card.parent.removeChild(card);
     card.location.x = this.cardStack.location.x + 100 + (Math.random() * 50);
     card.location.y = this.cardStack.location.y + 25 + (Math.random() * 50);
@@ -67,6 +70,7 @@ export class CardStackListComponent implements OnInit, OnDestroy {
   }
 
   up(card: Card) {
+    if (this.GuestMode()) return;
     let parent = card.parent;
     let index: number = parent.children.indexOf(card);
     if (0 < index) {
@@ -76,6 +80,7 @@ export class CardStackListComponent implements OnInit, OnDestroy {
   }
 
   down(card: Card) {
+    if (this.GuestMode()) return;
     let parent = card.parent;
     let index: number = parent.children.indexOf(card);
     if (index < parent.children.length - 1) {
@@ -85,6 +90,7 @@ export class CardStackListComponent implements OnInit, OnDestroy {
   }
 
   close(needShuffle: boolean = false) {
+    if (this.GuestMode()) return;
     if (needShuffle) {
       this.cardStack.shuffle();
       EventSystem.call('SHUFFLE_CARD_STACK', { identifier: this.cardStack.identifier });
@@ -94,6 +100,7 @@ export class CardStackListComponent implements OnInit, OnDestroy {
   }
 
   showDetail(gameObject: Card) {
+    if (this.GuestMode()) return;
     let coordinate = {
       x: this.panelService.left,
       y: this.panelService.top

@@ -43,6 +43,7 @@ export class DiceBot extends GameObject {
   public static diceBotInfos: DiceBotInfo[] = [
     { script: 'Cthulhu_ChineseTraditional', game: '克蘇魯的呼喚', lang: '正體中文' },
     { script: 'Cthulhu7th_ChineseTraditional', game: '克蘇魯的呼喚 第七版', lang: '正體中文' },
+    { script: 'Satasupe', game: '亞俠', lang: '正體中文' },
     { script: 'EarthDawn', game: 'アースドーン' },
     { script: 'EarthDawn3', game: 'アースドーン3版' },
     { script: 'EarthDawn4', game: 'アースドーン4版' },
@@ -99,7 +100,6 @@ export class DiceBot extends GameObject {
     { script: 'Gorilla', game: 'ゴリラTRPG' },
     { script: 'ColossalHunter', game: 'コロッサルハンター' },
     { script: 'Postman', game: '壊れた世界のポストマン' },
-    { script: 'Satasupe', game: 'サタスペ' },
     { script: 'SamsaraBallad', game: 'サンサーラ・バラッド' },
     { script: 'SharedFantasia', game: 'Shared†Fantasia' },
     { script: 'JamesBond', game: 'ジェームズ・ボンド007' },
@@ -210,8 +210,7 @@ export class DiceBot extends GameObject {
     { script: 'LostRoyal', game: 'ロストロイヤル' },
     { script: 'WaresBlade', game: 'ワースブレイド' },
     { script: 'WARPS', game: 'ワープス' },
-    { script: 'WorldOfDarkness', game: 'ワールド・オブ・ダークネス' },
-
+    { script: 'WorldOfDarkness', game: 'ワールド・オブ・ダークネス' }
   ];
 
   public static diceBotInfosIndexed: DiceBotInfosIndexed[] = [];

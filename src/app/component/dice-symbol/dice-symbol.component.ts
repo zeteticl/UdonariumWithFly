@@ -245,7 +245,9 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
     this.startDoubleClickTimer(e);
     this.startIconHiddenTimer();
   }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   startDoubleClickTimer(e) {
     if (!this.doubleClickTimer) {
       this.stopDoubleClickTimer();
@@ -279,20 +281,20 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
   onContextMenu(e: Event) {
     e.stopPropagation();
     e.preventDefault();
-
+    if (this.GuestMode()) return;
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
     let position = this.pointerDeviceService.pointers[0];
 
     let actions: ContextMenuAction[] = [];
 
     //if (this.isVisible) {
-      actions.push({
-        name: '擲骰子', action: () => {
-          this.diceRoll();
-        },
-        disabled: !this.isVisible,
-        default: this.isVisible
-      });
+    actions.push({
+      name: '擲骰子', action: () => {
+        this.diceRoll();
+      },
+      disabled: !this.isVisible,
+      default: this.isVisible
+    });
     //}
     actions.push(ContextMenuSeparator);
     if (this.isMine || this.hasOwner) {
@@ -406,12 +408,14 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   diceRoll(): string {
+    if (this.GuestMode()) return;
     EventSystem.call('ROLL_DICE_SYNBOL', { identifier: this.diceSymbol.identifier });
     SoundEffect.play(PresetSound.diceRoll1);
     return this.diceSymbol.diceRoll();
   }
 
   showDetail(gameObject: DiceSymbol) {
+    if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '骰子設定';

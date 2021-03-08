@@ -1,7 +1,7 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ObjectSerializer } from '@udonarium/core/synchronize-object/object-serializer';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { DiceRollTable } from '@udonarium/dice-roll-table';
 import { DiceRollTableList } from '@udonarium/dice-roll-table-list';
 import { TextViewComponent } from 'component/text-view/text-view.component';
@@ -59,7 +59,9 @@ export class DiceRollTableSettingComponent implements OnInit, OnDestroy, AfterVi
         }
       });
   }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngAfterViewInit() {
     //const diceRollTables = DiceRollTableList.instance.diceRollTables;
     if (this.diceRollTables.length > 0) {
@@ -80,18 +82,21 @@ export class DiceRollTableSettingComponent implements OnInit, OnDestroy, AfterVi
   }
 
   create(name: string = '簡易骰子表'): DiceRollTable {
+    if (this.GuestMode()) return;
     return DiceRollTableList.instance.addDiceRollTable(name)
   }
 
   add() {
+    if (this.GuestMode()) return;
     const diceRollTable = this.create('簡易骰子表');
     setTimeout(() => {
       this.onChangeDiceRollTable(diceRollTable.identifier);
       this.diceRollTableSelecter.nativeElement.value = diceRollTable.identifier;
     })
   }
-  
+
   async save() {
+    if (this.GuestMode()) return;
     if (!this.selectedDiceRollTable || this.isSaveing) return;
     this.isSaveing = true;
     this.progresPercent = 0;
@@ -109,6 +114,7 @@ export class DiceRollTableSettingComponent implements OnInit, OnDestroy, AfterVi
   }
 
   delete() {
+    if (this.GuestMode()) return;
     if (!this.isEmpty && this.selectedDiceRollTable) {
       this.selectedDiceRollTableXml = this.selectedDiceRollTable.toXml();
       this.selectedDiceRollTable.destroy();
@@ -116,6 +122,7 @@ export class DiceRollTableSettingComponent implements OnInit, OnDestroy, AfterVi
   }
 
   restore() {
+    if (this.GuestMode()) return;
     if (this.selectedDiceRollTable && this.selectedDiceRollTableXml) {
       let restoreTable = <DiceRollTable>ObjectSerializer.instance.parseXml(this.selectedDiceRollTableXml);
       DiceRollTableList.instance.addDiceRollTable(restoreTable);
@@ -124,6 +131,7 @@ export class DiceRollTableSettingComponent implements OnInit, OnDestroy, AfterVi
   }
 
   upTabIndex() {
+    if (this.GuestMode()) return;
     if (!this.selectedDiceRollTable) return;
     let parentElement = this.selectedDiceRollTable.parent;
     let index: number = parentElement.children.indexOf(this.selectedDiceRollTable);
@@ -134,6 +142,7 @@ export class DiceRollTableSettingComponent implements OnInit, OnDestroy, AfterVi
   }
 
   downTabIndex() {
+    if (this.GuestMode()) return;
     if (!this.selectedDiceRollTable) return;
     let parentElement = this.selectedDiceRollTable.parent;
     let index: number = parentElement.children.indexOf(this.selectedDiceRollTable);
@@ -144,12 +153,13 @@ export class DiceRollTableSettingComponent implements OnInit, OnDestroy, AfterVi
   }
 
   helpDiceRollTable() {
+    if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
     let option: PanelOption = { left: coordinate.x, top: coordinate.y, width: 600, height: 460 };
     let textView = this.panelService.open(TextViewComponent, option);
     textView.title = '簡易骰子表幫助';
-    textView.text = 
-`　名前、コマンド、振るダイスを設定し、ダイスの数字で表を参照し、表示します。
+    textView.text =
+      `　名前、コマンド、振るダイスを設定し、ダイスの数字で表を参照し、表示します。
 　チャットでコマンドを送信することにより、ダイスボットと同様に結果が送信されます、なおコマンドには英数、記号のみ使用可能です。
 　表は1行ごとに数字と結果を:（コロン）で区切り「数字:結果」の形で記述します（よって、ダイスは最後に一つの数字を返すものである必要があります、バラバラロール nBm の成功数にも対応しています）。
 　

@@ -112,7 +112,9 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
     private pointerDeviceService: PointerDeviceService,
     private modalService: ModalService
   ) { }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnInit() {
     EventSystem.register(this)
       .on('UPDATE_GAME_OBJECT', -1000, event => {
@@ -158,6 +160,7 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   @HostListener('carddrop', ['$event'])
   onCardDrop(e) {
+    if (this.GuestMode()) return;
     if (this.card === e.detail || (e.detail instanceof Card === false && e.detail instanceof CardStack === false)) {
       return;
     }
@@ -198,6 +201,7 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onDoubleClick() {
+    if (this.GuestMode()) return;
     this.stopDoubleClickTimer();
     let distance = (this.doubleClickPoint.x - this.input.pointer.x) ** 2 + (this.doubleClickPoint.y - this.input.pointer.y) ** 2;
     if (distance < 10 ** 2) {
@@ -223,6 +227,7 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   @HostListener('contextmenu', ['$event'])
   onContextMenu(e: Event) {
+    if (this.GuestMode()) return;
     e.stopPropagation();
     e.preventDefault();
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
@@ -308,6 +313,7 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private createStack() {
+    if (this.GuestMode()) return;
     let cardStack = CardStack.create('牌堆');
     cardStack.location.x = this.card.location.x;
     cardStack.location.y = this.card.location.y;
@@ -357,6 +363,7 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private showDetail(gameObject: Card) {
+    if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '卡牌設置';

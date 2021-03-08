@@ -19,6 +19,7 @@ import { GameObjectInventoryService } from 'service/game-object-inventory.servic
 import { ModalService } from 'service/modal.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
+import { DiceBot } from '@udonarium/dice-bot';
 
 @Component({
   selector: 'game-object-inventory',
@@ -45,6 +46,11 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   get indicateAll(): boolean { return this.inventoryService.indicateAll; }
   set indicateAll(indicateAll: boolean) { this.inventoryService.indicateAll = indicateAll; }
 
+  get diceBotInfos() { return DiceBot.diceBotInfos }
+  get gameType(): string { return this.inventoryService.gameType; }
+  set gameType(gameType: string) { this.inventoryService.gameType = gameType; }
+
+
   get sortOrderName(): string { return this.sortOrder === SortOrder.ASC ? '昇順' : '降順'; }
 
   get newLineString(): string { return this.inventoryService.newLineString; }
@@ -57,7 +63,9 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
     private pointerDeviceService: PointerDeviceService,
     private modalService: ModalService
   ) { }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnInit() {
     Promise.resolve().then(() => this.panelService.title = '倉庫');
     EventSystem.register(this)
@@ -90,6 +98,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   }
 
   getTabTitle(inventoryType: string) {
+    if (this.GuestMode()) return;
     switch (inventoryType) {
       case 'table':
         return '桌面';
@@ -103,6 +112,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   }
 
   getInventory(inventoryType: string) {
+    if (this.GuestMode()) return;
     switch (inventoryType) {
       case 'table':
         return this.inventoryService.tableInventory;
@@ -127,26 +137,26 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
     if (document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute('type') !== 'range') return;
     e.stopPropagation();
     e.preventDefault();
-
+    if (this.GuestMode()) return;
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
 
     this.selectGameObject(gameObject);
 
     let position = this.pointerDeviceService.pointers[0];
-    
+
     let actions: ContextMenuAction[] = [];
     if (gameObject.imageFiles.length > 1) {
       actions.push({
         name: '圖片切換',
         action: null,
         subActions: gameObject.imageFiles.map((image, i) => {
-          return { 
-            name: `${gameObject.currntImageIndex == i ? '◉' : '○'}`, 
-            action: () => { 
+          return {
+            name: `${gameObject.currntImageIndex == i ? '◉' : '○'}`,
+            action: () => {
               gameObject.currntImageIndex = i;
               SoundEffect.play(PresetSound.surprise);
               EventSystem.trigger('UPDATE_INVENTORY', null);
-            }, 
+            },
             default: gameObject.currntImageIndex == i,
             icon: image
           };
@@ -232,7 +242,8 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
           },
           disabled: !gameObject.isInverse && !gameObject.isHollow && !gameObject.isBlackPaint && gameObject.aura == -1
         }
-    ]});
+      ]
+    });
     actions.push(ContextMenuSeparator);
     actions.push((!gameObject.isNotRide
       ? {
@@ -273,7 +284,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
     actions.push(ContextMenuSeparator);
     actions.push({ name: '顯示詳情', action: () => { this.showDetail(gameObject); } });
     //if (gameObject.location.name !== 'graveyard') {
-      actions.push({ name: '顯示聊天面板', action: () => { this.showChatPalette(gameObject) }, disabled: gameObject.location.name === 'graveyard' });
+    actions.push({ name: '顯示聊天面板', action: () => { this.showChatPalette(gameObject) }, disabled: gameObject.location.name === 'graveyard' });
     //}
     actions.push({ name: 'Stand設定', action: () => { this.showStandSetting(gameObject) } });
     actions.push(ContextMenuSeparator);
@@ -311,14 +322,14 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
       { name: 'graveyard', alias: '墓場' }
     ];
     actions.push({
-      name: `${ (locations.find((location) => { return location.name == gameObject.location.name }) || locations[1]).alias }移動`,
+      name: `${(locations.find((location) => { return location.name == gameObject.location.name }) || locations[1]).alias}移動`,
       action: null,
       subActions: locations
         .filter((location, i) => { return !(gameObject.location.name == location.name || (i == 1 && !locations.map(loc => loc.name).includes(gameObject.location.name))) })
-        .map((location) => { 
+        .map((location) => {
           return {
-            name: `${location.alias}`, 
-            action: () => { 
+            name: `${location.alias}`,
+            action: () => {
               EventSystem.call('FAREWELL_STAND_IMAGE', { characterIdentifier: gameObject.identifier });
               gameObject.setLocation(location.name);
               if (location.name == 'graveyard') {
@@ -327,7 +338,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
                 SoundEffect.play(PresetSound.piecePut);
               }
             }
-          } 
+          }
         })
     });
     /*
@@ -359,11 +370,20 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
     this.contextMenuService.open(position, actions, gameObject.name);
   }
 
+  onChangeGameType(gameType: string) {
+    console.log('onChangeGameType ready');
+    DiceBot.getHelpMessage(this.gameType).then(help => {
+      console.log('onChangeGameType done\n' + help + gameType);
+    });
+  }
+
+
   toggleEdit() {
     this.isEdit = !this.isEdit;
   }
 
   cleanInventory() {
+    if (this.GuestMode()) return;
     let tabTitle = this.getTabTitle(this.selectTab);
     let gameObjects = this.getGameObjects(this.selectTab);
     if (!confirm(`${tabTitle}存在${gameObjects.length}個物件，要永久刪除嗎？`)) return;
@@ -374,10 +394,12 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private cloneGameObject(gameObject: TabletopObject) {
+    if (this.GuestMode()) return;
     gameObject.clone();
   }
 
   private showDetail(gameObject: GameCharacter) {
+    if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '角色卡';
@@ -388,6 +410,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private showChatPalette(gameObject: GameCharacter) {
+    if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
     let option: PanelOption = { left: coordinate.x - 250, top: coordinate.y - 175, width: 620, height: 350 };
     let component = this.panelService.open<ChatPaletteComponent>(ChatPaletteComponent, option);
@@ -395,22 +418,25 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   }
 
   selectGameObject(gameObject: GameObject) {
+    if (this.GuestMode()) return;
     let aliasName: string = gameObject.aliasName;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
   }
 
   private deleteGameObject(gameObject: GameObject) {
+    if (this.GuestMode()) return;
     gameObject.destroy();
     this.changeDetector.markForCheck();
   }
 
   private showStandSetting(gameObject: GameCharacter) {
+    if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
     let option: PanelOption = { left: coordinate.x - 400, top: coordinate.y - 175, width: 730, height: 572 };
     let component = this.panelService.open<StandSettingComponent>(StandSettingComponent, option);
     component.character = gameObject;
   }
-  
+
   trackByGameObject(index: number, gameObject: GameObject) {
     return gameObject ? gameObject.identifier : index;
   }

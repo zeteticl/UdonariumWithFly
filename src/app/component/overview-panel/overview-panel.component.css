@@ -545,3 +545,7 @@ input[type='range']::-ms-tooltip {
 .aura.white {
   filter: drop-shadow(0 -6px 6px #fff);
 }
+
+button[type='submit']{
+  font-size: 5px;
+}

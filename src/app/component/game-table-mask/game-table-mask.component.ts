@@ -13,7 +13,7 @@ import {
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { GameTableMask } from '@udonarium/game-table-mask';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
@@ -27,7 +27,7 @@ import { CoordinateService } from 'service/coordinate.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopActionService } from 'service/tabletop-action.service';
-
+import { PeerCursor } from '@udonarium/peer-cursor';
 @Component({
   selector: 'game-table-mask',
   templateUrl: './game-table-mask.component.html',
@@ -45,7 +45,13 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
   get imageFile(): ImageFile { return this.gameTableMask.imageFile; }
   get isLock(): boolean { return this.gameTableMask.isLock; }
   set isLock(isLock: boolean) { this.gameTableMask.isLock = isLock; }
-
+  get GM(): string { return this.gameTableMask.GM; }
+  set GM(GM: string) { this.gameTableMask.GM = GM; }
+  get isMine(): boolean { return this.gameTableMask.isMine; }
+  get hasGM(): boolean { return this.gameTableMask.hasGM; }
+  get isDisabled(): boolean {
+    return this.gameTableMask.isDisabled;
+  }
   gridSize: number = 50;
 
   movableOption: MovableOption = {};
@@ -63,13 +69,15 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
     private modalService: ModalService,
     private coordinateService: CoordinateService
   ) { }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnInit() {
     EventSystem.register(this)
       .on('UPDATE_GAME_OBJECT', -1000, event => {
         let object = ObjectStore.instance.get(event.data.identifier);
         if (!this.gameTableMask || !object) return;
-        if (this.gameTableMask === object || (object instanceof ObjectNode && this.gameTableMask.contains(object))) {
+        if (this.gameTableMask === object || (object instanceof ObjectNode && this.gameTableMask.contains(object)|| (object instanceof PeerCursor && object.peerId === this.gameTableMask.GM))) {
           this.changeDetector.markForCheck();
         }
       })
@@ -117,7 +125,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
   onContextMenu(e: Event) {
     e.stopPropagation();
     e.preventDefault();
-
+    if (this.GuestMode()) return;
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
     let menuPosition = this.pointerDeviceService.pointers[0];
     let objectPosition = this.coordinateService.calcTabletopLocalCoordinate();
@@ -135,7 +143,21 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
             SoundEffect.play(PresetSound.lock);
           }
         }
-      ),
+      ), ContextMenuSeparator,
+      (!this.isMine
+        ? {
+          name: 'GM圖層-只供自己看見', action: () => {
+            this.GM = PeerCursor.myCursor.name;
+            this.gameTableMask.setLocation('table')
+            SoundEffect.play(PresetSound.lock);
+          }
+        } : {
+          name: '回到普通圖層', action: () => {
+            this.GM = '';
+            this.gameTableMask.setLocation('table')
+            SoundEffect.play(PresetSound.unlock);
+          }
+        }),
       ContextMenuSeparator,
       { name: 'マップマスクを編集', action: () => { this.showDetail(this.gameTableMask); } },
       (this.gameTableMask.getUrls().length <= 0 ? null : {
@@ -186,7 +208,8 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
     return value < min ? min : value;
   }
 
-  private showDetail(gameObject: GameTableMask) {
+  public showDetail(gameObject: GameTableMask) {
+    if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '地圖遮罩設置';
     if (gameObject.name.length) title += ' - ' + gameObject.name;

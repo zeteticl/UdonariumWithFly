@@ -123,7 +123,9 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
     private pointerDeviceService: PointerDeviceService,
     private modalService: ModalService
   ) { }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnInit() {
     EventSystem.register(this)
       .on('SHUFFLE_CARD_STACK', -1000, event => {
@@ -193,6 +195,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @HostListener('carddrop', ['$event'])
   onCardDrop(e) {
+    if (this.GuestMode()) return;
     if (this.cardStack === e.detail || (e.detail instanceof Card === false && e.detail instanceof CardStack === false)) {
       return;
     }
@@ -232,6 +235,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onDoubleClick() {
+    if (this.GuestMode()) return;
     this.stopDoubleClickTimer();
     let distance = (this.doubleClickPoint.x - this.input.pointer.x) ** 2 + (this.doubleClickPoint.y - this.input.pointer.y) ** 2;
     if (distance < 10 ** 2) {
@@ -249,6 +253,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onInputStart(e: MouseEvent | TouchEvent) {
+    if (this.GuestMode()) return;
     this.startDoubleClickTimer(e);
     this.cardStack.toTopmost();
     this.startIconHiddenTimer();
@@ -258,6 +263,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @HostListener('contextmenu', ['$event'])
   onContextMenu(e: Event) {
+    if (this.GuestMode()) return;
     e.stopPropagation();
     e.preventDefault();
 
@@ -296,14 +302,14 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
         name: 'face Up', action: () => {
           this.cardStack.faceUp();
           SoundEffect.play(PresetSound.cardDraw);
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       {
         name: 'face Down', action: () => {
           this.cardStack.faceDown();
           SoundEffect.play(PresetSound.cardDraw);
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       ContextMenuSeparator,
@@ -311,21 +317,21 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
         name: '所有卡牌face Up', action: () => {
           this.cardStack.faceUpAll();
           SoundEffect.play(PresetSound.cardDraw);
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       {
         name: '所有卡牌face Down', action: () => {
           this.cardStack.faceDownAll();
           SoundEffect.play(PresetSound.cardDraw);
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       {
         name: '將所有卡牌放在正確的位置', action: () => {
           this.cardStack.uprightAll();
           SoundEffect.play(PresetSound.cardDraw);
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       ContextMenuSeparator,
@@ -334,7 +340,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
           this.cardStack.shuffle();
           SoundEffect.play(PresetSound.cardShuffle);
           EventSystem.call('SHUFFLE_CARD_STACK', { identifier: this.cardStack.identifier });
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       { name: '查看卡牌清單', action: () => { this.showStackList(this.cardStack); }, disabled: this.cards.length == 0 },
@@ -349,14 +355,14 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
         name: '根據人數分發卡牌', action: () => {
           this.splitStack(Network.peerIds.length);
           SoundEffect.play(PresetSound.cardDraw);
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       {
         name: '打破牌堆', action: () => {
           this.breakStack();
           SoundEffect.play(PresetSound.cardShuffle);
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       {
@@ -365,7 +371,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
           SoundEffect.play(PresetSound.cardDraw);
           SoundEffect.play(PresetSound.cardDraw);
           EventSystem.call('INVERSE_CARD_STACK', { identifier: this.cardStack.identifier });
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       ContextMenuSeparator,
@@ -437,6 +443,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private splitStack(split: number) {
+    if (this.GuestMode()) return;
     if (split < 2) return;
     let cardStacks: CardStack[] = [];
     for (let i = 0; i < split; i++) {
@@ -466,6 +473,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private concatStack(topStack: CardStack, bottomStack: CardStack = this.cardStack) {
+    if (this.GuestMode()) return;
     let newCardStack = CardStack.create(topStack.name);
     newCardStack.location.name = bottomStack.location.name;
     newCardStack.location.x = bottomStack.location.x;
@@ -496,6 +504,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private showDetail(gameObject: CardStack) {
+    if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '設定牌堆';
@@ -506,6 +515,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private showStackList(gameObject: CardStack) {
+    if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
 
     let coordinate = this.pointerDeviceService.pointers[0];

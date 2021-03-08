@@ -16,7 +16,7 @@ import { PanelService } from 'service/panel.service';
   styleUrls: ['./lobby.component.css'],
 })
 export class LobbyComponent implements OnInit, OnDestroy {
-  rooms: { alias: string, roomName: string, peerContexts: PeerContext[] }[] = [];
+  rooms: { alias: string, roomName: string, peerContexts: PeerContext[], isAllowGuest: boolean }[] = [];
 
   isReloading: boolean = false;
 
@@ -72,7 +72,7 @@ export class LobbyComponent implements OnInit, OnDestroy {
       }
     }
     for (let alias in peersOfroom) {
-      this.rooms.push({ alias: alias, roomName: peersOfroom[alias][0].roomName, peerContexts: peersOfroom[alias] });
+      this.rooms.push({ alias: alias, roomName: peersOfroom[alias][0].roomName, peerContexts: peersOfroom[alias], isAllowGuest: peersOfroom[alias][0].isAllowGuest });
     }
     this.rooms.sort((a, b) => {
       if (a.alias < b.alias) return -1;
@@ -83,19 +83,18 @@ export class LobbyComponent implements OnInit, OnDestroy {
     this.isReloading = false;
   }
 
-  async connect(peerContexts: PeerContext[]) {
+  async connect(peerContexts: PeerContext[], isGuest?: boolean) {
     let context = peerContexts[0];
     let password = '';
-
-    if (context.hasPassword) {
+    if (context.hasPassword && !isGuest) {
       password = await this.modalService.open<string>(PasswordCheckComponent, { peerId: context.peerId, title: `${context.roomName}/${context.roomId}` });
       if (password == null) password = '';
     }
 
-    if (!context.verifyPassword(password)) return;
+    if (!context.verifyPassword(password) && !(context.isAllowGuest && isGuest)) return;
 
     let userId = Network.peerContext ? Network.peerContext.userId : PeerContext.generateId();
-    Network.open(userId, context.roomId, context.roomName, password);
+    Network.open(userId, context.roomId, context.roomName, password, context.isAllowGuest, isGuest);
     PeerCursor.myCursor.peerId = Network.peerId;
 
     let triedPeer: string[] = [];

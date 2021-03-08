@@ -9,6 +9,7 @@ import { PeerCursor } from '@udonarium/peer-cursor';
 import { ChatInputComponent } from 'component/chat-input/chat-input.component';
 import { ChatMessageService } from 'service/chat-message.service';
 import { PanelService } from 'service/panel.service';
+import { GameObjectInventoryService } from 'service/game-object-inventory.service';
 
 @Component({
   selector: 'chat-palette',
@@ -59,13 +60,19 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
 
   constructor(
     public chatMessageService: ChatMessageService,
+    private inventoryService: GameObjectInventoryService,
     private panelService: PanelService
   ) { }
 
   ngOnInit() {
     Promise.resolve().then(() => this.updatePanelTitle());
     this.chatTabidentifier = this.chatMessageService.chatTabs ? this.chatMessageService.chatTabs[0].identifier : '';
-    this.gameType = this.character.chatPalette ? this.character.chatPalette.dicebot : '';
+    if (this.character.chatPalette != null && this.character.chatPalette.dicebot != '') {
+      this.gameType = this.character.chatPalette.dicebot;
+    } else {
+      this.gameType = this.inventoryService.gameType;
+    }
+
     EventSystem.register(this)
       .on('DELETE_GAME_OBJECT', -1000, event => {
         if (this.character && this.character.identifier === event.data.identifier) {
@@ -122,17 +129,19 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
     }
   }
 
-  sendChat(value: { text: string, gameType: string, sendFrom: string, sendTo: string,
-    color?: string, isInverse?:boolean, isHollow?: boolean, isBlackPaint?: boolean, aura?: number, isUseFaceIcon?: boolean, characterIdentifier?: string, standIdentifier?: string, standName?: string, isUseStandImage?: boolean }) {
+  sendChat(value: {
+    text: string, gameType: string, sendFrom: string, sendTo: string,
+    color?: string, isInverse?: boolean, isHollow?: boolean, isBlackPaint?: boolean, aura?: number, isUseFaceIcon?: boolean, characterIdentifier?: string, standIdentifier?: string, standName?: string, isUseStandImage?: boolean
+  }) {
     if (this.chatTab) {
       let text = this.palette.evaluate(value.text, this.character.rootDataElement);
       this.chatMessageService.sendMessage(
-        this.chatTab, 
-        text, 
-        value.gameType, 
-        value.sendFrom, 
+        this.chatTab,
+        text,
+        value.gameType,
+        value.sendFrom,
         value.sendTo,
-        value.color, 
+        value.color,
         value.isInverse,
         value.isHollow,
         value.isBlackPaint,

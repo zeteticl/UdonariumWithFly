@@ -38,13 +38,17 @@ export class FileStorageComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   handleFileSelect(event: Event) {
+    if (this.GuestMode()) return;
     let input = <HTMLInputElement>event.target;
     let files = input.files;
     if (files.length) FileArchiver.instance.load(files);
     input.value = '';
   }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   onSelectedFile(file: ImageFile) {
+    if (this.GuestMode()) return;
     console.log('onSelectedFile', file);
     EventSystem.call('SELECT_FILE', { fileIdentifier: file.identifier }, Network.peerId);
   }

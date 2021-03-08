@@ -18,7 +18,7 @@ import { DiceBot } from '@udonarium/dice-bot';
 import { Jukebox } from '@udonarium/Jukebox';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
-
+import { NoteInventoryComponent } from 'component/note-inventory/note-inventory.component';
 import { ChatWindowComponent } from 'component/chat-window/chat-window.component';
 import { ContextMenuComponent } from 'component/context-menu/context-menu.component';
 import { FileStorageComponent } from 'component/file-storage/file-storage.component';
@@ -157,7 +157,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     AudioStorage.instance.get(PresetSound.surprise).isHidden = true;
 
     PeerCursor.createMyCursor();
-    if (!PeerCursor.myCursor.name) PeerCursor.myCursor.name = '玩家';
+
+    if (!PeerCursor.myCursor.name) PeerCursor.myCursor.name = '玩家'+ ('000' + (Math.floor(Math.random() * 1000))).slice(-3);
     PeerCursor.myCursor.imageIdentifier = noneIconImage.identifier;
 
     EventSystem.register(this)
@@ -168,7 +169,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       .on<AppConfig>('LOAD_CONFIG', event => {
         console.log('LOAD_CONFIG !!!', event.data);
         if (event.data.dice && event.data.dice.url) {
-          fetch(event.data.dice.url + '/v1/names', {mode: 'cors'})
+          fetch(event.data.dice.url + '/v1/names', { mode: 'cors' })
             .then(response => { return response.json() })
             .then(infos => {
               let apiUrl = event.data.dice.url;
@@ -205,21 +206,21 @@ export class AppComponent implements AfterViewInit, OnDestroy {
                   return info;
                 })
                 .sort((a, b) => {
-                  return a.lang < b.lang ? -1 
+                  return a.lang < b.lang ? -1
                     : a.lang > b.lang ? 1
-                    : a.normalize == b.normalize ? 0 
-                    : a.normalize < b.normalize ? -1 : 1;
+                      : a.normalize == b.normalize ? 0
+                        : a.normalize < b.normalize ? -1 : 1;
                 });
               DiceBot.diceBotInfos.push(...tempInfos.map(info => { return { script: info.system, game: info.name } }));
               if (tempInfos.length > 0) {
                 let sentinel = tempInfos[0].normalize.substr(0, 1);
                 let group = { index: tempInfos[0].normalize.substr(0, 1), infos: [] };
                 for (let info of tempInfos) {
-                  let index = info.lang == 'B' ? '特殊' 
+                  let index = info.lang == 'B' ? '特殊'
                     : info.lang == 'ChineseTraditional' ? '正體中文'
-                    : info.lang == 'Korean' ? '한국어'
-                    : info.lang == 'English' ? 'English'
-                    : info.normalize.substr(0, 1);
+                      : info.lang == 'Korean' ? '한국어'
+                        : info.lang == 'English' ? 'English'
+                          : info.normalize.substr(0, 1);
                   if (index !== sentinel) {
                     sentinel = index;
                     DiceBot.diceBotInfosIndexed.push(group);
@@ -255,8 +256,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
             //console.log(info.index + ': ' + normalize);
           });
           DiceBot.diceBotInfos.sort((a, b) => {
-            return a.sort_key == b.sort_key ? 0 
-            : a.sort_key < b.sort_key ? -1 : 1;
+            return a.sort_key == b.sort_key ? 0
+              : a.sort_key < b.sort_key ? -1 : 1;
           });
           let sentinel = DiceBot.diceBotInfos[0].sort_key[0];
           let group = { index: sentinel, infos: [] };
@@ -356,6 +357,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       case 'GameObjectInventoryComponent':
         component = GameObjectInventoryComponent;
         break;
+      case 'NoteInventoryComponent':
+        component = NoteInventoryComponent;
+        break;
       case 'DiceRollTableSettingComponent':
         component = DiceRollTableSettingComponent;
         option = { width: 645, height: 470 };
@@ -393,7 +397,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     if (files.length) FileArchiver.instance.load(files);
     input.value = '';
   }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   private lazyNgZoneUpdate(isImmediate: boolean) {
     if (isImmediate) {
       if (this.immediateUpdateTimer !== null) return;
@@ -432,19 +438,22 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   standSetteings() {
     const isShowStand = StandImageComponent.isShowStand;
     const isShowNameTag = StandImageComponent.isShowNameTag;
-    const isCanBeGone = StandImageComponent.isCanBeGone; 
+    const isCanBeGone = StandImageComponent.isCanBeGone;
     this.contextMenuService.open(this.pointerDeviceService.pointers[0], [
+
       { name: `${ isShowStand ? '☑' : '☐' }Stand展示`, 
         action: () => {
           StandImageComponent.isShowStand = !isShowStand;
         }
       },
+
       { name: `${ isShowNameTag ? '☑' : '☐' }顯示名稱標籤`, 
         action: () => {
           StandImageComponent.isShowNameTag = !isShowNameTag;
         }
       },
-      { name: `${ isCanBeGone ? '☑' : '☐' }透明化、自動退去`, 
+      {
+        name: `${isCanBeGone ? '☑' : '☐'}透明化、自動退去`,
         action: () => {
           StandImageComponent.isCanBeGone = !isCanBeGone;
         }
@@ -453,11 +462,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       { name: '擦除所有Stand圖片', action: () => EventSystem.trigger('DESTORY_STAND_IMAGE_ALL', null) }
     ], 'Stand設置');
   }
-/*
-  farewellStandAll() {
-    EventSystem.trigger('DESTORY_STAND_IMAGE_ALL', null);
-  }
-*/
+  /*
+    farewellStandAll() {
+      EventSystem.trigger('DESTORY_STAND_IMAGE_ALL', null);
+    }
+  */
   diceAllOpne() {
     if (confirm('公開所有未設置為「不要一次性公開」的骰子。\n您確定嗎？')) {
       EventSystem.trigger('DICE_ALL_OPEN', null);

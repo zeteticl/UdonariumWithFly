@@ -1,18 +1,19 @@
-<label>
+<label *ngIf="!GuestMode()">
   <div class="drop-zone">
     <div>
       <i class="material-icons large-font">add_photo_alternate</i>
     </div>
     <div>將圖像放在這裡</div>
     <div class="small-font">或點擊這裡選擇</div>
-    <input type="file" style="display: none;" (change)="handleFileSelect($event)" multiple accept="image/*"/>
+    <input type="file" style="display: none;" (change)="handleFileSelect($event)" multiple accept="image/*" />
     <div class="small-font">
       <br>每個文件最大2MB</div>
   </div>
 </label>
-<div id="file-list">
+<div id="file-list" *ngIf="!GuestMode()">
   <span *ngFor="let file of fileStorageService.images" class="image">
-    <img *ngIf="0 < file.url.length" [src]="file.url | safe: 'resourceUrl'" [alt]="file.name" height="120" (click)="onSelectedFile(file)">
+    <img *ngIf="0 < file.url.length" [src]="file.url | safe: 'resourceUrl'" [alt]="file.name" height="120"
+      (click)="onSelectedFile(file)">
     <img *ngIf="file.url.length <= 0" src="assets/images/loading.gif" alt="{{file.name}}">
   </span>
 </div>
