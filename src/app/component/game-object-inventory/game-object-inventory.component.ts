@@ -19,6 +19,7 @@ import { GameObjectInventoryService } from 'service/game-object-inventory.servic
 import { ModalService } from 'service/modal.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
+import { DiceBot } from '@udonarium/dice-bot';
 
 @Component({
   selector: 'game-object-inventory',
@@ -44,6 +45,11 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
 
   get indicateAll(): boolean { return this.inventoryService.indicateAll; }
   set indicateAll(indicateAll: boolean) { this.inventoryService.indicateAll = indicateAll; }
+
+  get diceBotInfos() { return DiceBot.diceBotInfos }
+  get gameType(): string { return this.inventoryService.gameType; }
+  set gameType(gameType: string) { this.inventoryService.gameType = gameType; }
+
 
   get sortOrderName(): string { return this.sortOrder === SortOrder.ASC ? '昇順' : '降順'; }
 
@@ -366,6 +372,14 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
     }
     this.contextMenuService.open(position, actions, gameObject.name);
   }
+
+  onChangeGameType(gameType: string) {
+    console.log('onChangeGameType ready');
+    DiceBot.getHelpMessage(this.gameType).then(help => {
+      console.log('onChangeGameType done\n' + help + gameType);
+    });
+  }
+
 
   toggleEdit() {
     this.isEdit = !this.isEdit;
