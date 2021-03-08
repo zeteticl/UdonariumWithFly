@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { DataElement } from '@udonarium/data-element';
 import { TabletopObject } from '@udonarium/tabletop-object';
 import { GameObjectInventoryService } from 'service/game-object-inventory.service';
@@ -146,7 +146,6 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
     private changeDetector: ChangeDetectorRef,
     private pointerDeviceService: PointerDeviceService
   ) { }
-
   ngAfterViewInit() {
     this.initPanelPosition();
     setTimeout(() => {
@@ -236,5 +235,8 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
 
   private getInventoryTags(gameObject: TabletopObject): DataElement[] {
     return this.inventoryService.tableInventory.dataElementMap.get(gameObject.identifier);
+  }
+  GuestMode() {
+    return Network.GuestMode();
   }
 }

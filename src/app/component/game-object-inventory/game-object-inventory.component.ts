@@ -57,7 +57,9 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
     private pointerDeviceService: PointerDeviceService,
     private modalService: ModalService
   ) { }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnInit() {
     Promise.resolve().then(() => this.panelService.title = 'インベントリ');
     EventSystem.register(this)
@@ -90,6 +92,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   }
 
   getTabTitle(inventoryType: string) {
+    if (this.GuestMode()) return;
     switch (inventoryType) {
       case 'table':
         return 'テーブル';
@@ -103,6 +106,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   }
 
   getInventory(inventoryType: string) {
+    if (this.GuestMode()) return;
     switch (inventoryType) {
       case 'table':
         return this.inventoryService.tableInventory;
@@ -127,26 +131,26 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
     if (document.activeElement instanceof HTMLInputElement && document.activeElement.getAttribute('type') !== 'range') return;
     e.stopPropagation();
     e.preventDefault();
-
+    if (this.GuestMode()) return;
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
 
     this.selectGameObject(gameObject);
 
     let position = this.pointerDeviceService.pointers[0];
-    
+
     let actions: ContextMenuAction[] = [];
     if (gameObject.imageFiles.length > 1) {
       actions.push({
         name: '画像切り替え',
         action: null,
         subActions: gameObject.imageFiles.map((image, i) => {
-          return { 
-            name: `${gameObject.currntImageIndex == i ? '◉' : '○'}`, 
-            action: () => { 
+          return {
+            name: `${gameObject.currntImageIndex == i ? '◉' : '○'}`,
+            action: () => {
               gameObject.currntImageIndex = i;
               SoundEffect.play(PresetSound.surprise);
               EventSystem.trigger('UPDATE_INVENTORY', null);
-            }, 
+            },
             default: gameObject.currntImageIndex == i,
             icon: image
           };
@@ -168,59 +172,62 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
       }));
     actions.push(
       (gameObject.isDropShadow
-      ? {
-        name: '☑ 影の表示', action: () => {
-          gameObject.isDropShadow = false;
-          EventSystem.trigger('UPDATE_INVENTORY', null);
-        }
-      } : {
-        name: '☐ 影の表示', action: () => {
-          gameObject.isDropShadow = true;
-          EventSystem.trigger('UPDATE_INVENTORY', null);
-        }
-      })
+        ? {
+          name: '☑ 影の表示', action: () => {
+            gameObject.isDropShadow = false;
+            EventSystem.trigger('UPDATE_INVENTORY', null);
+          }
+        } : {
+          name: '☐ 影の表示', action: () => {
+            gameObject.isDropShadow = true;
+            EventSystem.trigger('UPDATE_INVENTORY', null);
+          }
+        })
     );
-    actions.push({ name: '画像効果', action: null,  
-    subActions: [
-      (gameObject.isInverse
-        ? {
-          name: '☑ 反転', action: () => {
-            gameObject.isInverse = false;
-            EventSystem.trigger('UPDATE_INVENTORY', null);
-          }
-        } : {
-          name: '☐ 反転', action: () => {
-            gameObject.isInverse = true;
-            EventSystem.trigger('UPDATE_INVENTORY', null);
-          }
-        }),
-      (gameObject.isHollow
-        ? {
-          name: '☑ ぼかし', action: () => {
-            gameObject.isHollow = false;
-            EventSystem.trigger('UPDATE_INVENTORY', null);
-          }
-        } : {
-          name: '☐ ぼかし', action: () => {
-            gameObject.isHollow = true;
-            EventSystem.trigger('UPDATE_INVENTORY', null);
-          }
-        }),
-      (gameObject.isBlackPaint
-        ? {
-          name: '☑ 黒塗り', action: () => {
-            gameObject.isBlackPaint = false;
-            EventSystem.trigger('UPDATE_INVENTORY', null);
-          }
-        } : {
-          name: '☐ 黒塗り', action: () => {
-            gameObject.isBlackPaint = true;
-            EventSystem.trigger('UPDATE_INVENTORY', null);
-          }
-        }),
-        { name: 'オーラ', action: null, subActions: [ { name: `${gameObject.aura == -1 ? '◉' : '○'} なし`, action: () => { gameObject.aura = -1; EventSystem.trigger('UPDATE_INVENTORY', null) } }, ContextMenuSeparator].concat(['ブラック', 'ブルー', 'グリーン', 'シアン', 'レッド', 'マゼンタ', 'イエロー', 'ホワイト'].map((color, i) => {  
-          return { name: `${gameObject.aura == i ? '◉' : '○'} ${color}`, action: () => { gameObject.aura = i; EventSystem.trigger('UPDATE_INVENTORY', null) } };
-        })) },
+    actions.push({
+      name: '画像効果', action: null,
+      subActions: [
+        (gameObject.isInverse
+          ? {
+            name: '☑ 反転', action: () => {
+              gameObject.isInverse = false;
+              EventSystem.trigger('UPDATE_INVENTORY', null);
+            }
+          } : {
+            name: '☐ 反転', action: () => {
+              gameObject.isInverse = true;
+              EventSystem.trigger('UPDATE_INVENTORY', null);
+            }
+          }),
+        (gameObject.isHollow
+          ? {
+            name: '☑ ぼかし', action: () => {
+              gameObject.isHollow = false;
+              EventSystem.trigger('UPDATE_INVENTORY', null);
+            }
+          } : {
+            name: '☐ ぼかし', action: () => {
+              gameObject.isHollow = true;
+              EventSystem.trigger('UPDATE_INVENTORY', null);
+            }
+          }),
+        (gameObject.isBlackPaint
+          ? {
+            name: '☑ 黒塗り', action: () => {
+              gameObject.isBlackPaint = false;
+              EventSystem.trigger('UPDATE_INVENTORY', null);
+            }
+          } : {
+            name: '☐ 黒塗り', action: () => {
+              gameObject.isBlackPaint = true;
+              EventSystem.trigger('UPDATE_INVENTORY', null);
+            }
+          }),
+        {
+          name: 'オーラ', action: null, subActions: [{ name: `${gameObject.aura == -1 ? '◉' : '○'} なし`, action: () => { gameObject.aura = -1; EventSystem.trigger('UPDATE_INVENTORY', null) } }, ContextMenuSeparator].concat(['ブラック', 'ブルー', 'グリーン', 'シアン', 'レッド', 'マゼンタ', 'イエロー', 'ホワイト'].map((color, i) => {
+            return { name: `${gameObject.aura == i ? '◉' : '○'} ${color}`, action: () => { gameObject.aura = i; EventSystem.trigger('UPDATE_INVENTORY', null) } };
+          }))
+        },
         ContextMenuSeparator,
         {
           name: 'リセット', action: () => {
@@ -232,7 +239,8 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
           },
           disabled: !gameObject.isInverse && !gameObject.isHollow && !gameObject.isBlackPaint && gameObject.aura == -1
         }
-    ]});
+      ]
+    });
     actions.push(ContextMenuSeparator);
     actions.push((!gameObject.isNotRide
       ? {
@@ -248,32 +256,32 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
       }));
     actions.push(
       (gameObject.isAltitudeIndicate
-      ? {
-        name: '☑ 高度の表示', action: () => {
-          gameObject.isAltitudeIndicate = false;
-          EventSystem.trigger('UPDATE_INVENTORY', null);
-        }
-      } : {
-        name: '☐ 高度の表示', action: () => {
-          gameObject.isAltitudeIndicate = true;
-          EventSystem.trigger('UPDATE_INVENTORY', null);
-        }
-      })
+        ? {
+          name: '☑ 高度の表示', action: () => {
+            gameObject.isAltitudeIndicate = false;
+            EventSystem.trigger('UPDATE_INVENTORY', null);
+          }
+        } : {
+          name: '☐ 高度の表示', action: () => {
+            gameObject.isAltitudeIndicate = true;
+            EventSystem.trigger('UPDATE_INVENTORY', null);
+          }
+        })
     );
     actions.push(
-    {
-      name: '高度を0にする', action: () => {
-        if (gameObject.altitude != 0) {
-          gameObject.altitude = 0;
-          if (gameObject.location.name === 'table') SoundEffect.play(PresetSound.sweep);
-        }
-      },
-      altitudeHande: gameObject
-    });
+      {
+        name: '高度を0にする', action: () => {
+          if (gameObject.altitude != 0) {
+            gameObject.altitude = 0;
+            if (gameObject.location.name === 'table') SoundEffect.play(PresetSound.sweep);
+          }
+        },
+        altitudeHande: gameObject
+      });
     actions.push(ContextMenuSeparator);
     actions.push({ name: '詳細を表示', action: () => { this.showDetail(gameObject); } });
     //if (gameObject.location.name !== 'graveyard') {
-      actions.push({ name: 'チャットパレットを表示', action: () => { this.showChatPalette(gameObject) }, disabled: gameObject.location.name === 'graveyard' });
+    actions.push({ name: 'チャットパレットを表示', action: () => { this.showChatPalette(gameObject) }, disabled: gameObject.location.name === 'graveyard' });
     //}
     actions.push({ name: 'スタンド設定', action: () => { this.showStandSetting(gameObject) } });
     actions.push(ContextMenuSeparator);
@@ -311,14 +319,14 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
       { name: 'graveyard', alias: '墓場' }
     ];
     actions.push({
-      name: `${ (locations.find((location) => { return location.name == gameObject.location.name }) || locations[1]).alias }から移動`,
+      name: `${(locations.find((location) => { return location.name == gameObject.location.name }) || locations[1]).alias}から移動`,
       action: null,
       subActions: locations
         .filter((location, i) => { return !(gameObject.location.name == location.name || (i == 1 && !locations.map(loc => loc.name).includes(gameObject.location.name))) })
-        .map((location) => { 
+        .map((location) => {
           return {
-            name: `${location.alias}`, 
-            action: () => { 
+            name: `${location.alias}`,
+            action: () => {
               EventSystem.call('FAREWELL_STAND_IMAGE', { characterIdentifier: gameObject.identifier });
               gameObject.setLocation(location.name);
               if (location.name == 'graveyard') {
@@ -327,7 +335,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
                 SoundEffect.play(PresetSound.piecePut);
               }
             }
-          } 
+          }
         })
     });
     /*
@@ -364,6 +372,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   }
 
   cleanInventory() {
+    if (this.GuestMode()) return;
     let tabTitle = this.getTabTitle(this.selectTab);
     let gameObjects = this.getGameObjects(this.selectTab);
     if (!confirm(`${tabTitle}に存在する${gameObjects.length}個の要素を完全に削除しますか？`)) return;
@@ -374,10 +383,12 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private cloneGameObject(gameObject: TabletopObject) {
+    if (this.GuestMode()) return;
     gameObject.clone();
   }
 
   private showDetail(gameObject: GameCharacter) {
+    if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = 'キャラクターシート';
@@ -388,6 +399,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   }
 
   private showChatPalette(gameObject: GameCharacter) {
+    if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
     let option: PanelOption = { left: coordinate.x - 250, top: coordinate.y - 175, width: 620, height: 350 };
     let component = this.panelService.open<ChatPaletteComponent>(ChatPaletteComponent, option);
@@ -395,22 +407,25 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   }
 
   selectGameObject(gameObject: GameObject) {
+    if (this.GuestMode()) return;
     let aliasName: string = gameObject.aliasName;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
   }
 
   private deleteGameObject(gameObject: GameObject) {
+    if (this.GuestMode()) return;
     gameObject.destroy();
     this.changeDetector.markForCheck();
   }
 
   private showStandSetting(gameObject: GameCharacter) {
+    if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
     let option: PanelOption = { left: coordinate.x - 400, top: coordinate.y - 175, width: 730, height: 572 };
     let component = this.panelService.open<StandSettingComponent>(StandSettingComponent, option);
     component.character = gameObject;
   }
-  
+
   trackByGameObject(index: number, gameObject: GameObject) {
     return gameObject ? gameObject.identifier : index;
   }
