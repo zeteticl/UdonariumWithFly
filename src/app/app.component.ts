@@ -18,7 +18,7 @@ import { DiceBot } from '@udonarium/dice-bot';
 import { Jukebox } from '@udonarium/Jukebox';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
-
+import { NoteInventoryComponent } from 'component/note-inventory/note-inventory.component';
 import { ChatWindowComponent } from 'component/chat-window/chat-window.component';
 import { ContextMenuComponent } from 'component/context-menu/context-menu.component';
 import { FileStorageComponent } from 'component/file-storage/file-storage.component';
@@ -355,6 +355,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         break;
       case 'GameObjectInventoryComponent':
         component = GameObjectInventoryComponent;
+        break;
+      case 'NoteInventoryComponent':
+        component = NoteInventoryComponent;
         break;
       case 'DiceRollTableSettingComponent':
         component = DiceRollTableSettingComponent;
