@@ -41,6 +41,9 @@ export class DiceBot extends GameObject {
   public static apiUrl: string = null;
 
   public static diceBotInfos: DiceBotInfo[] = [
+    { script: 'Cthulhu_ChineseTraditional', game: '克蘇魯的呼喚', lang: '正體中文' },
+    { script: 'Cthulhu7th_ChineseTraditional', game: '克蘇魯的呼喚 第七版', lang: '正體中文' },
+    { script: 'Satasupe', game: '亞俠', lang: '正體中文' },
     { script: 'EarthDawn', game: 'アースドーン' },
     { script: 'EarthDawn3', game: 'アースドーン3版' },
     { script: 'EarthDawn4', game: 'アースドーン4版' },
@@ -207,26 +210,7 @@ export class DiceBot extends GameObject {
     { script: 'LostRoyal', game: 'ロストロイヤル' },
     { script: 'WaresBlade', game: 'ワースブレイド' },
     { script: 'WARPS', game: 'ワープス' },
-    { script: 'WorldOfDarkness', game: 'ワールド・オブ・ダークネス' },
-    { script: 'Cthulhu_ChineseTraditional', game: '克蘇魯的呼喚', lang: '正體中文' },
-    { script: 'Cthulhu7th_ChineseTraditional', game: '克蘇魯的呼喚 第七版', lang: '正體中文' },
-    { script: 'Satasupe', game: '亞俠', lang: '正體中文' },
-    { script: 'KillDeathBusiness_Korean', game: 'Kill Death Business (한국어)', lang: '한국어' },
-    { script: 'Nechronica_Korean', game: '네크로니카', lang: '한국어' },
-    { script: 'DoubleCross_Korean', game: '더블크로스2nd, 3rd', lang: '한국어' },
-    { script: 'DetatokoSaga_Korean', game: '데타토코 사가', lang: '한국어' },
-    { script: 'FutariSousa_Korean', game: '둘이서 수사(후타리소우사)', lang: '한국어' },
-    { script: 'Dracurouge_Korean', game: '드라크루주', lang: '한국어' },
-    { script: 'LogHorizon_Korean', game: '로그 호라이즌', lang: '한국어' },
-    { script: 'MonotoneMuseum_Korean', game: '모노톤 뮤지엄', lang: '한국어' },
-    { script: 'BeginningIdol_Korean', game: '비기닝 아이돌', lang: '한국어' },
-    { script: 'StratoShout_Korean', game: '스트라토 샤우트', lang: '한국어' },
-    { script: 'Amadeus_Korean', game: '아마데우스', lang: '한국어' },
-    { script: 'Insane_Korean', game: '인세인', lang: '한국어' },
-    { script: 'Kamigakari_Korean', game: '카미가카리', lang: '한국어' },
-    { script: 'Cthulhu7th_Korean', game: '크툴루의 부름 7판', lang: '한국어' },
-    { script: 'Cthulhu_Korean', game: '크툴루', lang: '한국어' },
-    { script: 'Fiasco_Korean', game: '피아스코', lang: '한국어' },
+    { script: 'WorldOfDarkness', game: 'ワールド・オブ・ダークネス' }
   ];
 
   public static diceBotInfosIndexed: DiceBotInfosIndexed[] = [];
@@ -341,10 +325,10 @@ export class DiceBot extends GameObject {
   ];
 
   public static replaceData: [string, string, string?][] = [
-    ['新クトゥルフ', 'シンクトウルフシンワTRPG', '新クトゥルフ神話TRPG'],
-    ['クトゥルフ神話TRPG', 'クトウルフシンワTRPG', '(旧) クトゥルフ神話TRPG'],
     ['克蘇魯神話', '克蘇魯的呼喚', '克蘇魯的呼喚'],
     ['克蘇魯神話第7版', '克蘇魯的呼喚 第七版', '克蘇魯的呼喚 第七版'],
+    ['新クトゥルフ', 'シンクトウルフシンワTRPG', '新クトゥルフ神話TRPG'],
+    ['クトゥルフ神話TRPG', 'クトウルフシンワTRPG', '(旧) クトゥルフ神話TRPG'],
     ['トーグ', 'トオク', 'TORG'],
     ['ワープス', 'ワアフス', 'WARPS'],
     ['トーグ1.5版', 'トオク1.5ハン', 'TORG 1.5版'],
@@ -510,7 +494,7 @@ export class DiceBot extends GameObject {
             }
             if (isDiceRollTableMatch) {
               finalResult.isDiceRollTable = true;
-              finalResult.tableName = (diceRollTable.name && diceRollTable.name.length > 0) ? diceRollTable.name : '(無名のダイスボット表)';
+              finalResult.tableName = (diceRollTable.name && diceRollTable.name.length > 0) ? diceRollTable.name : '(無名骰子機械人列表)';
               finalResult.isSecret = isSecret;
               const diceRollTableRows = diceRollTable.parseText();
               for (let i = 0; i < repeat && i < 32; i++) {
@@ -531,7 +515,7 @@ export class DiceBot extends GameObject {
                     break;
                   }
                 }
-                if (!isRowMatch) finalResult.result += ('🎲 ' + rollResult.result + "\n" + '(結果なし)');
+                if (!isRowMatch) finalResult.result += ('🎲 ' + rollResult.result + "\n" + '(沒結果)');
                 if (1 < repeat) finalResult.result += ` #${i + 1}\n`;
               }
               break;

@@ -289,7 +289,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
 
     //if (this.isVisible) {
     actions.push({
-      name: 'ダイスを振る', action: () => {
+      name: '擲骰子', action: () => {
         this.diceRoll();
       },
       disabled: !this.isVisible,
@@ -299,7 +299,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
     actions.push(ContextMenuSeparator);
     if (this.isMine || this.hasOwner) {
       actions.push({
-        name: 'ダイスを公開', action: () => {
+        name: '公開骰子', action: () => {
           this.owner = '';
           SoundEffect.play(PresetSound.unlock);
         }
@@ -307,7 +307,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     if (!this.isMine) {
       actions.push({
-        name: '自分だけ見る', action: () => {
+        name: '只有自己看見', action: () => {
           this.owner = Network.peerContext.userId;
           SoundEffect.play(PresetSound.lock);
         }
@@ -315,12 +315,12 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     actions.push((this.isLock
       ? {
-        name: '☑ 一斉公開しない', action: () => {
+        name: '☑ 不要一次性公開', action: () => {
           this.isLock = false;
           SoundEffect.play(PresetSound.unlock);
         }
       } : {
-        name: '☐ 一斉公開しない', action: () => {
+        name: '☐ 不要一次性公開', action: () => {
           this.isLock = true;
           SoundEffect.play(PresetSound.lock);
         }
@@ -347,34 +347,34 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
           }
         });
       });
-      actions.push({ name: 'ダイス目', action: null, subActions: subActions });
+      actions.push({ name: '骰子', action: null, subActions: subActions });
     }
 
     actions.push(ContextMenuSeparator);
 
     actions.push((this.isDropShadow
       ? {
-        name: '☑ 影の表示', action: () => {
+        name: '☑ 陰影顯示', action: () => {
           this.isDropShadow = false;
         }
       } : {
-        name: '☐ 影の表示', action: () => {
+        name: '☐ 陰影顯示', action: () => {
           this.isDropShadow = true;
         }
       }));
 
     actions.push(ContextMenuSeparator);
-    actions.push({ name: '詳細を表示', action: () => { this.showDetail(this.diceSymbol); } });
+    actions.push({ name: '顯示詳情', action: () => { this.showDetail(this.diceSymbol); } });
     if (this.diceSymbol.getUrls().length > 0) {
       actions.push({
-        name: '参照URLを開く', action: null,
+        name: '打開參考網址', action: null,
         subActions: this.diceSymbol.getUrls().map((urlElement) => {
           const url = urlElement.value.toString();
           return {
             name: urlElement.name ? urlElement.name : url,
             action: () => { this.modalService.open(OpenUrlComponent, { url: url, title: this.diceSymbol.name, subTitle: urlElement.name }); },
             disabled: !StringUtil.validUrl(url),
-            error: !StringUtil.validUrl(url) ? 'URLが不正です' : null,
+            error: !StringUtil.validUrl(url) ? '網址無效' : null,
             materialIcon: 'open_in_new'
           };
         })
@@ -382,7 +382,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
       actions.push(ContextMenuSeparator);
     }
     actions.push({
-      name: 'コピーを作る', action: () => {
+      name: '製作副本', action: () => {
         let cloneObject = this.diceSymbol.clone();
         cloneObject.location.x += this.gridSize;
         cloneObject.location.y += this.gridSize;
@@ -391,7 +391,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     });
     actions.push({
-      name: '削除する', action: () => {
+      name: '刪除', action: () => {
         this.diceSymbol.destroy();
         SoundEffect.play(PresetSound.sweep);
       }
@@ -418,7 +418,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];
-    let title = 'ダイスシンボル設定';
+    let title = '骰子設定';
     if (gameObject.name.length) title += ' - ' + gameObject.name;
     let option: PanelOption = { title: title, left: coordinate.x - 300, top: coordinate.y - 300, width: 600, height: 600 };
     let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);

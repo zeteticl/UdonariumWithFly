@@ -1,7 +1,7 @@
 <div class="component" *ngIf="!GuestMode()">
   <ng-container *ngTemplateOutlet="inventoryTab"></ng-container>
   <ng-container *ngTemplateOutlet="inventoryViewSetting"></ng-container>
-  <div *ngIf="getGameObjects(selectTab).length < 1">{{getTabTitle(selectTab)}}インベントリは空です</div>
+  <div *ngIf="getGameObjects(selectTab).length < 1">{{getTabTitle(selectTab)}}庫存為空</div>
   <div (contextmenu)="onContextMenu($event, gameObject)"
     *ngFor="let gameObject of getGameObjects(selectTab); trackBy: trackByGameObject"
     (click)="selectGameObject(gameObject)"
@@ -10,7 +10,7 @@
   </div>
   <div *ngIf="selectTab === 'graveyard'" style="padding-top: 6px;">
     <button class="danger" (click)="cleanInventory()"
-      [attr.disabled]="getGameObjects(selectTab).length < 1 ? '' : null">墓場を空にする</button>
+      [attr.disabled]="getGameObjects(selectTab).length < 1 ? '' : null">清空墓地</button>
   </div>
 </div>
 <ng-template #inventoryTab>
@@ -26,39 +26,39 @@
 <ng-template #inventoryViewSetting>
   <ng-container *ngIf="isEdit">
     <div>
-      <div style="font-size: 12px;">並び順</div>
+      <div style="font-size: 12px;">排序</div>
       <input [(ngModel)]="sortTag" placeholder="タグ名" />
       <select [(ngModel)]="sortOrder">
-        <option value="ASC">昇順</option>
-        <option value="DESC">降順</option>
+        <option value="ASC">升序</option>
+        <option value="DESC">降序</option>
       </select>
     </div>
     <div style="font-size: 12px; padding-top: 6px;">表示項目</div>
     <input style="width: 100%; box-sizing: border-box;" [(ngModel)]="dataTag"
-      placeholder="スペース区切りでタグ名 スラッシュで改行 ex.「HP MP / メモ」" />
-    <div style="font-size: 12px; padding-top: 6px;">標準ダイスボット</div>
+      placeholder="空格分隔的標籤名稱，斜線換行，例如「 HP MP / Memo」" />
+    <div style="font-size: 12px; padding-top: 6px;">標準骰子機械人</div>
     <select style="width: 12em;" (change)="onChangeGameType($event.target.value)" [(ngModel)]="gameType"
       [ngModelOptions]="{standalone: true}">
-      <option value="">ダイスボット指定なし</option>
+      <option value="">指定骰組</option>
       <option *ngFor="let diceBotInfo of diceBotInfos" value="{{diceBotInfo.script}}">{{diceBotInfo.game}}</option>
     </select>
 
     <div style="padding-top: 6px;">
       <button class="tab-setting small-font" (click)="toggleEdit()"><i
-          class="material-icons small-font">settings</i>完了</button>
+          class="material-icons small-font">settings</i>完結</button>
     </div>
   </ng-container>
   <ng-container *ngIf="!isEdit">
     <table style="font-size: 0.8em;">
       <tr>
-        <th style=" vertical-align:middle;">並び順:</th>
+        <th style=" vertical-align:middle;">排序:</th>
         <td style=" vertical-align:middle;">
           <ng-container *ngIf="0 < sortTag.length">{{sortTag}} ({{sortOrderName}})</ng-container>
           <ng-container *ngIf="sortTag.length < 1">-</ng-container>
         </td>
         <td>
           <ng-container *ngIf="selectTab === 'table'">
-            <label><input type="checkbox" [(ngModel)]="indicateAll" />すべて表示</label>
+            <label><input type="checkbox" [(ngModel)]="indicateAll" />顯示所有</label>
           </ng-container>
           <button class="tab-setting small-font" (click)="toggleEdit()"><i
               class="material-icons small-font">settings</i>設定</button>
@@ -71,7 +71,7 @@
   <div class="inventory-object">
     <div class="object-name">
       <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier"
-        style="font-size: 0.8em; padding: 1px; width: 24px; height: 16px; margin-bottom: 1px" title="オーバービューに顔アイコンを使用"
+        style="font-size: 0.8em; padding: 1px; width: 24px; height: 16px; margin-bottom: 1px" title="使用表面圖標進行概述"
         [ngClass]="{'is-active': gameObject.isUseIconToOverviewImage}"
         (click)="gameObject.isUseIconToOverviewImage = !gameObject.isUseIconToOverviewImage">
         <i *ngIf="gameObject.faceIcon && 0 < gameObject.faceIcon?.url.length; else altImage" class="face-icon"><img
@@ -82,7 +82,7 @@
       </button>
       {{gameObject.name}}
       <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier"
-        style="font-size: 0.8em; padding: 1px; width: 24px; height: 16px; margin-bottom: 1px" title="影の表示"
+        style="font-size: 0.8em; padding: 1px; width: 24px; height: 16px; margin-bottom: 1px" title="陰影顯示"
         [ngClass]="{'is-active': gameObject.isDropShadow}" (click)="gameObject.isDropShadow = !gameObject.isDropShadow">
         <i *ngIf="gameObject.shadowImageFile && 0 < gameObject.shadowImageFile.url.length; else altShadow"
           class="face-icon"><img style="filter: brightness(0);"
@@ -94,20 +94,20 @@
         </ng-template>
       </button>
       <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier"
-        style="font-size: 0.8em; padding: 2px 5px;" title="他のキャラクターに乗る" [ngClass]="{'is-active': !gameObject.isNotRide}"
+        style="font-size: 0.8em; padding: 2px 5px;" title="乘上其他角色" [ngClass]="{'is-active': !gameObject.isNotRide}"
         (click)="gameObject.isNotRide = !gameObject.isNotRide">
         <i class="material-icons"
           style="font-size: 1em;">{{ !gameObject.isNotRide ? 'directions_bike' : 'directions_run'}}</i>
       </button>
       <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier"
-        style="font-size: 0.8em; padding: 2px 5px;" title="高度の表示"
+        style="font-size: 0.8em; padding: 2px 5px;" title="顯示高度"
         [ngClass]="{'is-active': gameObject.isAltitudeIndicate}"
         (click)="gameObject.isAltitudeIndicate = !gameObject.isAltitudeIndicate">
         <i class="material-icons rotate" style="font-size: 1em;">straighten</i><span
           style="display: inline-block; text-align: center; font-size: xx-small; color: gray; min-width: 2em;">{{ gameObject.altitude }}</span>
       </button>
       <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier"
-        style="font-size: 0.8em; padding: 2px 5px;" title="テーブルインベントリに表示"
+        style="font-size: 0.8em; padding: 2px 5px;" title="在表格清單中顯示"
         [ngClass]="{'is-active': gameObject.isInventoryIndicate}"
         (click)="gameObject.isInventoryIndicate = !gameObject.isInventoryIndicate">
         <i class="material-icons" style="font-size: 1em;">all_inbox</i>

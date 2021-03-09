@@ -90,7 +90,7 @@ export class ChatPaletteComponent implements OnInit, OnDestroy {
   }
 
   updatePanelTitle() {
-    this.panelService.title = this.character.name + ' のチャットパレット';
+    this.panelService.title = this.character.name + ' 的聊天面板';
   }
 
   onSelectedCharacter(identifier: string) {

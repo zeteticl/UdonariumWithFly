@@ -76,7 +76,7 @@ export class ChatMessageService {
     return Math.floor(this.timeOffset + (performance.now() - this.performanceOffset));
   }
 
-  sendMessage(chatTab: ChatTab, text: string, gameType: string, sendFrom: string, sendTo?: string, color? :string, isInverseIcon? :boolean, isHollowIcon? :boolean, isBlackPaint? :boolean, aura?: number, isUseFaceIcon?: boolean, characterIdentifier?: string, standIdentifier?: string, standName? :string, isUseStandImage?: boolean): ChatMessage {
+  sendMessage(chatTab: ChatTab, text: string, gameType: string, sendFrom: string, sendTo?: string, color?: string, isInverseIcon?: boolean, isHollowIcon?: boolean, isBlackPaint?: boolean, aura?: number, isUseFaceIcon?: boolean, characterIdentifier?: string, standIdentifier?: string, standName?: string, isUseStandImage?: boolean): ChatMessage {
     // もうちょとなんとかする
     let effective = !(isUseFaceIcon && this.findFaceIconIdentifier(sendFrom));
     let chatMessage: ChatMessageContext = {
@@ -124,12 +124,17 @@ export class ChatMessageService {
 
   private makeMessageName(sendFrom: string, sendTo?: string): string {
     let sendFromName = this.findObjectName(sendFrom);
+    if (this.GuestMode()) {
+      sendFromName += '(訪客)';
+    }
     if (sendTo == null || sendTo.length < 1) return sendFromName;
 
     let sendToName = this.findObjectName(sendTo);
     return sendFromName + ' ➡ ' + sendToName;
   }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   private findImageIdentifier(identifier: string, isUseFaceIcon: boolean = false): string {
     let object = ObjectStore.instance.get(identifier);
     if (object instanceof GameCharacter) {

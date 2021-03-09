@@ -161,21 +161,21 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
       ContextMenuSeparator,
       { name: 'マップマスクを編集', action: () => { this.showDetail(this.gameTableMask); } },
       (this.gameTableMask.getUrls().length <= 0 ? null : {
-        name: '参照URLを開く', action: null,
+        name: '打開參考網址', action: null,
         subActions: this.gameTableMask.getUrls().map((urlElement) => {
           const url = urlElement.value.toString();
           return {
             name: urlElement.name ? urlElement.name : url,
             action: () => { this.modalService.open(OpenUrlComponent, { url: url, title: this.gameTableMask.name, subTitle: urlElement.name }); },
             disabled: !StringUtil.validUrl(url),
-            error: !StringUtil.validUrl(url) ? 'URLが不正です' : null,
+            error: !StringUtil.validUrl(url) ? '網址無效' : null,
             materialIcon: 'open_in_new'
           };
         })
       }),
       (this.gameTableMask.getUrls().length <= 0 ? null : ContextMenuSeparator),
       {
-        name: 'コピーを作る', action: () => {
+        name: '製作副本', action: () => {
           let cloneObject = this.gameTableMask.clone();
           console.log('コピー', cloneObject);
           cloneObject.location.x += this.gridSize;
@@ -186,13 +186,13 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
         }
       },
       {
-        name: '削除する', action: () => {
+        name: '刪除', action: () => {
           this.gameTableMask.destroy();
           SoundEffect.play(PresetSound.sweep);
         }
       },
       ContextMenuSeparator,
-      { name: 'オブジェクト作成', action: null, subActions: this.tabletopActionService.makeDefaultContextMenuActions(objectPosition) }
+      { name: '新增物件', action: null, subActions: this.tabletopActionService.makeDefaultContextMenuActions(objectPosition) }
     ], this.name);
   }
 
@@ -211,7 +211,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
   public showDetail(gameObject: GameTableMask) {
     if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
-    let title = 'マップマスク設定';
+    let title = '地圖遮罩設置';
     if (gameObject.name.length) title += ' - ' + gameObject.name;
     let option: PanelOption = { title: title, left: coordinate.x - 200, top: coordinate.y - 150, width: 400, height: 300 };
     let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);

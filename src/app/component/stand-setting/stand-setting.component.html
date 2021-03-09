@@ -6,13 +6,13 @@
     <input style="width: 3em; text-align: right; margin-right: 3px;" type="number" min="0" max="100" [(ngModel)]="position"><b sytle="margin-left: 3px; margin-right: 1em ">％　</b>
   </div>
   <div class="position-indicate">
-    <b>Height (0=元画像のまま): </b> 
+    <b>Height (0=原始圖片仍然保留): </b> 
     <input style="width: 350px" type="range" min="0" max="100" [(ngModel)]="height">
     <input style="width: 3em; text-align: right; margin-right: 3px;" type="number" min="0" max="100" [(ngModel)]="height"><b sytle="margin-left: 3px; margin-right: 1em ">％</b>
   </div>
 </div>
 <div class="overview-selecter" [style.border-color]="overviewIndex == -1 ? 'red' : 'transparent'" style="padding: 0px; width: 695px;">
-  <label style="font-size: smaller; font-weight: bolder;"><input type="radio" name="{{panelId}}_overviewIndex" value="-1" [checked]="overviewIndex == -1" (click)="overviewIndex = -1"> スタンド画像をオーバービューに使用しない</label>
+  <label style="font-size: smaller; font-weight: bolder;"><input type="radio" name="{{panelId}}_overviewIndex" value="-1" [checked]="overviewIndex == -1" (click)="overviewIndex = -1"> 請勿使用Stand圖像進行概覽</label>
 </div>
 <hr>
 <div style="display: flex; flex-direction: row; flex-wrap: wrap">
@@ -33,4 +33,4 @@
     <hr>
   </div>
 </div>
-<button (click)="add()">スタンド設定の追加</button>
+<button (click)="add()">添加Stand設置</button>
