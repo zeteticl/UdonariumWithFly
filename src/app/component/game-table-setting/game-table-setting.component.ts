@@ -81,9 +81,11 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
     private imageService: ImageService,
     private panelService: PanelService
   ) { }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnInit() {
-    Promise.resolve().then(() => { this.modalService.title = this.panelService.title = 'テーブル設定'; this.panelService.isAbleFullScreenButton = false});
+    Promise.resolve().then(() => { this.modalService.title = this.panelService.title = '桌面設定'; this.panelService.isAbleFullScreenButton = false });
     this.selectedTable = this.tableSelecter.viewTable;
     EventSystem.register(this)
       .on('DELETE_GAME_OBJECT', 1000, event => {
@@ -102,6 +104,7 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
   }
 
   selectGameTable(identifier: string) {
+    if (this.GuestMode()) return;
     EventSystem.call('SELECT_GAME_TABLE', { identifier: identifier }, Network.peerId);
     this.selectedTable = ObjectStore.instance.get<GameTable>(identifier);
     this.selectedTableXml = '';
@@ -112,14 +115,16 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
   }
 
   createGameTable() {
+    if (this.GuestMode()) return;
     let gameTable = new GameTable();
-    gameTable.name = '白紙のテーブル';
+    gameTable.name = '空白的桌面';
     gameTable.imageIdentifier = 'testTableBackgroundImage_image';
     gameTable.initialize();
     this.selectGameTable(gameTable.identifier);
   }
 
   async save() {
+    if (this.GuestMode()) return;
     if (!this.selectedTable || this.isSaveing) return;
     this.isSaveing = true;
     this.progresPercent = 0;
@@ -136,6 +141,7 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
   }
 
   delete() {
+    if (this.GuestMode()) return;
     if (!this.isEmpty && this.selectedTable) {
       this.selectedTableXml = this.selectedTable.toXml();
       this.selectedTable.destroy();
@@ -143,6 +149,7 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
   }
 
   restore() {
+    if (this.GuestMode()) return;
     if (this.selectedTable && this.selectedTableXml) {
       let restoreTable = ObjectSerializer.instance.parseXml(this.selectedTableXml);
       this.selectGameTable(restoreTable.identifier);
@@ -151,6 +158,7 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
   }
 
   openBgImageModal() {
+    if (this.GuestMode()) return;
     if (this.isDeleted) return;
     this.modalService.open<string>(FileSelecterComponent).then(value => {
       if (!this.selectedTable || !value) return;
@@ -159,6 +167,7 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
   }
 
   openDistanceViewImageModal() {
+    if (this.GuestMode()) return;
     if (this.isDeleted) return;
     this.modalService.open<string>(FileSelecterComponent, { isAllowedEmpty: true }).then(value => {
       if (!this.selectedTable || !value) return;

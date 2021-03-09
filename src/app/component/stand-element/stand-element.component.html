@@ -13,7 +13,7 @@
               </span>
             </div>
           </div>
-          <button class="stand-image-button" (click)="openModal()" style="font-size: smaller; padding: 2px 3px;"><b>{{ isSpeakable ? '通常' : '' }}画像変更</b></button>
+          <button class="stand-image-button" (click)="openModal()" style="font-size: smaller; padding: 2px 3px;"><b>{{ isSpeakable ? '通常' : '' }}變更圖片</b></button>
           <div *ngIf="isSpeakable" style="position: absolute; margin-top: -26px; margin-left: 120px; font-size: 22px; filter: grayscale(100%); opacity: 0.5; cursor: default;">{{ isSpeaking ? '😃' : '🤐' }}</div>
         </div>
       </ng-container>
@@ -26,13 +26,13 @@
           </span>
         </ng-container>
         <ng-container *ngIf="conditionTypeElement">
-          <b style="font-size: smaller">　Cond: </b><select style="width: 15.5em" [(ngModel)]="conditionTypeElement.value">
-            <option value="{{ standConditionType.Default }}">デフォルト</option>
-            <option value="{{ standConditionType.Image }}">指定画像</option>
-            <option value="{{ standConditionType.Postfix }}">チャット末尾</option>
-            <option value="{{ standConditionType.PostfixOrImage }}">チャット末尾 または 指定画像</option>
-            <option value="{{ standConditionType.PostfixAndImage }}">チャット末尾 かつ 指定画像</option>
-            <option value="{{ standConditionType.NotConditionStandUp }}">選択時のみ</option>
+          <b style="font-size: smaller"> 條件: </b><select style="width: 15.5em" [(ngModel)]="conditionTypeElement.value">
+            <option value="{{ standConditionType.Default }}">預設</option>
+            <option value="{{ standConditionType.Image }}">指定圖片</option>
+            <option value="{{ standConditionType.Postfix }}">聊天末尾</option>
+            <option value="{{ standConditionType.PostfixOrImage }}">聊天末尾 或者 指定圖片</option>
+            <option value="{{ standConditionType.PostfixAndImage }}">聊天末尾 和 指定圖片</option>
+            <option value="{{ standConditionType.NotConditionStandUp }}">僅在選擇時</option>
           </select>
         </ng-container>
         <ng-container *ngIf="nameElement">
@@ -45,13 +45,13 @@
         <ng-container *ngIf="applyImageEffectElement">
           <label style="margin-right: 0.6em;">
             <input type="checkbox" [(ngModel)]="applyImageEffectElement.value" checked="{{applyImageEffectElement.value ? 'checked' : ''}}" (change)="applyImageEffectElement.value = (applyImageEffectElement.value ? 'applyImageEffect' : '')">
-            <b style="font-size: smaller;">キャラクター画像効果を反映</b>
+            <b style="font-size: smaller;">反映人物形象效果</b>
           </label>
         </ng-container>
         <ng-container *ngIf="applyRollElement">
           <label style="margin-right: 0.6em;">
             <input type="checkbox" [(ngModel)]="applyRollElement.value" checked="{{applyRollElement.value ? 'checked' : ''}}" (change)="applyRollElement.value = (applyRollElement.value ? 'applyRoll' : '')">
-            <b style="font-size: smaller;">回転を反映</b>
+            <b style="font-size: smaller;">反映旋轉</b>
           </label>
         </ng-container>
         <ng-container *ngIf="applyDialogElement">
@@ -60,9 +60,9 @@
             <b style="font-size: smaller;">💭</b>
           </label>
         </ng-container>
-        <button (click)="openSpeakingModal()" style="font-size: 9px" [style.font-weight]="isSpeakable ? 'bolder' : 'normal'">口パクアニメ (APNGなど)</button>
+        <button (click)="openSpeakingModal()" style="font-size: 9px" [style.font-weight]="isSpeakable ? 'bolder' : 'normal'">口型同步動畫（APNG等）</button>
         <ng-container *ngIf="positionElement">
-          <br><button style="font-size: 9px; margin-right: 1em;" (click)="testStandUp()"><b>テスト (自分だけ見る)</b></button>
+          <br><button style="font-size: 9px; margin-right: 1em;" (click)="testStandUp()"><b>測試（僅見本人）</b></button>
           <label style="margin-right: 0.3em;">
             <input type="checkbox" [(ngModel)]="positionElement.currentValue" checked="{{positionElement.currentValue ? 'checked' : ''}}" (change)="positionElement.currentValue = (positionElement.currentValue ? 'posSpecialize' : '')">
             <b style="font-size: smaller;">Pos個別指定: </b>
@@ -75,7 +75,7 @@
         </ng-container>
         <ng-container *ngIf="heightElement">
           <br><span style="white-space: nowrap; font-size: smaller">
-            <b style="display: inline-block; margin-left: 3px">Height (0=指定なし): </b>
+            <b style="display: inline-block; margin-left: 3px">Height (0=未指定): </b>
             <input style="width: 130px" type="range" min="0" max="100" [(ngModel)]="heightElement.value">
             <input style="width: 3em; text-align: right;" type="number" min="0" max="100" [(ngModel)]="heightElement.value">
             <b style="display: inline-block; font-size: smaller; margin-left: 3px">%</b>
@@ -88,7 +88,7 @@
         </ng-container>
       </div>
       <div *ngIf="postfixElement && (conditionTypeElement.value == standConditionType.Postfix || conditionTypeElement.value == standConditionType.PostfixOrImage || conditionTypeElement.value == standConditionType.PostfixAndImage)">
-        <textarea [(ngModel)]="postfixElement.value" style="width: 100%; margin-top: 3px; height: 2.4rem" placeholder="1行に一つ、冒頭@を付けるとマッチ時にテキストから切り取り&#13;&#10;@怒り&#13;&#10;@必殺技"></textarea>
+        <textarea [(ngModel)]="postfixElement.value" style="width: 100%; margin-top: 3px; height: 2.4rem" placeholder="在每行的開頭添加一個@，以在匹配時從文本中剪切掉&#13;&#10;@憤怒&#13;&#10;@必殺技"></textarea>
       </div>
       <div *ngIf="conditionTypeElement.value == standConditionType.Image || conditionTypeElement.value == standConditionType.PostfixOrImage || conditionTypeElement.value == standConditionType.PostfixAndImage">
         <div *ngIf="imageList && imageList.length > 0" style="display: flex; flex-wrap: wrap; margin-right: -30px;">
@@ -98,7 +98,7 @@
             </div>
           </ng-container>
         </div>
-        <div *ngIf="!imageList || imageList.length == 0">キャラクター画像、顔ICが設定されていません</div>
+        <div *ngIf="!imageList || imageList.length == 0">未設置字符圖片和臉部IC</div>
       </div>
     </div>
   </div>

@@ -1,9 +1,10 @@
-<div class="flex-container">
+<div class="flex-container" *ngIf="!GuestMode()">
   <div class="flex-item no-grow">
     <div>
-      <button (click)="createGameTable()">新しいテーブルを作る</button>
+      <button (click)="createGameTable()">製作新桌面</button>
     </div>
-    <select style="width: 10em;" size="10" (change)="selectGameTable($event.target.value)" [ngModel]="selectedTable?.identifier">
+    <select style="width: 10em;" size="10" (change)="selectGameTable($event.target.value)"
+      [ngModel]="selectedTable?.identifier">
       <option *ngFor="let gameTable of getGameTables()" value="{{gameTable.identifier}}">{{gameTable.name}}</option>
     </select>
   </div>
@@ -11,7 +12,7 @@
     <ng-container *ngIf="!isEmpty || selectedTable">
       <div class="images-select">
         <div>
-          画像
+          圖片
           <div (click)="openBgImageModal()">
             <img height="120" [src]="tableBackgroundImage.url | safe: 'resourceUrl'">
           </div>
@@ -19,7 +20,7 @@
         <div>
           背景
           <div *ngIf="!tableDistanceviewImage.url">
-            <button (click)="openDistanceViewImageModal()" style="height: 120px;">背景画像を追加</button>
+            <button (click)="openDistanceViewImageModal()" style="height: 120px;">添加背景圖片</button>
           </div>
           <div *ngIf="tableDistanceviewImage.url" (click)="openDistanceViewImageModal()">
             <img height="120" [src]="tableDistanceviewImage.url | safe: 'resourceUrl'">
@@ -30,43 +31,45 @@
         <input [(ngModel)]="tableName" placeholder="Name" [attr.disabled]="!isEditable ? '' : null" />
       </div>
       <div>
-        <input [(ngModel)]="tableWidth" type="range" title="{{tableWidth}}" min="{{minSize}}" max="{{maxSize}}" name="tableWidth" [attr.disabled]="!isEditable ? '' : null"
-        /> Width :
-        <input [(ngModel)]="tableWidth" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;" [attr.disabled]="!isEditable ? '' : null">
+        <input [(ngModel)]="tableWidth" type="range" title="{{tableWidth}}" min="{{minSize}}" max="{{maxSize}}"
+          name="tableWidth" [attr.disabled]="!isEditable ? '' : null" /> Width :
+        <input [(ngModel)]="tableWidth" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;"
+          [attr.disabled]="!isEditable ? '' : null">
       </div>
       <div>
-        <input [(ngModel)]="tableHeight" title="{{tableHeight}}" type="range" min="{{minSize}}" max="{{maxSize}}" name="tableHeight" [attr.disabled]="!isEditable ? '' : null"
-        /> Height :
-        <input [(ngModel)]="tableHeight" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;" [attr.disabled]="!isEditable ? '' : null">
+        <input [(ngModel)]="tableHeight" title="{{tableHeight}}" type="range" min="{{minSize}}" max="{{maxSize}}"
+          name="tableHeight" [attr.disabled]="!isEditable ? '' : null" /> Height :
+        <input [(ngModel)]="tableHeight" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;"
+          [attr.disabled]="!isEditable ? '' : null">
       </div>
       <div>
-        グリッド:
+        網格:
         <select [(ngModel)]="tableGridType" name="tableGridType" [attr.disabled]="!isEditable ? '' : null">
-          <option value="-1">なし</option>
-          <option value="0">スクエア</option>
-          <option value="1">ヘクス（縦揃え）</option>
-          <option value="2">ヘクス（横揃え）</option>
+          <option value="-1">沒有</option>
+          <option value="0">正方形</option>
+          <option value="1">十六進制（垂直對齊）</option>
+          <option value="2">十六進制（水平對齊）</option>
         </select>
-        色:
+        顏色:
         <select [(ngModel)]="tableGridColor" name="tableGridColor" [attr.disabled]="!isEditable ? '' : null">
           <option value="#000000e6">黒</option>
           <option value="#dddddde6">白</option>
         </select>
       </div>
       <div>
-        背景フィルタ
+        背景濾鏡
         <select [(ngModel)]="tableDistanceviewFilter" name="tableDistanceviewFilter" [attr.disabled]="!isEditable ? '' : null">
-          <option value="">なし</option>
-          <option value="white">ホワイト</option>
-          <option value="black">ブラック</option>
+          <option value="">沒有</option>
+          <option value="white">白色</option>
+          <option value="black">黑色</option>
         </select>
       </div>
-      <hr/>
+      <hr />
       <div>
-        <label>グリッドを常に表示:
+        <label>始終顯示網格:
           <input type="checkbox" [(ngModel)]="tableGridShow" name="tableGridShow" />
         </label>
-        <label>スナップ:
+        <label>Snap:
           <input type="checkbox" [(ngModel)]="tableGridSnap" name="tableGridSnap" />
         </label>
         <ng-container *ngIf="!isDeleted">
@@ -76,15 +79,15 @@
               <div *ngIf="isSaveing" class="progress">{{progresPercent}}%</div>
             </div>
           </button>
-          <button class="danger" (click)="delete()" [attr.disabled]="getGameTables().length <= 1 ? '' : null">削除</button>
+          <button class="danger" (click)="delete()" [attr.disabled]="getGameTables().length <= 1 ? '' : null">刪除</button>
         </ng-container>
         <ng-container *ngIf="isDeleted">
-          <button (click)="restore()">元に戻す</button>
+          <button (click)="restore()">Undo</button>
         </ng-container>
       </div>
     </ng-container>
   </div>
 </div>
 <ng-container *ngIf="isEmpty">
-  <div style="font-size: 12px;">※テーブルが１つも作成されていません。「新しいテーブルを作る」から新しいテーブルを作成することができます。</div>
+  <div style="font-size: 12px;">*未新增列表。 您可以使用“新增列表”。</div>
 </ng-container>

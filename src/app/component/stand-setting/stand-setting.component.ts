@@ -106,7 +106,7 @@ export class StandSettingComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   updatePanelTitle() {
-    this.panelService.title = this.character.name + ' のスタンド設定';
+    this.panelService.title = this.character.name + ' 的Stand設定';
   }
 
   add() {
@@ -114,7 +114,7 @@ export class StandSettingComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   delele(standElement: DataElement, index: number) {
-    if (!this.character || !this.character.standList || !window.confirm('スタンド設定を削除しますか？')) return;
+    if (!this.character || !this.character.standList || !window.confirm('您要刪除Stand設定嗎？')) return;
     let elm = this.character.standList.removeChild(standElement);
     if (elm) {
       if (this.character.standList.overviewIndex == index) {
@@ -157,7 +157,7 @@ export class StandSettingComponent implements OnInit, OnDestroy, AfterViewInit {
     let coordinate = this.pointerDeviceService.pointers[0];
     let option: PanelOption = { left: coordinate.x, top: coordinate.y, width: 600, height: 590 };
     let textView = this.panelService.open(TextViewComponent, option);
-    textView.title = 'スタンド設定ヘルプ';
+    textView.title = 'Stand設定幫助';
     textView.text = 
 `　キャラクターのスタンドの名前、位置と画像の高さ（それぞれ画面サイズに対する相対指定）、チャット送信時にスタンドが表示される条件を設定できます。
 

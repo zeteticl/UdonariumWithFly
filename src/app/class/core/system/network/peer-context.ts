@@ -4,7 +4,7 @@ import * as SHA256 from 'crypto-js/sha256';
 import { base } from '../util/base-x';
 
 const Base62 = base('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
-const roomIdPattern = /^(\w{6})(\w{3})(\w*)-(\w*)/i;
+const roomIdPattern = /^(\w{6})(\w{3})(\w*)-(\w*)(-(\w*))?(-(\w*))/i;
 
 export interface IPeerContext {
   readonly peerId: string;
@@ -17,6 +17,7 @@ export interface IPeerContext {
   readonly isOpen: boolean;
   readonly isRoom: boolean;
   readonly hasPassword: boolean;
+  readonly isGuest: boolean;
 }
 
 export class PeerContext implements IPeerContext {
@@ -28,7 +29,8 @@ export class PeerContext implements IPeerContext {
   digestUserId: string = '';
   digestPassword: string = '';
   isOpen: boolean = false;
-
+  isAllowGuest: boolean = true;
+  isGuest: boolean = false;
   get isRoom(): boolean { return 0 < this.roomId.length; }
   get hasPassword(): boolean { return 0 < this.password.length + this.digestPassword.length; }
 
@@ -46,6 +48,8 @@ export class PeerContext implements IPeerContext {
         this.roomId = regArray[2];
         this.roomName = lzbase62.decompress(regArray[3]);
         this.digestPassword = regArray[4];
+        this.isAllowGuest = (regArray[6] == "true");
+        this.isGuest = (regArray[8] == "true");
         return;
       }
     } catch (e) {
@@ -66,7 +70,7 @@ export class PeerContext implements IPeerContext {
   }
 
   static create(userId: string): PeerContext
-  static create(userId: string, roomId: string, roomName: string, password: string): PeerContext
+  static create(userId: string, roomId: string, roomName: string, password: string, isAllowGuest?: boolean, isGuest?: boolean): PeerContext
   static create(...args: any[]): PeerContext {
     if (args.length <= 1) {
       return PeerContext._create.apply(this, args);
@@ -83,10 +87,10 @@ export class PeerContext implements IPeerContext {
     return peerContext;
   }
 
-  private static _createRoom(userId: string = '', roomId: string = '', roomName: string = '', password: string = ''): PeerContext {
+  private static _createRoom(userId: string = '', roomId: string = '', roomName: string = '', password: string = '', isAllowGuest: boolean = false, isGuest: boolean = false): PeerContext {
     let digestUserId = this.generateId('******');
     let digestPassword = calcDigestPassword(roomId, password);
-    let peerId = `${digestUserId}${roomId}${lzbase62.compress(roomName)}-${digestPassword}`;
+    let peerId = `${digestUserId}${roomId}${lzbase62.compress(roomName)}-${digestPassword}` + '-' + isAllowGuest + '-' + isGuest;
 
     let peerContext = new PeerContext(peerId);
     peerContext.userId = userId;

@@ -1,13 +1,16 @@
-<div class="component">
+<div class="component" *ngIf="!GuestMode()">
   <ng-container *ngTemplateOutlet="inventoryTab"></ng-container>
   <ng-container *ngTemplateOutlet="inventoryViewSetting"></ng-container>
-  <div *ngIf="getGameObjects(selectTab).length < 1">{{getTabTitle(selectTab)}}インベントリは空です</div>
-  <div (contextmenu)="onContextMenu($event, gameObject)" *ngFor="let gameObject of getGameObjects(selectTab); trackBy: trackByGameObject"
-    (click)="selectGameObject(gameObject)" [ngClass]="{'box': true, 'selected': (selectedIdentifier === gameObject.identifier)}">
+  <div *ngIf="getGameObjects(selectTab).length < 1">{{getTabTitle(selectTab)}}庫存為空</div>
+  <div (contextmenu)="onContextMenu($event, gameObject)"
+    *ngFor="let gameObject of getGameObjects(selectTab); trackBy: trackByGameObject"
+    (click)="selectGameObject(gameObject)"
+    [ngClass]="{'box': true, 'selected': (selectedIdentifier === gameObject.identifier)}">
     <ng-container *ngTemplateOutlet="gameObjectTags; context:{ gameObject: gameObject}"></ng-container>
   </div>
   <div *ngIf="selectTab === 'graveyard'" style="padding-top: 6px;">
-    <button class="danger" (click)="cleanInventory()" [attr.disabled]="getGameObjects(selectTab).length < 1 ? '' : null">墓場を空にする</button>
+    <button class="danger" (click)="cleanInventory()"
+      [attr.disabled]="getGameObjects(selectTab).length < 1 ? '' : null">清空墓地</button>
   </div>
 </div>
 <ng-template #inventoryTab>
@@ -23,32 +26,42 @@
 <ng-template #inventoryViewSetting>
   <ng-container *ngIf="isEdit">
     <div>
-      <div style="font-size: 12px;">並び順</div>
+      <div style="font-size: 12px;">排序</div>
       <input [(ngModel)]="sortTag" placeholder="タグ名" />
       <select [(ngModel)]="sortOrder">
-        <option value="ASC">昇順</option>
-        <option value="DESC">降順</option>
+        <option value="ASC">升序</option>
+        <option value="DESC">降序</option>
       </select>
     </div>
     <div style="font-size: 12px; padding-top: 6px;">表示項目</div>
-    <input style="width: 100%; box-sizing: border-box;" [(ngModel)]="dataTag" placeholder="スペース区切りでタグ名 スラッシュで改行 ex.「HP MP / メモ」" />
+    <input style="width: 100%; box-sizing: border-box;" [(ngModel)]="dataTag"
+      placeholder="空格分隔的標籤名稱，斜線換行，例如「 HP MP / Memo」" />
+    <div style="font-size: 12px; padding-top: 6px;">標準骰子機械人</div>
+    <select style="width: 12em;" (change)="onChangeGameType($event.target.value)" [(ngModel)]="gameType"
+      [ngModelOptions]="{standalone: true}">
+      <option value="">指定骰組</option>
+      <option *ngFor="let diceBotInfo of diceBotInfos" value="{{diceBotInfo.script}}">{{diceBotInfo.game}}</option>
+    </select>
+
     <div style="padding-top: 6px;">
-      <button class="tab-setting small-font" (click)="toggleEdit()"><i class="material-icons small-font">settings</i>完了</button>
+      <button class="tab-setting small-font" (click)="toggleEdit()"><i
+          class="material-icons small-font">settings</i>完結</button>
     </div>
   </ng-container>
   <ng-container *ngIf="!isEdit">
     <table style="font-size: 0.8em;">
       <tr>
-        <th style=" vertical-align:middle;">並び順:</th>
+        <th style=" vertical-align:middle;">排序:</th>
         <td style=" vertical-align:middle;">
           <ng-container *ngIf="0 < sortTag.length">{{sortTag}} ({{sortOrderName}})</ng-container>
           <ng-container *ngIf="sortTag.length < 1">-</ng-container>
         </td>
         <td>
           <ng-container *ngIf="selectTab === 'table'">
-            <label><input type="checkbox" [(ngModel)]="indicateAll" />すべて表示</label>
+            <label><input type="checkbox" [(ngModel)]="indicateAll" />顯示所有</label>
           </ng-container>
-          <button class="tab-setting small-font" (click)="toggleEdit()"><i class="material-icons small-font">settings</i>設定</button>
+          <button class="tab-setting small-font" (click)="toggleEdit()"><i
+              class="material-icons small-font">settings</i>設定</button>
         </td>
       </tr>
     </table>
@@ -57,36 +70,59 @@
 <ng-template #gameObjectTags let-gameObject="gameObject">
   <div class="inventory-object">
     <div class="object-name">
-      <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier" style="font-size: 0.8em; padding: 1px; width: 24px; height: 16px; margin-bottom: 1px" title="オーバービューに顔アイコンを使用" [ngClass]="{'is-active': gameObject.isUseIconToOverviewImage}" (click)="gameObject.isUseIconToOverviewImage = !gameObject.isUseIconToOverviewImage">
-        <i *ngIf="gameObject.faceIcon && 0 < gameObject.faceIcon?.url.length; else altImage" class="face-icon"><img [src]="gameObject.faceIcon.url | safe: 'resourceUrl'" alt=""></i>
+      <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier"
+        style="font-size: 0.8em; padding: 1px; width: 24px; height: 16px; margin-bottom: 1px" title="使用表面圖標進行概述"
+        [ngClass]="{'is-active': gameObject.isUseIconToOverviewImage}"
+        (click)="gameObject.isUseIconToOverviewImage = !gameObject.isUseIconToOverviewImage">
+        <i *ngIf="gameObject.faceIcon && 0 < gameObject.faceIcon?.url.length; else altImage" class="face-icon"><img
+            [src]="gameObject.faceIcon.url | safe: 'resourceUrl'" alt=""></i>
         <ng-template #altImage>
           <i class="material-icons" style="font-size: 1em;">emoji_emotions</i>
         </ng-template>
       </button>
       {{gameObject.name}}
-      <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier" style="font-size: 0.8em; padding: 1px; width: 24px; height: 16px; margin-bottom: 1px" title="影の表示" [ngClass]="{'is-active': gameObject.isDropShadow}" (click)="gameObject.isDropShadow = !gameObject.isDropShadow">
-        <i *ngIf="gameObject.shadowImageFile && 0 < gameObject.shadowImageFile.url.length; else altShadow" class="face-icon"><img style="filter: brightness(0);" [ngStyle]="{'opacity': gameObject.isDropShadow ? 0.7 : 0.3}" [src]="gameObject.shadowImageFile.url | safe: 'resourceUrl'" alt=""></i>
+      <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier"
+        style="font-size: 0.8em; padding: 1px; width: 24px; height: 16px; margin-bottom: 1px" title="陰影顯示"
+        [ngClass]="{'is-active': gameObject.isDropShadow}" (click)="gameObject.isDropShadow = !gameObject.isDropShadow">
+        <i *ngIf="gameObject.shadowImageFile && 0 < gameObject.shadowImageFile.url.length; else altShadow"
+          class="face-icon"><img style="filter: brightness(0);"
+            [ngStyle]="{'opacity': gameObject.isDropShadow ? 0.7 : 0.3}"
+            [src]="gameObject.shadowImageFile.url | safe: 'resourceUrl'" alt=""></i>
         <ng-template #altShadow>
-          <i class="material-icons" style="font-size: 1em;">{{ gameObject.isDropShadow ? 'star_half' : 'star_border'}}</i>
-        </ng-template>      
+          <i class="material-icons"
+            style="font-size: 1em;">{{ gameObject.isDropShadow ? 'star_half' : 'star_border'}}</i>
+        </ng-template>
       </button>
-      <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier" style="font-size: 0.8em; padding: 2px 5px;" title="他のキャラクターに乗る" [ngClass]="{'is-active': !gameObject.isNotRide}" (click)="gameObject.isNotRide = !gameObject.isNotRide">
-        <i class="material-icons" style="font-size: 1em;">{{ !gameObject.isNotRide ? 'directions_bike' : 'directions_run'}}</i>
+      <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier"
+        style="font-size: 0.8em; padding: 2px 5px;" title="乘上其他角色" [ngClass]="{'is-active': !gameObject.isNotRide}"
+        (click)="gameObject.isNotRide = !gameObject.isNotRide">
+        <i class="material-icons"
+          style="font-size: 1em;">{{ !gameObject.isNotRide ? 'directions_bike' : 'directions_run'}}</i>
       </button>
-      <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier" style="font-size: 0.8em; padding: 2px 5px;" title="高度の表示" [ngClass]="{'is-active': gameObject.isAltitudeIndicate}" (click)="gameObject.isAltitudeIndicate = !gameObject.isAltitudeIndicate">
-        <i class="material-icons rotate" style="font-size: 1em;">straighten</i><span style="display: inline-block; text-align: center; font-size: xx-small; color: gray; min-width: 2em;">{{ gameObject.altitude }}</span>
+      <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier"
+        style="font-size: 0.8em; padding: 2px 5px;" title="顯示高度"
+        [ngClass]="{'is-active': gameObject.isAltitudeIndicate}"
+        (click)="gameObject.isAltitudeIndicate = !gameObject.isAltitudeIndicate">
+        <i class="material-icons rotate" style="font-size: 1em;">straighten</i><span
+          style="display: inline-block; text-align: center; font-size: xx-small; color: gray; min-width: 2em;">{{ gameObject.altitude }}</span>
       </button>
-      <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier" style="font-size: 0.8em; padding: 2px 5px;" title="テーブルインベントリに表示" [ngClass]="{'is-active': gameObject.isInventoryIndicate}" (click)="gameObject.isInventoryIndicate = !gameObject.isInventoryIndicate">
+      <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier"
+        style="font-size: 0.8em; padding: 2px 5px;" title="在表格清單中顯示"
+        [ngClass]="{'is-active': gameObject.isInventoryIndicate}"
+        (click)="gameObject.isInventoryIndicate = !gameObject.isInventoryIndicate">
         <i class="material-icons" style="font-size: 1em;">all_inbox</i>
       </button>
-      <button *ngIf="selectedIdentifier === gameObject.identifier" style="font-size: 0.8em; padding: 2px 5px;" title="メニュー" (click)="onContextMenu($event, gameObject)">
+      <button *ngIf="selectedIdentifier === gameObject.identifier" style="font-size: 0.8em; padding: 2px 5px;"
+        title="メニュー" (click)="onContextMenu($event, gameObject)">
         <i class="material-icons" style="font-size: 1em;">settings</i>
       </button>
     </div>
     <div class="object-tags-box">
       <div class="table-cell image-box">
-        <span class="aura" [ngClass]="{black: gameObject.aura == 0, blue: gameObject.aura == 1, green: gameObject.aura == 2, cyan: gameObject.aura == 3, red: gameObject.aura == 4, magenta: gameObject.aura == 5, yellow: gameObject.aura == 6, white: gameObject.aura == 7}">
-          <img *ngIf="gameObject.imageFile.url" class="inverser" [src]="gameObject.imageFile.url | safe: 'resourceUrl'" [ngClass]="{inverse: gameObject.isInverse, hollow: gameObject.isHollow, 'black-paint': gameObject.isBlackPaint}" />
+        <span class="aura"
+          [ngClass]="{black: gameObject.aura == 0, blue: gameObject.aura == 1, green: gameObject.aura == 2, cyan: gameObject.aura == 3, red: gameObject.aura == 4, magenta: gameObject.aura == 5, yellow: gameObject.aura == 6, white: gameObject.aura == 7}">
+          <img *ngIf="gameObject.imageFile.url" class="inverser" [src]="gameObject.imageFile.url | safe: 'resourceUrl'"
+            [ngClass]="{inverse: gameObject.isInverse, hollow: gameObject.isHollow, 'black-paint': gameObject.isBlackPaint}" />
         </span>
       </div>
       <div class="table-cell">
@@ -109,7 +145,9 @@
           <div style="display: inline-block;">
             <div class="tag-value-box">
               <div class="hidden-spacer" style="font-weight: bold;">{{dataElm.value}}</div>
-              <input class="input tag-value" type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1" [(ngModel)]="dataElm.value" placeholder="" />
+              <input class="input tag-value"
+                type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1"
+                [(ngModel)]="dataElm.value" placeholder="" />
             </div>
           </div>
         </div>
@@ -117,11 +155,14 @@
       <ng-container *ngSwitchCase="'numberResource'">
         <div class="resource-tag">
           <div style="font-size: 0.8em; display: inline-block; margin-right: 0.5em;">{{dataElm.name}}</div>
-          <input class="input resource-value" type="number" size="1" [(ngModel)]="dataElm.currentValue" placeholder="Value" />
+          <input class="input resource-value" type="number" size="1" [(ngModel)]="dataElm.currentValue"
+            placeholder="Value" />
         </div>
         <div class="resource-tag">
-          <input type="range" title="{{dataElm.currentValue}}" [style]="'font-size: 0.8em; min-width: 1em; width:' + (dataElm.name.length + 4.5) + 'em; --min: 0; --max: ' + dataElm.value + '; --val:' + dataElm.currentValue +';' | safe: 'style'"
-            min="0" max="{{!+dataElm.value ? 1000 : dataElm.value}}" [ngStyle]="{'background-color':'green'}" [(ngModel)]="dataElm.currentValue" />
+          <input type="range" title="{{dataElm.currentValue}}"
+            [style]="'font-size: 0.8em; min-width: 1em; width:' + (dataElm.name.length + 4.5) + 'em; --min: 0; --max: ' + dataElm.value + '; --val:' + dataElm.currentValue +';' | safe: 'style'"
+            min="0" max="{{!+dataElm.value ? 1000 : dataElm.value}}" [ngStyle]="{'background-color':'green'}"
+            [(ngModel)]="dataElm.currentValue" />
         </div>
       </ng-container>
       <ng-container *ngSwitchCase="'checkProperty'">
@@ -129,7 +170,8 @@
         <div style="text-align: center;">
           <div style="display: inline-block;">
             <div class="tag-value-box">
-              <input type="checkbox" [(ngModel)]="dataElm.value" checked="{{dataElm.value ? 'checked' : ''}}" (change)="dataElm.value = (dataElm.value ? dataElm.name : '')">
+              <input type="checkbox" [(ngModel)]="dataElm.value" checked="{{dataElm.value ? 'checked' : ''}}"
+                (change)="dataElm.value = (dataElm.value ? dataElm.name : '')">
             </div>
           </div>
         </div>
@@ -140,8 +182,11 @@
           <div style="display: inline-block;">
             <div class="tag-value-box">
               <div class="hidden-spacer" style="font-weight: bold;">{{dataElm.value}}</div>
-              <input class="input tag-value" type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1" [(ngModel)]="dataElm.value" placeholder="" />
-              <span style="font-size: smaller;">({{ (dataElm.calcAbilityScore() >= 0 ? '+' : '') + dataElm.calcAbilityScore() }})</span>
+              <input class="input tag-value"
+                type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1"
+                [(ngModel)]="dataElm.value" placeholder="" />
+              <span
+                style="font-size: smaller;">({{ (dataElm.calcAbilityScore() >= 0 ? '+' : '') + dataElm.calcAbilityScore() }})</span>
             </div>
           </div>
         </div>
@@ -152,7 +197,9 @@
           <div style="display: inline-block;">
             <div class="tag-value-box">
               <div class="hidden-spacer" style="font-weight: bold;">{{dataElm.value}}</div>
-              <input class="input tag-value" type="{{dataElm.name === 'size' || dataElm.name === 'altitude' ? 'number' : 'text'}}" min="{{dataElm.name === 'size' ? '0' : ''}}" size="1" [(ngModel)]="dataElm.value" placeholder="" />
+              <input class="input tag-value"
+                type="{{dataElm.name === 'size' || dataElm.name === 'altitude' ? 'number' : 'text'}}"
+                min="{{dataElm.name === 'size' ? '0' : ''}}" size="1" [(ngModel)]="dataElm.value" placeholder="" />
             </div>
           </div>
         </div>

@@ -1,55 +1,56 @@
 <div *ngIf="myPeer">
-  <button (click)="changeIcon()">アイコンを変更する</button>
+  <button (click)="changeIcon()">變更圖示</button>
   <div *ngIf="myPeer.image" class="image cover" [style.background-image]="'url(' + myPeer.image.url + ')' | safe: 'style' "
     (click)="changeIcon()">
     <!--<img *ngIf="myPeer.image" [src]="myPeer.image.url | safe: 'resourceUrl'" />-->
   </div>
-  <span>あなたの色とニックネーム：<input type="color" style="width:1em; margin-right: 0.5em" [(ngModel)]="myPeerColor">　<input [(ngModel)]="myPeerName" [style.color]="myPeerColor" style="font-weight: bolder;" placeholder="ニックネーム" />
-  <br>※最後に使った色とニックネームをブラウザに保存、<br>　色を初期値に戻す際は白(255,255,255)を選択。</span>
+  <span>您的顏色和暱稱：<input type="color" style="width:1em; margin-right: 0.5em" [(ngModel)]="myPeerColor">　<input [(ngModel)]="myPeerName" [style.color]="myPeerColor" style="font-weight: bolder;" placeholder="ニックネーム" />
+  <br>※在瀏覽器中保存上次使用的顏色和暱稱、<br>　選擇白色（255,255,255）將顏色恢復為初始值。</span>
 </div>
 <div>
-  <span>あなたのID：<span>
+  <span>你的ID：<span>
     <ng-container *ngIf="networkService.isOpen">
       <span style="display: inline-block;">
         <span #idSpacer class="id-spacer">{{ networkService.peerContext.userId }}</span>
         <input #idInput class="id-input" type="text" value="{{ networkService.peerContext.userId }}" readonly>
       </span>
       <button *ngIf="isAbleClipboardCopy" (click)="copyPeerId()" [disabled]="isCopied"><b class="material-icons" style="font-size: 1em; vertical-align: bottom">content_copy</b></button>
-      <span [@fadeInOut]="isCopied" class="copied" [style.color]="myPeerColor"> {{ isCopied ? 'クリップボードにコピーしました。' : '' }}</span>
+      <span [@fadeInOut]="isCopied" class="copied" [style.color]="myPeerColor"> {{ isCopied ? '將其複製到剪貼板。' : '' }}</span>
     </ng-container>
   </span>
   <span *ngIf="!networkService.isOpen" style="font-weight: bold;">???</span>
   </span>
+  <span *ngIf="GuestMode()"><strong>※訪客身份登入中</strong></span>
 </div>
 <!--<div>host ID:{{networkService.hostPeerID}}</div>-->
 <ng-container *ngIf="networkService.peerContext.isRoom">
   <hr/>
   <div>
-    <span>ルーム名：<span *ngIf="networkService.isOpen" style="font-weight: bold;">{{networkService.peerContext.roomName}}/{{networkService.peerContext.roomId}}</span></span>
+    <span>房間名稱：<span *ngIf="networkService.isOpen" style="font-weight: bold;">{{networkService.peerContext.roomName}}/{{networkService.peerContext.roomId}}</span></span>
   </div>
   <div>
-    <span>パスワード：<span *ngIf="networkService.isOpen" style="font-weight: bold;">{{networkService.peerContext.password}}</span></span>
+    <span>密碼：<span *ngIf="networkService.isOpen" style="font-weight: bold;">{{networkService.peerContext.password}}</span></span>
   </div>
 </ng-container>
 <hr/>
 <div *ngFor="let context of networkService.peerContexts">
   <div>
-    <span *ngIf="!context.isOpen">[接続中]</span>
-    <span>他の参加者：{{findUserId(context.peerId)}} [<b [style.color]="findPeerColor(context.peerId)">{{findPeerName(context.peerId)}}</b>]</span>
+    <span *ngIf="!context.isOpen">[連接中]</span>
+    <span>其他参加者：{{findUserId(context.peerId)}} [<b [style.color]="findPeerColor(context.peerId)">{{findPeerName(context.peerId)}}</b>]</span><span *ngIf="context.isGuest"> (訪客)</span>
   </div>
 </div>
 <div>
   <ng-container *ngIf="!networkService.peerContext.isRoom">
-    <input [(ngModel)]="targetUserId" placeholder="接続したい相手のID" name="targetUserId" />
-    <button (click)="connectPeer()" [disabled]="!networkService.isOpen">プライベート接続</button><br>
+    <input [(ngModel)]="targetUserId" placeholder="您想進行連接的人的ID" name="targetUserId" />
+    <button (click)="connectPeer()" [disabled]="!networkService.isOpen">私人連接</button><br>
   </ng-container>
-  <button *ngIf="networkService.peerIds.length <= 1" (click)="showLobby()" [disabled]="!networkService.isOpen">ロビー（ルーム一覧）を表示</button>
+  <button *ngIf="networkService.peerIds.length <= 1" (click)="showLobby()" [disabled]="!networkService.isOpen">大廳（房間列表）</button>
 </div>
 <div><span style="font-size: 12px;">{{help}}</span></div>
 <ng-container *ngIf="!networkService.peerContext.isRoom">
-  <div style="font-size: 12px;" *ngIf="networkService.peerContexts.length < 1">※プライベート接続を使用する場合は、お互いのIDをユドナリウム外で共有してください。</div>
-  <div style="font-size: 12px;" *ngIf="networkService.peerContexts.length < 1">※一人で動作確認を行いたい場合はブラウザを2つ開くと良いと思います。</div>
+  <div style="font-size: 12px;" *ngIf="networkService.peerContexts.length < 1">※如果您使用私人連接，請在Udonarium之外共享彼此的ID。</div>
+  <div style="font-size: 12px;" *ngIf="networkService.peerContexts.length < 1">※如果要自己檢查的操作，則應打開兩個瀏覽器。</div>
 </ng-container>
 <ng-container *ngIf="networkService.peerContext.isRoom">
-  <div style="font-size: 12px;">※ルーム機能を利用している時はプライベート接続を利用できません。</div>
+  <div style="font-size: 12px;">※使用房間功能時，私人連接不可用。</div>
 </ng-container>

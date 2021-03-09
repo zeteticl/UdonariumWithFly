@@ -123,7 +123,9 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
     private pointerDeviceService: PointerDeviceService,
     private modalService: ModalService
   ) { }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnInit() {
     EventSystem.register(this)
       .on('SHUFFLE_CARD_STACK', -1000, event => {
@@ -193,6 +195,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @HostListener('carddrop', ['$event'])
   onCardDrop(e) {
+    if (this.GuestMode()) return;
     if (this.cardStack === e.detail || (e.detail instanceof Card === false && e.detail instanceof CardStack === false)) {
       return;
     }
@@ -232,6 +235,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onDoubleClick() {
+    if (this.GuestMode()) return;
     this.stopDoubleClickTimer();
     let distance = (this.doubleClickPoint.x - this.input.pointer.x) ** 2 + (this.doubleClickPoint.y - this.input.pointer.y) ** 2;
     if (distance < 10 ** 2) {
@@ -249,6 +253,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onInputStart(e: MouseEvent | TouchEvent) {
+    if (this.GuestMode()) return;
     this.startDoubleClickTimer(e);
     this.cardStack.toTopmost();
     this.startIconHiddenTimer();
@@ -258,6 +263,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @HostListener('contextmenu', ['$event'])
   onContextMenu(e: Event) {
+    if (this.GuestMode()) return;
     e.stopPropagation();
     e.preventDefault();
 
@@ -265,7 +271,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
     let position = this.pointerDeviceService.pointers[0];
     this.contextMenuService.open(position, [
       {
-        name: 'カードを１枚引く', action: () => {
+        name: '抽一張卡', action: () => {
           if (this.drawCard() != null) {
             SoundEffect.play(PresetSound.cardDraw);
           }
@@ -274,10 +280,10 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
         disabled: this.cards.length == 0
       },
       {
-        name: 'カードを引く', action: null,
+        name: '抽卡', action: null,
         subActions: [2, 3, 4, 5, 10].map(n => {
           return {
-            name: `${n}枚`,
+            name: `${n}張`,
             action: () => { 
               for (let i = 0; i < n; i++) {
                 if (this.drawCard() != null) {
@@ -293,99 +299,99 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       ContextMenuSeparator,
       {
-        name: '一番上を表にする', action: () => {
+        name: 'face Up', action: () => {
           this.cardStack.faceUp();
           SoundEffect.play(PresetSound.cardDraw);
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       {
-        name: '一番上を裏にする', action: () => {
+        name: 'face Down', action: () => {
           this.cardStack.faceDown();
           SoundEffect.play(PresetSound.cardDraw);
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       ContextMenuSeparator,
       {
-        name: 'すべて表にする', action: () => {
+        name: '所有卡牌face Up', action: () => {
           this.cardStack.faceUpAll();
           SoundEffect.play(PresetSound.cardDraw);
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       {
-        name: 'すべて裏にする', action: () => {
+        name: '所有卡牌face Down', action: () => {
           this.cardStack.faceDownAll();
           SoundEffect.play(PresetSound.cardDraw);
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       {
-        name: 'すべて正位置にする', action: () => {
+        name: '將所有卡牌放在正確的位置', action: () => {
           this.cardStack.uprightAll();
           SoundEffect.play(PresetSound.cardDraw);
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       ContextMenuSeparator,
       {
-        name: 'シャッフル', action: () => {
+        name: '洗牌', action: () => {
           this.cardStack.shuffle();
           SoundEffect.play(PresetSound.cardShuffle);
           EventSystem.call('SHUFFLE_CARD_STACK', { identifier: this.cardStack.identifier });
-        }, 
+        },
         disabled: this.cards.length == 0
       },
-      { name: 'カード一覧を見る', action: () => { this.showStackList(this.cardStack); }, disabled: this.cards.length == 0 },
+      { name: '查看卡牌清單', action: () => { this.showStackList(this.cardStack); }, disabled: this.cards.length == 0 },
       ContextMenuSeparator,
       (this.isShowTotal
-        ? { name: '☑ 枚数を表示', action: () => { this.cardStack.isShowTotal = false; } }
-        : { name: '☐ 枚数を表示', action: () => { this.cardStack.isShowTotal = true; } }
+        ? { name: '☑ 顯示牌數', action: () => { this.cardStack.isShowTotal = false; } }
+        : { name: '☐ 顯示牌數', action: () => { this.cardStack.isShowTotal = true; } }
       ),
-      { name: 'カードサイズを揃える', action: () => { if (this.cardStack.topCard) this.cardStack.unifyCardsSize(this.cardStack.topCard.size); }, disabled: this.cards.length == 0 },
+      { name: '對齊卡片尺寸', action: () => { if (this.cardStack.topCard) this.cardStack.unifyCardsSize(this.cardStack.topCard.size); }, disabled: this.cards.length == 0 },
       ContextMenuSeparator,
       {
-        name: '山札を人数分に分割する', action: () => {
+        name: '根據人數分發卡牌', action: () => {
           this.splitStack(Network.peerIds.length);
           SoundEffect.play(PresetSound.cardDraw);
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       {
-        name: '山札を崩す', action: () => {
+        name: '打破牌堆', action: () => {
           this.breakStack();
           SoundEffect.play(PresetSound.cardShuffle);
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       {
-        name: '山札全体を裏返す', action: () => {
+        name: '翻轉整個牌堆', action: () => {
           this.cardStack.inverse();
           SoundEffect.play(PresetSound.cardDraw);
           SoundEffect.play(PresetSound.cardDraw);
           EventSystem.call('INVERSE_CARD_STACK', { identifier: this.cardStack.identifier });
-        }, 
+        },
         disabled: this.cards.length == 0
       },
       ContextMenuSeparator,
-      { name: '詳細を表示', action: () => { this.showDetail(this.cardStack); } },
+      { name: '顯示詳細資料', action: () => { this.showDetail(this.cardStack); } },
       (this.cardStack.getUrls().length <= 0 ? null : {
-        name: '参照URLを開く', action: null,
+        name: '開啓参考URL', action: null,
         subActions: this.cardStack.getUrls().map((urlElement) => {
           const url = urlElement.value.toString();
           return {
             name: urlElement.name ? urlElement.name : url,
             action: () => { this.modalService.open(OpenUrlComponent, { url: url, title: this.cardStack.name, subTitle: urlElement.name }); },
             disabled: !StringUtil.validUrl(url),
-            error: !StringUtil.validUrl(url) ? 'URLが不正です' : null,
+            error: !StringUtil.validUrl(url) ? '網址無效' : null,
             materialIcon: 'open_in_new'
           };
         })
       }),
       (this.cardStack.getUrls().length <= 0 ? null : ContextMenuSeparator),
       {
-        name: 'コピーを作る', action: () => {
+        name: '製作副本', action: () => {
           let cloneObject = this.cardStack.clone();
           cloneObject.location.x += this.gridSize;
           cloneObject.location.y += this.gridSize;
@@ -395,7 +401,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
         }
       },
       {
-        name: '山札を削除する', action: () => {
+        name: '刪除牌堆', action: () => {
           this.cardStack.setLocation('graveyard');
           this.cardStack.destroy();
           SoundEffect.play(PresetSound.sweep);
@@ -437,6 +443,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private splitStack(split: number) {
+    if (this.GuestMode()) return;
     if (split < 2) return;
     let cardStacks: CardStack[] = [];
     for (let i = 0; i < split; i++) {
@@ -466,6 +473,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private concatStack(topStack: CardStack, bottomStack: CardStack = this.cardStack) {
+    if (this.GuestMode()) return;
     let newCardStack = CardStack.create(topStack.name);
     newCardStack.location.name = bottomStack.location.name;
     newCardStack.location.x = bottomStack.location.x;
@@ -496,9 +504,10 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private showDetail(gameObject: CardStack) {
+    if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];
-    let title = '山札設定';
+    let title = '設定牌堆';
     if (gameObject.name.length) title += ' - ' + gameObject.name;
     let option: PanelOption = { title: title, left: coordinate.x - 300, top: coordinate.y - 300, width: 600, height: 600 };
     let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
@@ -506,6 +515,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private showStackList(gameObject: CardStack) {
+    if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
 
     let coordinate = this.pointerDeviceService.pointers[0];
