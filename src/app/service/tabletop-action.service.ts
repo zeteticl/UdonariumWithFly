@@ -40,7 +40,7 @@ export class TabletopActionService {
     let viewTable = this.getViewTable();
     if (!viewTable) return;
 
-    let tableMask = GameTableMask.create('マップマスク', 5, 5, 100);
+    let tableMask = GameTableMask.create('地圖Mark', 5, 5, 100);
     tableMask.location.x = position.x - 25;
     tableMask.location.y = position.y - 25;
     tableMask.posZ = position.z;
@@ -69,7 +69,7 @@ export class TabletopActionService {
 
   createTextNote(position: PointerCoordinate): TextNote {
     if (this.GuestMode()) return;
-    let textNote = TextNote.create('共有メモ', 'テキストを入力してください', 5, 4, 3);
+    let textNote = TextNote.create('共有筆記', '在這裡輸入內容', 5, 4, 3);
     textNote.location.x = position.x;
     textNote.location.y = position.y;
     textNote.posZ = position.z;
@@ -103,7 +103,7 @@ export class TabletopActionService {
 
   createTrump(position: PointerCoordinate): CardStack {
     if (this.GuestMode()) return;
-    let cardStack = CardStack.create('トランプ山札');
+    let cardStack = CardStack.create('啤牌');
     cardStack.location.x = position.x - 25;
     cardStack.location.y = position.y - 25;
     cardStack.posZ = position.z;
@@ -130,7 +130,7 @@ export class TabletopActionService {
       if (!ImageStorage.instance.get(url)) {
         ImageStorage.instance.add(url);
       }
-      let card = Card.create('カード', url, back);
+      let card = Card.create('卡牌', url, back);
       cardStack.putOnBottom(card);
     }
     return cardStack;
@@ -145,7 +145,7 @@ export class TabletopActionService {
     let bgFileContext = ImageFile.createEmpty('testTableBackgroundImage_image').toContext();
     bgFileContext.url = './assets/images/BG10a_80.jpg';
     testBgFile = ImageStorage.instance.add(bgFileContext);
-    gameTable.name = '最初桌面';
+    gameTable.name = '最初的桌面';
     gameTable.imageIdentifier = testBgFile.identifier;
     gameTable.width = 20;
     gameTable.height = 15;

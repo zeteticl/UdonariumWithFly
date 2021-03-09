@@ -19,8 +19,9 @@
   <!-- Twitter Card -->
   <meta property="og:url" content="https://z01.hktrpg.com/">
   <meta property="og:title" content="Udonarium with Fly">
-  <meta property="og:description" content="ユドナリウム（Udonarium）の私家改造版、高度とかチャットテキストの色とか立ち絵（ユドナリウムだとキャラクターの画像と紛らわしいのでスタンドと呼称）とか。">
-  <meta property="og:image" content="https://nanasunana.github.io/card.png">
+  <meta property="og:description" content="烏冬（Udonarium）改造版@HKTRPG、高度，聊天文字顏色，Stand圖片，訪客功能及其他。">
+  <meta property="og:image" content="https://raw.githubusercontent.com/zeteticl/UdonariumWithFly/CHT/src/card.png">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link rel="stylesheet" href="./assets/styles.css">
   <link rel="manifest" href="manifest.webmanifest">
@@ -46,12 +47,13 @@
   <script type="text/yaml" src="./assets/config.yaml"></script>
   <script type="text/javascript" src="https://cdn.webrtc.ecl.ntt.com/skyway-latest.min.js"></script>
   <script type="text/javascript">
-  window.addEventListener('beforeunload', (event) => {
-    // Cancel the event as stated by the standard.
-    event.preventDefault();
-    // Chrome requires returnValue to be set.
-    event.returnValue = '';
-  });
+    window.addEventListener('beforeunload', (event) => {
+      // Cancel the event as stated by the standard.
+      event.preventDefault();
+      // Chrome requires returnValue to be set.
+      event.returnValue = '';
+    });
+
   </script>
   <noscript>Please enable JavaScript to continue using this application.</noscript>
 </body>
