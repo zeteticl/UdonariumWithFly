@@ -42,7 +42,6 @@ export class PeerContext implements IPeerContext {
     try {
       this.peerId = peerId;
       let regArray = roomIdPattern.exec(peerId);
-      console.log('regArray', regArray)
       let isRoom = regArray != null;
       if (isRoom) {
         this.digestUserId = regArray[1];

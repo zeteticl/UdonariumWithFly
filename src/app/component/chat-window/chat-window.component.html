@@ -13,14 +13,14 @@
           <div>{{chatTab.name}}<badge *ngIf="chatTab.hasUnread" class="badge" [count]="chatTab.unreadLength"></badge>
           </div>
         </label>
-        <button class="tab-setting small-font" (click)="showTabSetting()"><i
+        <button class="tab-setting small-font" (click)="showTabSetting()" *ngIf="!GuestMode()"><i
             class="material-icons small-font">settings</i>標籤設定</button>
         <button class="tab-setting small-font" (click)="onSoundEffectSwitchChanged()">
           <i *ngIf="!SoundEffectSwitch2()" class="material-icons icon-size">toggle_on</i>
           <i *ngIf="SoundEffectSwitch2()" class="material-icons icon-size">toggle_off</i>
           效果音
         </button>
-        <button class="tab-setting small-font" (click)="diceAllOpne()">
+        <button class="tab-setting small-font" (click)="diceAllOpne()" *ngIf="!GuestMode()">
           <i class="material-icons icon-size">all_out</i>
           公開骰子
         </button>

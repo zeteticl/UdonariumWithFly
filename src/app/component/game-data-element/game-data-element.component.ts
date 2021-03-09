@@ -9,7 +9,9 @@ import {
 } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
 import { DataElement } from '@udonarium/data-element';
-
+import { ChatMessageService } from 'service/chat-message.service';
+import { ChatTab } from '@udonarium/chat-tab';
+import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 @Component({
   selector: 'game-data-element, [game-data-element]',
   templateUrl: './game-data-element.component.html',
@@ -35,7 +37,8 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
   set currentValue(currentValue: number | string) { this._currentValue = currentValue; this.setUpdateTimer(); }
 
   get abilityScore(): number { return this.gameDataElement.calcAbilityScore(); }
-
+  get chatTab(): ChatTab { return ObjectStore.instance.get<ChatTab>(this.chatTabidentifier); }
+  chatTabidentifier: string = '';
   get isCommonValue(): boolean {
     if (this.gameDataElement) {
       return this.isTagLocked && (this.gameDataElement.name === 'size'
@@ -51,12 +54,13 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
   private updateTimer: NodeJS.Timer = null;
 
   constructor(
+    public chatMessageService: ChatMessageService,
     private changeDetector: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
     if (this.gameDataElement) this.setValues(this.gameDataElement);
-
+    this.chatTabidentifier = this.chatMessageService.chatTabs ? this.chatMessageService.chatTabs[0].identifier : '';
     EventSystem.register(this)
       .on('UPDATE_GAME_OBJECT', -1000, event => {
         if (this.gameDataElement && event.data.identifier === this.gameDataElement.identifier) {
@@ -118,7 +122,24 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
     this._currentValue = object.currentValue;
     this._value = object.value;
   }
-
+  sendLogMessage(text, value, currentValue) {
+    if (currentValue) value = currentValue + "/" + value
+    this.chatMessageService.sendMessage(this.chatTab,
+      value + " " + text,
+      value.gameType,
+      value.sendFrom,
+      value.sendTo,
+      value.color,
+      value.isInverse,
+      value.isHollow,
+      value.isBlackPaint,
+      value.aura,
+      value.isUseFaceIcon,
+      value.characterIdentifier,
+      value.standIdentifier,
+      value.standName,
+      value.isUseStandImage);
+  }
   private setUpdateTimer() {
     clearTimeout(this.updateTimer);
     this.updateTimer = setTimeout(() => {
