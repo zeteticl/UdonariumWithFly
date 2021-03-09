@@ -1,7 +1,7 @@
 <div *ngIf="!isConnected;else other_content">
-  <div>ルーム名 : <input class="input" (input)="calcPeerId($event.target.value, password)" [(ngModel)]="roomName" required
+  <div>房間名稱 : <input class="input" (input)="calcPeerId($event.target.value, password)" [(ngModel)]="roomName" required
       minlength="1" maxlength="128" #roomNameValidation="ngModel" placeholder="需要房間名稱" /></div>
-  <div>パスワード: <input class="input" (input)="calcPeerId(roomName, $event.target.value)" [(ngModel)]="password"
+  <div>密碼: <input class="input" (input)="calcPeerId(roomName, $event.target.value)" [(ngModel)]="password"
       maxlength="12" #passwordValidation="ngModel" placeholder="如果填寫密碼，則沒有密碼" /></div>
   <div><input type="checkbox" [(ngModel)]="allowGuest" />允許訪客</div>
   <hr />
