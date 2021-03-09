@@ -13,7 +13,7 @@ import {
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { Terrain, TerrainViewState } from '@udonarium/terrain';
@@ -29,7 +29,7 @@ import { ImageService } from 'service/image.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopActionService } from 'service/tabletop-action.service';
-
+import { PeerCursor } from '@udonarium/peer-cursor';
 @Component({
   selector: 'terrain',
   templateUrl: './terrain.component.html',
@@ -48,6 +48,15 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
   set isLocked(isLocked: boolean) { this.terrain.isLocked = isLocked; }
   get hasWall(): boolean { return this.terrain.hasWall; }
   get hasFloor(): boolean { return this.terrain.hasFloor; }
+
+
+  get GM(): string { return this.terrain.GM; }
+  set GM(GM: string) { this.terrain.GM = GM; }
+  get isMine(): boolean { return this.terrain.isMine; }
+  get hasGM(): boolean { return this.terrain.hasGM; }
+  get isDisabled(): boolean {
+    return this.terrain.isDisabled;
+  }
 
   get wallImage(): ImageFile { return this.imageService.getSkeletonOr(this.terrain.wallImage); }
   get floorImage(): ImageFile { return this.imageService.getSkeletonOr(this.terrain.floorImage); }
@@ -68,7 +77,7 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
 
   get isSlope(): boolean { return this.terrain.isSlope; }
   set isSlope(isSlope: boolean) { this.terrain.isSlope = isSlope; }
-  
+
   get isAltitudeIndicate(): boolean { return this.terrain.isAltitudeIndicate; }
   set isAltitudeIndicate(isAltitudeIndicate: boolean) { this.terrain.isAltitudeIndicate = isAltitudeIndicate; }
 
@@ -171,7 +180,7 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
   onContextMenu(e: Event) {
     e.stopPropagation();
     e.preventDefault();
-
+    if (this.GuestMode()) return;
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
 
     let menuPosition = this.pointerDeviceService.pointers[0];
@@ -190,6 +199,21 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
           }
         }),
       ContextMenuSeparator,
+      (!this.isMine
+        ? {
+          name: 'GM圖層-只供自己看見', action: () => {
+            this.GM = PeerCursor.myCursor.name;
+            this.terrain.setLocation('table')
+            SoundEffect.play(PresetSound.lock);
+          }
+        } : {
+          name: '回到普通圖層', action: () => {
+            this.GM = '';
+            this.terrain.setLocation('table')
+            SoundEffect.play(PresetSound.unlock);
+          }
+        }),
+      ContextMenuSeparator,
       (this.isSlope
         ? {
           name: '☑ 傾斜', action: () => {
@@ -200,29 +224,31 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
             this.isSlope = true;
           }
         }),
-      { name: '壁の表示', action: null, subActions: [
-        {
-          name: `${ this.hasWall && this.isSurfaceShading ? '◉' : '○' } 通常`, action: () => {
-            this.mode = TerrainViewState.ALL;
-            this.isSurfaceShading = true;
-          }
-        },
-        {
-          name: `${ this.hasWall && !this.isSurfaceShading ? '◉' : '○' } 陰影なし`, action: () => {
-            this.mode = TerrainViewState.ALL;
-            this.isSurfaceShading = false;
-          }
-        },
-        {
-          name: `${ !this.hasWall ? '◉' : '○' } 非表示`, action: () => {
-            this.mode = TerrainViewState.FLOOR;
-            if (this.depth * this.width === 0) {
-              this.terrain.width = this.width <= 0 ? 1 : this.width;
-              this.terrain.depth = this.depth <= 0 ? 1 : this.depth;
+      {
+        name: '顯示牆壁', action: null, subActions: [
+          {
+            name: `${this.hasWall && this.isSurfaceShading ? '◉' : '○'} 通常`, action: () => {
+              this.mode = TerrainViewState.ALL;
+              this.isSurfaceShading = true;
+            }
+          },
+          {
+            name: `${this.hasWall && !this.isSurfaceShading ? '◉' : '○'} 無陰影`, action: () => {
+              this.mode = TerrainViewState.ALL;
+              this.isSurfaceShading = false;
+            }
+          },
+          {
+            name: `${!this.hasWall ? '◉' : '○'} 不表示`, action: () => {
+              this.mode = TerrainViewState.FLOOR;
+              if (this.depth * this.width === 0) {
+                this.terrain.width = this.width <= 0 ? 1 : this.width;
+                this.terrain.depth = this.depth <= 0 ? 1 : this.depth;
+              }
             }
           }
-        },
-      ]},
+        ]
+      },
       ContextMenuSeparator,
       /*
       (this.isInteract
@@ -241,26 +267,26 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
       */
       (this.isDropShadow
         ? {
-          name: '☑ 影を落とす', action: () => {
+          name: '☑ 加上陰影', action: () => {
             this.isDropShadow = false;
           }
         } : {
-          name: '☐ 影を落とす', action: () => {
+          name: '☐ 加上陰影', action: () => {
             this.isDropShadow = true;
           }
         }),
       (this.isAltitudeIndicate
         ? {
-          name: '☑ 高度の表示', action: () => {
+          name: '☑ 顯示高度', action: () => {
             this.isAltitudeIndicate = false;
           }
         } : {
-          name: '☐ 高度の表示', action: () => {
+          name: '☐ 顯示高度', action: () => {
             this.isAltitudeIndicate = true;
           }
         }),
       {
-        name: '高度を0にする', action: () => {
+        name: '將高度設為0', action: () => {
           if (this.altitude != 0) {
             this.altitude = 0;
             SoundEffect.play(PresetSound.sweep);
@@ -269,23 +295,23 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
         altitudeHande: this.terrain
       },
       ContextMenuSeparator,
-      { name: '地形設定を編集', action: () => { this.showDetail(this.terrain); } },
+      { name: '編輯地形設置', action: () => { this.showDetail(this.terrain); } },
       (this.terrain.getUrls().length <= 0 ? null : {
-        name: '参照URLを開く', action: null,
+        name: '打開參考網址', action: null,
         subActions: this.terrain.getUrls().map((urlElement) => {
           const url = urlElement.value.toString();
           return {
             name: urlElement.name ? urlElement.name : url,
             action: () => { this.modalService.open(OpenUrlComponent, { url: url, title: this.terrain.name, subTitle: urlElement.name }); },
             disabled: !StringUtil.validUrl(url),
-            error: !StringUtil.validUrl(url) ? 'URLが不正です' : null,
+            error: !StringUtil.validUrl(url) ? '網址無效' : null,
             materialIcon: 'open_in_new'
           };
         })
       }),
       (this.terrain.getUrls().length <= 0 ? null : ContextMenuSeparator),
       {
-        name: 'コピーを作る', action: () => {
+        name: '製作副本', action: () => {
           let cloneObject = this.terrain.clone();
           cloneObject.location.x += this.gridSize;
           cloneObject.location.y += this.gridSize;
@@ -295,13 +321,13 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       },
       {
-        name: '削除する', action: () => {
+        name: '刪除', action: () => {
           this.terrain.destroy();
           SoundEffect.play(PresetSound.sweep);
         }
       },
       ContextMenuSeparator,
-      { name: 'オブジェクト作成', action: null, subActions: this.tabletopActionService.makeDefaultContextMenuActions(objectPosition) }
+      { name: '新增物件', action: null, subActions: this.tabletopActionService.makeDefaultContextMenuActions(objectPosition) }
     ], this.name);
   }
 
@@ -317,7 +343,11 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
     return value < min ? min : value;
   }
 
-  private showDetail(gameObject: Terrain) {
+  GuestMode() {
+    return Network.GuestMode();
+  }
+  public showDetail(gameObject: Terrain) {
+    if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '地形設定';

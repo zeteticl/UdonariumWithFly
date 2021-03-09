@@ -5,7 +5,7 @@ import { AudioPlayer, VolumeType } from '@udonarium/core/file-storage/audio-play
 import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
 import { FileArchiver } from '@udonarium/core/file-storage/file-archiver';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { Jukebox } from '@udonarium/Jukebox';
 
 import { ModalService } from 'service/modal.service';
@@ -39,36 +39,43 @@ export class JukeboxComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
-    Promise.resolve().then(() => this.modalService.title = this.panelService.title = 'ジュークボックス');
+    Promise.resolve().then(() => this.modalService.title = this.panelService.title = '播放器');
     this.auditionPlayer.volumeType = VolumeType.AUDITION;
     EventSystem.register(this)
       .on('*', event => {
         if (event.eventName.startsWith('FILE_')) this.lazyNgZoneUpdate();
       });
   }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnDestroy() {
     EventSystem.unregister(this);
     this.stop();
   }
 
   play(audio: AudioFile) {
+    if (this.GuestMode()) return;
     this.auditionPlayer.play(audio);
   }
 
   stop() {
+    if (this.GuestMode()) return;
     this.auditionPlayer.stop();
   }
 
   playBGM(audio: AudioFile) {
+    if (this.GuestMode()) return;
     this.jukebox.play(audio.identifier, true);
   }
 
   stopBGM(audio: AudioFile) {
+    if (this.GuestMode()) return;
     if (this.jukebox.audio === audio) this.jukebox.stop();
   }
 
   handleFileSelect(event: Event) {
+    if (this.GuestMode()) return;
     let input = <HTMLInputElement>event.target;
     let files = input.files;
     if (files.length) FileArchiver.instance.load(files);

@@ -4,7 +4,7 @@ import { ChatTab } from '@udonarium/chat-tab';
 import { ChatTabList } from '@udonarium/chat-tab-list';
 import { ObjectSerializer } from '@udonarium/core/synchronize-object/object-serializer';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 
 import { ChatMessageService } from 'service/chat-message.service';
 import { ModalService } from 'service/modal.service';
@@ -42,7 +42,8 @@ export class ChatTabSettingComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
-    Promise.resolve().then(() => this.modalService.title = this.panelService.title = 'チャットタブ設定');
+    if (this.GuestMode()) return;
+    Promise.resolve().then(() => this.modalService.title = this.panelService.title = '聊天標籤設定');
     EventSystem.register(this)
       .on('DELETE_GAME_OBJECT', 1000, event => {
         if (!this.selectedTab || event.data.identifier !== this.selectedTab.identifier) return;
@@ -52,7 +53,9 @@ export class ChatTabSettingComponent implements OnInit, OnDestroy {
         }
       });
   }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnDestroy() {
     EventSystem.unregister(this);
   }
@@ -63,10 +66,55 @@ export class ChatTabSettingComponent implements OnInit, OnDestroy {
   }
 
   create() {
-    ChatTabList.instance.addChatTab('タブ');
+    if (this.GuestMode()) return;
+    ChatTabList.instance.addChatTab('標籤');
   }
 
+  save_log() {
+    if (!this.selectedTab) return;
+
+    let msg_arr = this.selectedTab.children;
+    if (msg_arr.length <= 0) return;
+
+    function twobit(n: number) {
+      return (n <= 9 ? "0" + n : n);
+    }
+
+    let date = new Date();
+    let y = date.getFullYear();
+    let m = twobit(date.getMonth() + 1);
+    let d = twobit(date.getDate());
+    let h = twobit(date.getHours());
+    let min = twobit(date.getMinutes());
+    let sec = twobit(date.getSeconds());
+    let fileName: string = 'chatlog_' + y + m + d + "_" + h + min + sec + "_" + this.selectedTab.name + ".html";
+
+    let html_doc = "";
+    for (let i = 0; i < msg_arr.length; i++) {
+      let msg = msg_arr[i];
+      let color = msg["color"] ? msg["color"] : "#000000";
+      let name = msg["name"].match(/^<BCDice：/) ? "<span style='padding-left:20px;'>&nbsp;</span>" : (msg["name"] + ": ");
+      console.log(msg.value);
+      html_doc += "<font color='" + color + "'><b>" + name + "</b>" + msg.value.toString().replace(/\n/g, '<br>\n') + "</font><br>\n";
+    }
+    this.downloadHtml(fileName, html_doc);
+  }
+
+  downloadHtml(filename, html) {
+    var evt = new MouseEvent('click', {
+      'view': window,
+      'bubbles': true,
+      'cancelable': true
+    });
+    var aLink = document.createElement('a');
+    aLink.download = filename;
+    aLink.href = "data:text/html;charset=UTF-8," + encodeURIComponent(html);
+    aLink.dispatchEvent(evt);
+  }
+
+
   async save() {
+    if (this.GuestMode()) return;
     if (!this.selectedTab || this.isSaveing) return;
     this.isSaveing = true;
     this.progresPercent = 0;
@@ -84,6 +132,7 @@ export class ChatTabSettingComponent implements OnInit, OnDestroy {
   }
 
   delete() {
+    if (this.GuestMode()) return;
     if (!this.isEmpty && this.selectedTab) {
       this.selectedTabXml = this.selectedTab.toXml();
       this.selectedTab.destroy();
@@ -91,6 +140,7 @@ export class ChatTabSettingComponent implements OnInit, OnDestroy {
   }
 
   restore() {
+    if (this.GuestMode()) return;
     if (this.selectedTab && this.selectedTabXml) {
       let restoreTable = <ChatTab>ObjectSerializer.instance.parseXml(this.selectedTabXml);
       ChatTabList.instance.addChatTab(restoreTable);
@@ -99,6 +149,7 @@ export class ChatTabSettingComponent implements OnInit, OnDestroy {
   }
 
   upTabIndex() {
+    if (this.GuestMode()) return;
     if (!this.selectedTab) return;
     let parentElement = this.selectedTab.parent;
     let index: number = parentElement.children.indexOf(this.selectedTab);
@@ -109,6 +160,7 @@ export class ChatTabSettingComponent implements OnInit, OnDestroy {
   }
 
   downTabIndex() {
+    if (this.GuestMode()) return;
     if (!this.selectedTab) return;
     let parentElement = this.selectedTab.parent;
     let index: number = parentElement.children.indexOf(this.selectedTab);

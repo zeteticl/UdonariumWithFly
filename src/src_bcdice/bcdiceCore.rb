@@ -35,7 +35,7 @@ class BCDiceMaker
     @tableFileData = TableFileData.new
   end
 
-  # @todo 未使用のため削除する
+  # @todo 未使用のため刪除
   attr_accessor :diceBotPath
 
   def newBcDice

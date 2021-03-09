@@ -16,11 +16,11 @@ import { PanelService } from 'service/panel.service';
   styleUrls: ['./lobby.component.css'],
 })
 export class LobbyComponent implements OnInit, OnDestroy {
-  rooms: { alias: string, roomName: string, peerContexts: PeerContext[] }[] = [];
+  rooms: { alias: string, roomName: string, peerContexts: PeerContext[], isAllowGuest: boolean }[] = [];
 
   isReloading: boolean = false;
 
-  help: string = '「一覧を更新」ボタンを押すと接続可能なルーム一覧を表示します。';
+  help: string = '「一覧を更新」ボタンを押すと連接可能なルーム一覧を表示します。';
 
   get currentRoom(): string { return Network.peerContext.roomId };
   get peerId(): string { return Network.peerId; }
@@ -45,7 +45,7 @@ export class LobbyComponent implements OnInit, OnDestroy {
   }
 
   private changeTitle() {
-    this.modalService.title = this.panelService.title = 'ロビー';
+    this.modalService.title = this.panelService.title = '大堂';
     if (Network.peerContext.roomName.length) {
       this.modalService.title = this.panelService.title = '〈' + Network.peerContext.roomName + '/' + Network.peerContext.roomId + '〉'
     }
@@ -57,7 +57,7 @@ export class LobbyComponent implements OnInit, OnDestroy {
 
   async reload() {
     this.isReloading = true;
-    this.help = '検索中...';
+    this.help = '搜索中...';
     this.rooms = [];
     let peersOfroom: { [room: string]: PeerContext[] } = {};
     let peerIds = await Network.listAllPeers();
@@ -72,30 +72,29 @@ export class LobbyComponent implements OnInit, OnDestroy {
       }
     }
     for (let alias in peersOfroom) {
-      this.rooms.push({ alias: alias, roomName: peersOfroom[alias][0].roomName, peerContexts: peersOfroom[alias] });
+      this.rooms.push({ alias: alias, roomName: peersOfroom[alias][0].roomName, peerContexts: peersOfroom[alias], isAllowGuest: peersOfroom[alias][0].isAllowGuest });
     }
     this.rooms.sort((a, b) => {
       if (a.alias < b.alias) return -1;
       if (a.alias > b.alias) return 1;
       return 0;
     });
-    this.help = '接続可能なルームが見つかりませんでした。「新しいルームを作成する」で新規ルームを作成できます。';
+    this.help = '找不到連接的房間。 您可以使用「新增房間」。';
     this.isReloading = false;
   }
 
-  async connect(peerContexts: PeerContext[]) {
+  async connect(peerContexts: PeerContext[], isGuest?: boolean) {
     let context = peerContexts[0];
     let password = '';
-
-    if (context.hasPassword) {
+    if (context.hasPassword && !(context.isAllowGuest && isGuest)) {
       password = await this.modalService.open<string>(PasswordCheckComponent, { peerId: context.peerId, title: `${context.roomName}/${context.roomId}` });
       if (password == null) password = '';
     }
 
-    if (!context.verifyPassword(password)) return;
+    if (!context.verifyPassword(password) && !(context.isAllowGuest && isGuest)) return;
 
     let userId = Network.peerContext ? Network.peerContext.userId : PeerContext.generateId();
-    Network.open(userId, context.roomId, context.roomName, password);
+    Network.open(userId, context.roomId, context.roomName, password, context.isAllowGuest, isGuest);
     PeerCursor.myCursor.peerId = Network.peerId;
 
     let triedPeer: string[] = [];
@@ -109,18 +108,18 @@ export class LobbyComponent implements OnInit, OnDestroy {
         }
         EventSystem.register(triedPeer)
           .on('CONNECT_PEER', event => {
-            console.log('接続成功！', event.data.peerId);
+            console.log('連接成功！', event.data.peerId);
             triedPeer.push(event.data.peerId);
-            console.log('接続成功 ' + triedPeer.length + '/' + peerContexts.length);
+            console.log('連接成功 ' + triedPeer.length + '/' + peerContexts.length);
             if (peerContexts.length <= triedPeer.length) {
               this.resetNetwork();
               EventSystem.unregister(triedPeer);
             }
           })
           .on('DISCONNECT_PEER', event => {
-            console.warn('接続失敗', event.data.peerId);
+            console.warn('連接失敗', event.data.peerId);
             triedPeer.push(event.data.peerId);
-            console.warn('接続失敗 ' + triedPeer.length + '/' + peerContexts.length);
+            console.warn('連接失敗 ' + triedPeer.length + '/' + peerContexts.length);
             if (peerContexts.length <= triedPeer.length) {
               this.resetNetwork();
               EventSystem.unregister(triedPeer);
@@ -139,6 +138,6 @@ export class LobbyComponent implements OnInit, OnDestroy {
   async showRoomSetting() {
     await this.modalService.open(RoomSettingComponent, { width: 700, height: 400, left: 0, top: 400 });
     this.reload();
-    this.help = '「一覧を更新」ボタンを押すと接続可能なルーム一覧を表示します。';
+    this.help = '單擊「更新列表」按鈕以顯示可以連接的房間的列表。';
   }
 }

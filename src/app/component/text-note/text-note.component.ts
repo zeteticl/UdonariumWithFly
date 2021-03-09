@@ -2,7 +2,7 @@ import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, E
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { TextNote } from '@udonarium/text-note';
@@ -14,7 +14,7 @@ import { ContextMenuSeparator, ContextMenuService } from 'service/context-menu.s
 import { ModalService } from 'service/modal.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
-
+import { PeerCursor } from '@udonarium/peer-cursor';
 @Component({
   selector: 'text-note',
   templateUrl: './text-note.component.html',
@@ -37,6 +37,23 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   get height(): number { return this.adjustMinBounds(this.textNote.height); }
   get width(): number { return this.adjustMinBounds(this.textNote.width); }
 
+
+  get GM(): string { return this.textNote.GM; }
+  set GM(GM: string) { this.textNote.GM = GM; }
+  get isMine(): boolean { return this.textNote.isMine; }
+  get hasGM(): boolean { return this.textNote.hasGM; }
+  get isDisabled(): boolean {
+    if (this.textNote.location.name == 'common') return true
+    else
+      return this.textNote.isDisabled;
+  }
+
+
+  //STORE
+  get location(): string { return this.textNote.location.name; }
+  set location(location: string) { this.textNote.location.name = location; }
+
+
   get altitude(): number { return this.textNote.altitude; }
   set altitude(altitude: number) { this.textNote.altitude = altitude; }
 
@@ -46,7 +63,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
       if (-this.height <= this.altitude) return 0;
       ret += this.height;
     }
-    return +ret.toFixed(1); 
+    return +ret.toFixed(1);
   }
 
   get isUpright(): boolean { return this.textNote.isUpright; }
@@ -127,6 +144,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   @HostListener('mousedown', ['$event'])
   onMouseDown(e: any) {
     if (this.isSelected) return;
+    if (this.GuestMode()) return;
     e.preventDefault();
     this.textNote.toTopmost();
 
@@ -157,6 +175,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   @HostListener('contextmenu', ['$event'])
   onContextMenu(e: Event) {
     this.removeMouseEventListeners();
+    if (this.GuestMode()) return;
     if (this.isSelected) return;
     e.stopPropagation();
     e.preventDefault();
@@ -177,6 +196,27 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
           }
         }),
       ContextMenuSeparator,
+      (!this.isMine
+        ? {
+          name: 'GM圖層-只供自己看見', action: () => {
+            this.GM = PeerCursor.myCursor.name;
+            this.textNote.setLocation('table')
+            SoundEffect.play(PresetSound.lock);
+          }
+        } : {
+          name: '回到普通圖層', action: () => {
+            this.GM = '';
+            this.textNote.setLocation('table')
+            SoundEffect.play(PresetSound.unlock);
+          }
+        }),
+      ContextMenuSeparator,
+      {
+        name: '移動到共有倉庫', action: () => {
+          this.textNote.setLocation('common')
+        }
+      },
+      ContextMenuSeparator,
       (this.isUpright
         ? {
           name: '☑ 直立', action: () => {
@@ -190,16 +230,16 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
       ContextMenuSeparator,
       (this.isAltitudeIndicate
         ? {
-          name: '☑ 高度の表示', action: () => {
+          name: '☑ 顯示高度', action: () => {
             this.isAltitudeIndicate = false;
           }
         } : {
-          name: '☐ 高度の表示', action: () => {
+          name: '☐ 顯示高度', action: () => {
             this.isAltitudeIndicate = true;
           }
         }),
       {
-        name: '高度を0にする', action: () => {
+        name: '將高度設為0', action: () => {
           if (this.altitude != 0) {
             this.altitude = 0;
             SoundEffect.play(PresetSound.sweep);
@@ -210,21 +250,21 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
       ContextMenuSeparator,
       { name: 'メモを編集', action: () => { this.showDetail(this.textNote); } },
       (this.textNote.getUrls().length <= 0 ? null : {
-        name: '参照URLを開く', action: null,
+        name: '打開參考網址', action: null,
         subActions: this.textNote.getUrls().map((urlElement) => {
           const url = urlElement.value.toString();
           return {
             name: urlElement.name ? urlElement.name : url,
             action: () => { this.modalService.open(OpenUrlComponent, { url: url, title: this.textNote.title, subTitle: urlElement.name }); },
             disabled: !StringUtil.validUrl(url),
-            error: !StringUtil.validUrl(url) ? 'URLが不正です' : null,
+            error: !StringUtil.validUrl(url) ? '網址無效' : null,
             materialIcon: 'open_in_new'
           };
         })
       }),
       (this.textNote.getUrls().length <= 0 ? null : ContextMenuSeparator),
       {
-        name: 'コピーを作る', action: () => {
+        name: '製作副本', action: () => {
           let cloneObject = this.textNote.clone();
           cloneObject.isLocked = false;
           console.log('コピー', cloneObject);
@@ -235,7 +275,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       },
       {
-        name: '削除する', action: () => {
+        name: '刪除', action: () => {
           this.textNote.destroy();
           SoundEffect.play(PresetSound.sweep);
         }
@@ -280,11 +320,15 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   private removeMouseEventListeners() {
     document.body.removeEventListener('mouseup', this.callbackOnMouseUp, false);
   }
+  GuestMode() {
+    return Network.GuestMode();
+  }
 
-  private showDetail(gameObject: TextNote) {
+  public showDetail(gameObject: TextNote) {
+    if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
     let coordinate = this.pointerDeviceService.pointers[0];
-    let title = '共有メモ設定';
+    let title = '共有筆記設定';
     if (gameObject.title.length) title += ' - ' + gameObject.title;
     let option: PanelOption = { title: title, left: coordinate.x - 350, top: coordinate.y - 200, width: 700, height: 400 };
     let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
