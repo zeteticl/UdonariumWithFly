@@ -18,7 +18,7 @@ import { DiceBot } from '@udonarium/dice-bot';
 import { Jukebox } from '@udonarium/Jukebox';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
-
+import { NoteInventoryComponent } from 'component/note-inventory/note-inventory.component';
 import { ChatWindowComponent } from 'component/chat-window/chat-window.component';
 import { ContextMenuComponent } from 'component/context-menu/context-menu.component';
 import { FileStorageComponent } from 'component/file-storage/file-storage.component';
@@ -100,15 +100,15 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     let soundEffect: SoundEffect = new SoundEffect('SoundEffect');
     soundEffect.initialize();
 
-    ChatTabList.instance.addChatTab('メインタブ', 'MainTab');
-    ChatTabList.instance.addChatTab('サブタブ', 'SubTab');
+    ChatTabList.instance.addChatTab('主要標籤', 'MainTab');
+    ChatTabList.instance.addChatTab('閒聊標籤', 'SubTab');
 
     let sampleDiceRollTable = new DiceRollTable('SampleDiceRollTable');
     sampleDiceRollTable.initialize();
-    sampleDiceRollTable.name = 'サンプルダイスボット表'
+    sampleDiceRollTable.name = 'Sample骰子機器人表'
     sampleDiceRollTable.command = 'SAMPLE'
     sampleDiceRollTable.dice = '1d6';
-    sampleDiceRollTable.value = "1:これはダイスボット表のサンプルです\n2:数字と対応する結果を1行に1つづつ:（コロン）で区切り\n3:数字:結果のように記述します\n4:\\\\n  \\nで改行します\n5-6:また、-（ハイフン）で区切って数字の範囲を指定可能です";
+    sampleDiceRollTable.value = "1：這是骰子機器人表的示例\n2：數字和相應的結果用一行分隔:（冒號）\n3:數字:描述為結果\n4:\\\\n以\\n換行\n5-6:您也可以指定數字範圍，中間用-（連字符）分隔。";
     DiceRollTableList.instance.addDiceRollTable(sampleDiceRollTable);
 
     let fileContext = ImageFile.createEmpty('none_icon').toContext();
@@ -157,7 +157,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     AudioStorage.instance.get(PresetSound.surprise).isHidden = true;
 
     PeerCursor.createMyCursor();
-    if (!PeerCursor.myCursor.name) PeerCursor.myCursor.name = 'プレイヤー';
+
+    if (!PeerCursor.myCursor.name) PeerCursor.myCursor.name = '玩家'+ ('000' + (Math.floor(Math.random() * 1000))).slice(-3);
     PeerCursor.myCursor.imageIdentifier = noneIconImage.identifier;
 
     EventSystem.register(this)
@@ -168,7 +169,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       .on<AppConfig>('LOAD_CONFIG', event => {
         console.log('LOAD_CONFIG !!!', event.data);
         if (event.data.dice && event.data.dice.url) {
-          fetch(event.data.dice.url + '/v1/names', {mode: 'cors'})
+          fetch(event.data.dice.url + '/v1/names', { mode: 'cors' })
             .then(response => { return response.json() })
             .then(infos => {
               let apiUrl = event.data.dice.url;
@@ -205,21 +206,21 @@ export class AppComponent implements AfterViewInit, OnDestroy {
                   return info;
                 })
                 .sort((a, b) => {
-                  return a.lang < b.lang ? -1 
+                  return a.lang < b.lang ? -1
                     : a.lang > b.lang ? 1
-                    : a.normalize == b.normalize ? 0 
-                    : a.normalize < b.normalize ? -1 : 1;
+                      : a.normalize == b.normalize ? 0
+                        : a.normalize < b.normalize ? -1 : 1;
                 });
               DiceBot.diceBotInfos.push(...tempInfos.map(info => { return { script: info.system, game: info.name } }));
               if (tempInfos.length > 0) {
                 let sentinel = tempInfos[0].normalize.substr(0, 1);
                 let group = { index: tempInfos[0].normalize.substr(0, 1), infos: [] };
                 for (let info of tempInfos) {
-                  let index = info.lang == 'B' ? '特殊' 
+                  let index = info.lang == 'B' ? '特殊'
                     : info.lang == 'ChineseTraditional' ? '正體中文'
-                    : info.lang == 'Korean' ? '한국어'
-                    : info.lang == 'English' ? 'English'
-                    : info.normalize.substr(0, 1);
+                      : info.lang == 'Korean' ? '한국어'
+                        : info.lang == 'English' ? 'English'
+                          : info.normalize.substr(0, 1);
                   if (index !== sentinel) {
                     sentinel = index;
                     DiceBot.diceBotInfosIndexed.push(group);
@@ -255,8 +256,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
             //console.log(info.index + ': ' + normalize);
           });
           DiceBot.diceBotInfos.sort((a, b) => {
-            return a.sort_key == b.sort_key ? 0 
-            : a.sort_key < b.sort_key ? -1 : 1;
+            return a.sort_key == b.sort_key ? 0
+              : a.sort_key < b.sort_key ? -1 : 1;
           });
           let sentinel = DiceBot.diceBotInfos[0].sort_key[0];
           let group = { index: sentinel, infos: [] };
@@ -285,9 +286,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         console.log('CLOSE_NETWORK', event.data.peerId);
         this.ngZone.run(async () => {
           if (1 < Network.peerIds.length) {
-            await this.modalService.open(TextViewComponent, { title: 'ネットワークエラー', text: 'ネットワーク接続に何らかの異常が発生しました。\nこの表示以後、接続が不安定であれば、ページリロードと再接続を試みてください。' });
+            await this.modalService.open(TextViewComponent, { title: '網絡錯誤', text: '網絡連接出了點問題。 \n如果在此顯示後連接不穩定，請嘗試重新加載頁面並重新連接。' });
           } else {
-            await this.modalService.open(TextViewComponent, { title: 'ネットワークエラー', text: '接続情報が破棄されました。\nこのウィンドウを閉じると再接続を試みます。' });
+            await this.modalService.open(TextViewComponent, { title: '網絡錯誤', text: '連接信息已被丟棄。 \n如果您關閉此窗口，它將嘗試重新連接。' });
             Network.open();
           }
         });
@@ -356,6 +357,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       case 'GameObjectInventoryComponent':
         component = GameObjectInventoryComponent;
         break;
+      case 'NoteInventoryComponent':
+        component = NoteInventoryComponent;
+        break;
       case 'DiceRollTableSettingComponent':
         component = DiceRollTableSettingComponent;
         option = { width: 645, height: 470 };
@@ -370,13 +374,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   }
 
   async save() {
-    if (this.isSaveing) return;
+    if (this.isSaveing||this.GuestMode()) return;
     this.isSaveing = true;
     this.progresPercent = 0;
 
     let roomName = Network.peerContext && 0 < Network.peerContext.roomName.length
       ? Network.peerContext.roomName
-      : 'ルームデータ';
+      : '房間數據';
     await this.saveDataService.saveRoomAsync(roomName, percent => {
       this.progresPercent = percent;
     });
@@ -393,7 +397,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     if (files.length) FileArchiver.instance.load(files);
     input.value = '';
   }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   private lazyNgZoneUpdate(isImmediate: boolean) {
     if (isImmediate) {
       if (this.immediateUpdateTimer !== null) return;
@@ -424,42 +430,45 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
   resetPointOfView() {
     this.contextMenuService.open(this.pointerDeviceService.pointers[0], [
-      { name: '初期視点に戻す', action: () => EventSystem.trigger('RESET_POINT_OF_VIEW', null) },
-      { name: '真上から視る', action: () => EventSystem.trigger('RESET_POINT_OF_VIEW', 'top') }
-    ], '視点リセット');
+      { name: '回到最初的視點', action: () => EventSystem.trigger('RESET_POINT_OF_VIEW', null) },
+      { name: '使用正上方視點', action: () => EventSystem.trigger('RESET_POINT_OF_VIEW', 'top') }
+    ], '視點重置');
   }
 
   standSetteings() {
     const isShowStand = StandImageComponent.isShowStand;
     const isShowNameTag = StandImageComponent.isShowNameTag;
-    const isCanBeGone = StandImageComponent.isCanBeGone; 
+    const isCanBeGone = StandImageComponent.isCanBeGone;
     this.contextMenuService.open(this.pointerDeviceService.pointers[0], [
-      { name: `${ isShowStand ? '☑' : '☐' }スタンド表示`, 
+
+      { name: `${ isShowStand ? '☑' : '☐' }Stand展示`, 
         action: () => {
           StandImageComponent.isShowStand = !isShowStand;
         }
       },
-      { name: `${ isShowNameTag ? '☑' : '☐' }ネームタグ表示`, 
+
+      { name: `${ isShowNameTag ? '☑' : '☐' }顯示名稱標籤`, 
         action: () => {
           StandImageComponent.isShowNameTag = !isShowNameTag;
         }
       },
-      { name: `${ isCanBeGone ? '☑' : '☐' }透明化、自動退去`, 
+      {
+        name: `${isCanBeGone ? '☑' : '☐'}透明化、自動退去`,
         action: () => {
           StandImageComponent.isCanBeGone = !isCanBeGone;
         }
       },
       ContextMenuSeparator,
-      { name: '表示スタンド全消去', action: () => EventSystem.trigger('DESTORY_STAND_IMAGE_ALL', null) }
-    ], 'スタンド設定');
+      { name: '擦除所有Stand圖片', action: () => EventSystem.trigger('DESTORY_STAND_IMAGE_ALL', null) }
+    ], 'Stand設置');
   }
-/*
-  farewellStandAll() {
-    EventSystem.trigger('DESTORY_STAND_IMAGE_ALL', null);
-  }
-*/
+  /*
+    farewellStandAll() {
+      EventSystem.trigger('DESTORY_STAND_IMAGE_ALL', null);
+    }
+  */
   diceAllOpne() {
-    if (confirm('「一斉公開しない」設定ではないダイスをすべて公開します。\nよろしいですか？')) {
+    if (confirm('公開所有未設置為「不要一次性公開」的骰子。\n您確定嗎？')) {
       EventSystem.trigger('DICE_ALL_OPEN', null);
     }
   }

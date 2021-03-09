@@ -3,6 +3,17 @@
   cursor: -webkit-grab;
   cursor: grab;
 }
+.is-Yellow-border {
+  border: solid 6px #FFCC80;
+}
+
+.is-opacity {
+  opacity: 0.6;
+}
+
+.is-disabled {
+  display: none;
+}
 
 .is-grabbing {
   cursor: -moz-grabbing;

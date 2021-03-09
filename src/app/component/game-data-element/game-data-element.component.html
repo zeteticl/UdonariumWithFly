@@ -4,12 +4,12 @@
       <ng-container *ngTemplateOutlet="editButtons"></ng-container>
       <select (change)="setElementType($event.target.value)" [ngModel]="gameDataElement.type">
         <option value="">通常</option>
-        <option value="simpleNumber">数値</option>
-        <option value="numberResource">リソース</option>
-        <option value="abilityScore">能力値</option>
-        <option value="checkProperty">チェック</option>
-        <option value="note">ノート</option>
-        <option value="url">参照URL</option>
+        <option value="simpleNumber">數值</option>
+        <option value="numberResource">資源</option>
+        <option value="abilityScore">能力值</option>
+        <option value="checkProperty">查看</option>
+        <option value="note">筆記</option>
+        <option value="url">参考URL</option>
       </select>
     </div>
     <div class="table-cell table-cell_solid">
@@ -50,7 +50,7 @@
             <input style="width:40%; max-width:5em; text-align:right" type="{{isNum(value) ? 'number' : 'text'}}" size="1" [(ngModel)]="value" placeholder="Value">
             <ng-container *ngIf="isEdit">
               <select class="modeifire-type" style="width:40%; max-width:5em" [(ngModel)]="currentValue">
-                <option value="">なし</option>
+                <option value="">無</option>
                 <option value="div2">÷2</option>
                 <option value="div3">÷3 SRS,LHZ</option>
                 <option value="div4">÷4</option>

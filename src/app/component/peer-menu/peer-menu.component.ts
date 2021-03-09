@@ -71,7 +71,7 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
   ) { }
 
   ngOnInit() {
-    Promise.resolve().then(() => { this.panelService.title = '接続情報'; this.panelService.isAbleFullScreenButton = false });
+    Promise.resolve().then(() => { this.panelService.title = '連接情報'; this.panelService.isAbleFullScreenButton = false });
   }
 
   ngAfterViewInit() {
@@ -109,7 +109,9 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
     ObjectStore.instance.clearDeleteHistory();
     Network.connect(context.peerId);
   }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   async connectPeerHistory() {
     this.help = '';
     let conectPeers: PeerContext[] = [];
@@ -139,7 +141,7 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       }
       if (conectPeers.length < 1) {
-        this.help = '前回接続していたルームが見つかりませんでした。既に解散しているかもしれません。';
+        this.help = '找不到您上次連接的房間。 它可能已經解散了。';
         console.warn('Room is already closed...');
         return;
       }

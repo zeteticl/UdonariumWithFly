@@ -32,7 +32,7 @@ export class PasswordCheckComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    Promise.resolve().then(() => this.modalService.title = this.panelService.title = `パスワード〈${this.title}〉`);
+    Promise.resolve().then(() => this.modalService.title = this.panelService.title = `密碼〈${this.title}〉`);
     EventSystem.register(this);
   }
 
@@ -46,6 +46,6 @@ export class PasswordCheckComponent implements OnInit, OnDestroy {
 
   submit() {
     if (this.targetPeerContext.verifyPassword(this.password)) this.modalService.resolve(this.password);
-    this.help = 'パスワードが違います';
+    this.help = '密碼錯誤';
   }
 }

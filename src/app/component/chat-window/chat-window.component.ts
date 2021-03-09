@@ -2,13 +2,14 @@ import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
 import { ChatMessage } from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
-import { EventSystem } from '@udonarium/core/system';
+import { EventSystem, Network } from '@udonarium/core/system';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { ChatTabSettingComponent } from 'component/chat-tab-setting/chat-tab-setting.component';
 import { ChatMessageService } from 'service/chat-message.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
-
+import { ContextMenuService } from 'service/context-menu.service';
+import { GameObjectInventoryService} from 'service/game-object-inventory.service';
 @Component({
   selector: 'chat-window',
   templateUrl: './chat-window.component.html',
@@ -30,7 +31,15 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
       this.scrollToBottom(true);
     }
   }
-
+  public static SoundEffectSwitch: boolean = true;
+  public onSoundEffectSwitchChanged() {
+    if (ChatWindowComponent.SoundEffectSwitch)
+      ChatWindowComponent.SoundEffectSwitch = false
+    else ChatWindowComponent.SoundEffectSwitch = true
+  }
+  public SoundEffectSwitch2() {
+    return ChatWindowComponent.SoundEffectSwitch;
+  }
   get chatTab(): ChatTab { return ObjectStore.instance.get<ChatTab>(this.chatTabidentifier); }
   isAutoScroll: boolean = true;
   scrollToBottomTimer: NodeJS.Timer = null;
@@ -38,12 +47,17 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor(
     public chatMessageService: ChatMessageService,
     private panelService: PanelService,
+    private contextMenuService: ContextMenuService,
+    private inventoryService: GameObjectInventoryService,
     private pointerDeviceService: PointerDeviceService
   ) { }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnInit() {
     this.sendFrom = PeerCursor.myCursor.identifier;
     this._chatTabidentifier = 0 < this.chatMessageService.chatTabs.length ? this.chatMessageService.chatTabs[0].identifier : '';
+    this.gameType = this.inventoryService.gameType;
 
     EventSystem.register(this)
       .on('MESSAGE_ADDED', event => {
@@ -93,12 +107,24 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
       this.isAutoScroll = false;
     }
   }
+  diceAllOpne() {
+    if (this.GuestMode()) return;
+    if (confirm('公開所有未設置為「不要一次性公開」的骰子。\n您確定嗎？')) {
+      EventSystem.trigger('DICE_ALL_OPEN', null);
+    }
+  }
 
+  resetPointOfView() {
+    this.contextMenuService.open(this.pointerDeviceService.pointers[0], [
+      { name: '回到初期視點', action: () => EventSystem.trigger('RESET_POINT_OF_VIEW', null) },
+      { name: '使用最上方視點', action: () => EventSystem.trigger('RESET_POINT_OF_VIEW', 'top') }
+    ], '改變視点');
+  }
   updatePanelTitle() {
     if (this.chatTab) {
-      this.panelService.title = 'チャットウィンドウ - ' + this.chatTab.name;
+      this.panelService.title = '聊天視窗 - ' + this.chatTab.name;
     } else {
-      this.panelService.title = 'チャットウィンドウ';
+      this.panelService.title = '聊天視窗';
     }
   }
 
@@ -107,22 +133,25 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   showTabSetting() {
+    if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
     let option: PanelOption = { left: coordinate.x - 250, top: coordinate.y - 175, width: 500, height: 350 };
     let component = this.panelService.open<ChatTabSettingComponent>(ChatTabSettingComponent, option);
     component.selectedTab = this.chatTab;
   }
 
-  sendChat(value: { text: string, gameType: string, sendFrom: string, sendTo: string,
-    color?: string, isInverse?:boolean, isHollow?: boolean, isBlackPaint?: boolean, aura?: number, isUseFaceIcon?: boolean, characterIdentifier?: string, standIdentifier?: string, standName?: string, isUseStandImage?: boolean }) {
+  sendChat(value: {
+    text: string, gameType: string, sendFrom: string, sendTo: string,
+    color?: string, isInverse?: boolean, isHollow?: boolean, isBlackPaint?: boolean, aura?: number, isUseFaceIcon?: boolean, characterIdentifier?: string, standIdentifier?: string, standName?: string, isUseStandImage?: boolean
+  }) {
     if (this.chatTab) {
       this.chatMessageService.sendMessage(
-        this.chatTab, 
-        value.text, 
-        value.gameType, 
-        value.sendFrom, 
+        this.chatTab,
+        value.text,
+        value.gameType,
+        value.sendFrom,
         value.sendTo,
-        value.color, 
+        value.color,
         value.isInverse,
         value.isHollow,
         value.isBlackPaint,

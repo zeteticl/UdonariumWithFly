@@ -2,7 +2,7 @@ import { SyncObject, SyncVar } from './core/synchronize-object/decorator';
 import { DataElement } from './data-element';
 import { TabletopObject } from './tabletop-object';
 import { moveToTopmost } from './tabletop-object-util';
-
+import { PeerCursor } from '@udonarium/peer-cursor';
 @SyncObject('text-note')
 export class TextNote extends TabletopObject {
   @SyncVar() rotate: number = 0;
@@ -10,7 +10,12 @@ export class TextNote extends TabletopObject {
   @SyncVar() password: string = '';
   @SyncVar() isUpright: boolean = true;
   @SyncVar() isLocked: boolean = false;
-
+  @SyncVar() GM: string = '';
+  get hasGM(): boolean {
+    if (this.GM) return true
+    else return false }
+  get isMine(): boolean { return PeerCursor.myCursor.name === this.GM; }
+  get isDisabled(): boolean { return this.hasGM && !this.isMine; }
   get width(): number { return this.getCommonValue('width', 1); }
   get height(): number { return this.getCommonValue('height', 1); }
   get fontSize(): number { return this.getCommonValue('fontsize', 1); }

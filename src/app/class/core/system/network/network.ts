@@ -38,7 +38,7 @@ export class Network {
   }
 
   open(peerId?: string)
-  open(userId: string, roomId: string, roomName: string, password: string)
+  open(userId: string, roomId: string, roomName: string, password: string, isAllowGuest?: boolean, isGuest?: boolean)
   open(...args: any[]) {
     if (this.connection && this.connection.peerContext) {
       console.warn('It is already opened.');
@@ -71,7 +71,9 @@ export class Network {
       this.disconnect(peerId);
     }
   }
-
+  GuestMode(): boolean {
+    return this.peerContext && this.peerContext.isGuest;
+  }
   send(data: any, sendTo?: string) {
     this.queue.add({ data: data, sendTo: sendTo });
     if (this.sendInterval === null) {
