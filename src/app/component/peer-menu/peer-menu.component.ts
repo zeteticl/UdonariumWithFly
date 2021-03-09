@@ -109,7 +109,9 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
     ObjectStore.instance.clearDeleteHistory();
     Network.connect(context.peerId);
   }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   async connectPeerHistory() {
     this.help = '';
     let conectPeers: PeerContext[] = [];

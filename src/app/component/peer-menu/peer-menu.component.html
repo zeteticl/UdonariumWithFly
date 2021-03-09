@@ -20,6 +20,7 @@
   </span>
   <span *ngIf="!networkService.isOpen" style="font-weight: bold;">???</span>
   </span>
+  <span *ngIf="GuestMode()"><strong>※訪客身份登入中</strong></span>
 </div>
 <!--<div>host ID:{{networkService.hostPeerID}}</div>-->
 <ng-container *ngIf="networkService.peerContext.isRoom">
