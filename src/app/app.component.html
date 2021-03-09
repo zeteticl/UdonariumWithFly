@@ -47,6 +47,12 @@
           <div>インベントリ</div>
         </a>
       </li>
+      <li (click)="open('NoteInventoryComponent')" *ngIf="!GuestMode()">
+        <a routerLink="/" routerLinkActive="active">
+          <div><i class="material-icons icon-size">folder_shared</i></div>
+          <div>筆記倉庫</div>
+        </a>
+      </li>
       <li (click)="standSetteings()">
         <a routerLink="/" routerLinkActive="active">
           <div><i class="material-icons icon-size">how_to_reg</i></div>
