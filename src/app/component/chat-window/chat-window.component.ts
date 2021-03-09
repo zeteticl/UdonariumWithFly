@@ -8,7 +8,8 @@ import { ChatTabSettingComponent } from 'component/chat-tab-setting/chat-tab-set
 import { ChatMessageService } from 'service/chat-message.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
-
+import { ContextMenuService } from 'service/context-menu.service';
+import { GameObjectInventoryService } from 'service/game-object-inventory.service';
 @Component({
   selector: 'chat-window',
   templateUrl: './chat-window.component.html',
@@ -91,6 +92,12 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
       this.isAutoScroll = true;
     } else {
       this.isAutoScroll = false;
+    }
+  }
+  diceAllOpne() {
+    if (this.GuestMode()) return;
+    if (confirm('「一斉公開しない」設定ではないダイスをすべて公開します。\nよろしいですか？')) {
+      EventSystem.trigger('DICE_ALL_OPEN', null);
     }
   }
 

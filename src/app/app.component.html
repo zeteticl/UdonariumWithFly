@@ -74,7 +74,7 @@
           </label>
         </a>
       </li>
-      <li *ngIf="!isSaveing" (click)="save()">
+      <li *ngIf="!isSaveing&&!GuestMode()" (click)="save()">
         <a routerLink="/" routerLinkActive="active">
           <div><i class="material-icons">sd_storage</i></div>
           <div>保存</div>
