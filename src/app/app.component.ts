@@ -374,7 +374,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   }
 
   async save() {
-    if (this.isSaveing) return;
+    if (this.isSaveing||this.GuestMode()) return;
     this.isSaveing = true;
     this.progresPercent = 0;
 

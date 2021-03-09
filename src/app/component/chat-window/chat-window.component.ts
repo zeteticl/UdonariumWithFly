@@ -108,6 +108,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
   diceAllOpne() {
+    if (this.GuestMode()) return;
     if (confirm('「一斉公開しない」設定ではないダイスをすべて公開します。\nよろしいですか？')) {
       EventSystem.trigger('DICE_ALL_OPEN', null);
     }
