@@ -43,8 +43,8 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
       imageIdentifier: "",
       tag: "",
       name: "教學Zzzzzz",
-      text: "烏冬說明: 這是由日本作者TK11235 所開發的開源TRPG跑團平台，使用MIT授權方式。特點是地圖顯示使用2.5D的方式，架構簡單，容易擴充。原版地址在底下。\n在這個平台中，主要的資料由使用者之間彼此傳送及處理，HKTRPG只是提供一個中文化的平台，棋子圖片等等都是儲存在使用者的電腦之中，所以離開前，請大家先按《保存房間》生成ZIP檔案，下次再使用時按《讀取房間》上傳檔案，不然房間就會像煙火一樣燒光。"
-    },  {
+      text: "烏冬說明: 這是由日本作者TK11235 所開發的開源TRPG跑團平台，使用MIT授權方式。\n特點是地圖顯示使用2.5D的方式，架構簡單，容易擴充。原版地址在底下。\n在這個平台中，主要的資料由使用者之間彼此傳送及處理，HKTRPG只是提供一個中文化的平台，棋子圖片等等都是儲存在使用者的電腦之中，\n所以離開前，請大家先按《保存房間》生成ZIP檔案，下次再使用時按《讀取房間》上傳檔案，不然房間就會像煙火一樣燒光。"
+    }, {
       from: "System",
       to: "???",
       timestamp: 0,
@@ -52,14 +52,21 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
       tag: "",
       name: "教學Zzzzzz > 玩家",
       text: "密語並不會儲存到ZIP中。而當你的ID更新之後，你將無法再看見之前傳給您的密語，還請多加注意。"
-    }
-    , {
+    }, {
       from: "System",
-      timestamp: 2445551999,
+      timestamp: 1615253220000,
       imageIdentifier: "",
       tag: "",
       name: "連結:",
-      text: "https://udonarium.app/ \n原版連結 https://nanasunana.github.io/\n 改版連結\nhttps://discord.gg/vx4kcm7 意見留言DISCORD群\nhttps://www.facebook.com/groups/HKTRPG 香港TRPG研究社\nhttps://www.hktrpg.com/ TRPG百科\nhttps://www.patreon.com/HKTRPG HKTPRG開發支援"
+      text: "根據 https://nanasunana.github.io/ 私家改造版 重新中文化 及 加入各種功能. \n升級1.13.2版本"
+    }
+    , {
+      from: "System",
+      timestamp: 2445551999000,
+      imageIdentifier: "",
+      tag: "",
+      name: "連結:",
+      text: "https://udonarium.app/ 原版連結\nhttps://nanasunana.github.io/ 改版連結\nhttps://discord.gg/vx4kcm7 意見留言DISCORD群\nhttps://www.facebook.com/groups/HKTRPG 香港TRPG研究社\nhttps://www.hktrpg.com/ TRPG百科\nhttps://www.patreon.com/HKTRPG HKTPRG開發支援"
     }
   ];
 

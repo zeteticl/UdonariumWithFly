@@ -108,7 +108,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
   diceAllOpne() {
-    if (confirm('「一斉公開しない」設定ではないダイスをすべて公開します。\nよろしいですか？')) {
+    if (confirm('公開所有未設置為「不要一次性公開」的骰子。\n您確定嗎？')) {
       EventSystem.trigger('DICE_ALL_OPEN', null);
     }
   }
