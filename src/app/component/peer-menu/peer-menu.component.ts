@@ -168,7 +168,6 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
 
   findUserId(peerId: string) {
     const peerCursor = PeerCursor.findByPeerId(peerId);
-    console.log('peerCursor', peerCursor)
     return peerCursor ? peerCursor.userId : '';
   }
 
