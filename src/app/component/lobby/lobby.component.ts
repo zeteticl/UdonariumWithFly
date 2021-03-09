@@ -86,7 +86,7 @@ export class LobbyComponent implements OnInit, OnDestroy {
   async connect(peerContexts: PeerContext[], isGuest?: boolean) {
     let context = peerContexts[0];
     let password = '';
-    if (context.hasPassword && !isGuest) {
+    if (context.hasPassword && !(context.isAllowGuest && isGuest)) {
       password = await this.modalService.open<string>(PasswordCheckComponent, { peerId: context.peerId, title: `${context.roomName}/${context.roomId}` });
       if (password == null) password = '';
     }
