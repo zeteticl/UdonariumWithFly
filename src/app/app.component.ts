@@ -168,7 +168,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       .on<AppConfig>('LOAD_CONFIG', event => {
         console.log('LOAD_CONFIG !!!', event.data);
         if (event.data.dice && event.data.dice.url) {
-          fetch(event.data.dice.url + '/v1/names', {mode: 'cors'})
+          fetch(event.data.dice.url + '/v1/names', { mode: 'cors' })
             .then(response => { return response.json() })
             .then(infos => {
               let apiUrl = event.data.dice.url;
@@ -205,21 +205,21 @@ export class AppComponent implements AfterViewInit, OnDestroy {
                   return info;
                 })
                 .sort((a, b) => {
-                  return a.lang < b.lang ? -1 
+                  return a.lang < b.lang ? -1
                     : a.lang > b.lang ? 1
-                    : a.normalize == b.normalize ? 0 
-                    : a.normalize < b.normalize ? -1 : 1;
+                      : a.normalize == b.normalize ? 0
+                        : a.normalize < b.normalize ? -1 : 1;
                 });
               DiceBot.diceBotInfos.push(...tempInfos.map(info => { return { script: info.system, game: info.name } }));
               if (tempInfos.length > 0) {
                 let sentinel = tempInfos[0].normalize.substr(0, 1);
                 let group = { index: tempInfos[0].normalize.substr(0, 1), infos: [] };
                 for (let info of tempInfos) {
-                  let index = info.lang == 'B' ? '特殊' 
+                  let index = info.lang == 'B' ? '特殊'
                     : info.lang == 'ChineseTraditional' ? '正體中文'
-                    : info.lang == 'Korean' ? '한국어'
-                    : info.lang == 'English' ? 'English'
-                    : info.normalize.substr(0, 1);
+                      : info.lang == 'Korean' ? '한국어'
+                        : info.lang == 'English' ? 'English'
+                          : info.normalize.substr(0, 1);
                   if (index !== sentinel) {
                     sentinel = index;
                     DiceBot.diceBotInfosIndexed.push(group);
@@ -228,6 +228,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
                   group.infos.push({ script: info.system, game: info.name });
                 }
                 DiceBot.diceBotInfosIndexed.push(group);
+
               }
             });
         } else {
@@ -254,9 +255,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
             //return info;
             //console.log(info.index + ': ' + normalize);
           });
-          DiceBot.diceBotInfos.sort((a, b) => {
-            return a.sort_key == b.sort_key ? 0 
-            : a.sort_key < b.sort_key ? -1 : 1;
+          DiceBot.diceBotInfos.sort((b, a) => {
+            return a.sort_key == b.sort_key ? 0
+              : a.sort_key < b.sort_key ? -1 : 1;
           });
           let sentinel = DiceBot.diceBotInfos[0].sort_key[0];
           let group = { index: sentinel, infos: [] };
@@ -432,19 +433,22 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   standSetteings() {
     const isShowStand = StandImageComponent.isShowStand;
     const isShowNameTag = StandImageComponent.isShowNameTag;
-    const isCanBeGone = StandImageComponent.isCanBeGone; 
+    const isCanBeGone = StandImageComponent.isCanBeGone;
     this.contextMenuService.open(this.pointerDeviceService.pointers[0], [
-      { name: `${ isShowStand ? '☑' : '☐' }スタンド表示`, 
+      {
+        name: `${isShowStand ? '☑' : '☐'}スタンド表示`,
         action: () => {
           StandImageComponent.isShowStand = !isShowStand;
         }
       },
-      { name: `${ isShowNameTag ? '☑' : '☐' }ネームタグ表示`, 
+      {
+        name: `${isShowNameTag ? '☑' : '☐'}ネームタグ表示`,
         action: () => {
           StandImageComponent.isShowNameTag = !isShowNameTag;
         }
       },
-      { name: `${ isCanBeGone ? '☑' : '☐' }透明化、自動退去`, 
+      {
+        name: `${isCanBeGone ? '☑' : '☐'}透明化、自動退去`,
         action: () => {
           StandImageComponent.isCanBeGone = !isCanBeGone;
         }
@@ -453,11 +457,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       { name: '表示スタンド全消去', action: () => EventSystem.trigger('DESTORY_STAND_IMAGE_ALL', null) }
     ], 'スタンド設定');
   }
-/*
-  farewellStandAll() {
-    EventSystem.trigger('DESTORY_STAND_IMAGE_ALL', null);
-  }
-*/
+  /*
+    farewellStandAll() {
+      EventSystem.trigger('DESTORY_STAND_IMAGE_ALL', null);
+    }
+  */
   diceAllOpne() {
     if (confirm('「一斉公開しない」設定ではないダイスをすべて公開します。\nよろしいですか？')) {
       EventSystem.trigger('DICE_ALL_OPEN', null);
