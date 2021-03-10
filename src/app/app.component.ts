@@ -229,6 +229,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
                   group.infos.push({ script: info.system, game: info.name });
                 }
                 DiceBot.diceBotInfosIndexed.push(group);
+
               }
             });
         } else {
@@ -255,7 +256,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
             //return info;
             //console.log(info.index + ': ' + normalize);
           });
-          DiceBot.diceBotInfos.sort((a, b) => {
+          DiceBot.diceBotInfos.sort((b, a) => {
             return a.sort_key == b.sort_key ? 0
               : a.sort_key < b.sort_key ? -1 : 1;
           });
@@ -440,7 +441,6 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     const isShowNameTag = StandImageComponent.isShowNameTag;
     const isCanBeGone = StandImageComponent.isCanBeGone;
     this.contextMenuService.open(this.pointerDeviceService.pointers[0], [
-
       { name: `${ isShowStand ? '☑' : '☐' }展示立繪`, 
         action: () => {
           StandImageComponent.isShowStand = !isShowStand;
