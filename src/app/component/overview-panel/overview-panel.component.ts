@@ -172,14 +172,17 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
   }
 
   movetocommon() {
+    if (this.GuestMode()) return;
     this.tabletopObject.setLocation('common');
     SoundEffect.play(PresetSound.lock);
   }
   movetoid() {
+    if (this.GuestMode()) return;
     this.tabletopObject.setLocation(Network.peerId);
     SoundEffect.play(PresetSound.lock);
   }
   movetograveyard() {
+    if (this.GuestMode()) return;
     this.tabletopObject.setLocation('graveyard');
     SoundEffect.play(PresetSound.lock);
   }
