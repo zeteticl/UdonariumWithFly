@@ -441,7 +441,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     const isShowNameTag = StandImageComponent.isShowNameTag;
     const isCanBeGone = StandImageComponent.isCanBeGone;
     this.contextMenuService.open(this.pointerDeviceService.pointers[0], [
-      { name: `${ isShowStand ? '☑' : '☐' }Stand展示`, 
+      { name: `${ isShowStand ? '☑' : '☐' }展示立繪`, 
         action: () => {
           StandImageComponent.isShowStand = !isShowStand;
         }
@@ -459,8 +459,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         }
       },
       ContextMenuSeparator,
-      { name: '擦除所有Stand圖片', action: () => EventSystem.trigger('DESTORY_STAND_IMAGE_ALL', null) }
-    ], 'Stand設置');
+      { name: '消除所有立繪', action: () => EventSystem.trigger('DESTORY_STAND_IMAGE_ALL', null) }
+    ], '立繪設定');
   }
   /*
     farewellStandAll() {

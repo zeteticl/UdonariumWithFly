@@ -166,12 +166,12 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
     }
     actions.push((gameObject.isUseIconToOverviewImage
       ? {
-        name: '☑ 使用顏IC', action: () => {
+        name: '☑ 使用大頭照icon', action: () => {
           gameObject.isUseIconToOverviewImage = false;
           EventSystem.trigger('UPDATE_INVENTORY', null);
         }
       } : {
-        name: '☐ 使用顏IC', action: () => {
+        name: '☐ 使用大頭照icon', action: () => {
           gameObject.isUseIconToOverviewImage = true;
           EventSystem.trigger('UPDATE_INVENTORY', null);
         }
