@@ -432,10 +432,10 @@ export class ChatInputComponent implements OnInit, OnDestroy {
     DiceBot.getHelpMessage(this.gameType).then(help => {
       this.gameHelp = help;
 
-      let gameName: string = 'ダイスボット';
+      let gameName: string = '骰子機械人';
       for (let diceBotInfo of DiceBot.diceBotInfos) {
         if (diceBotInfo.script === this.gameType) {
-          gameName = 'ダイスボット〈' + diceBotInfo.game + '〉'
+          gameName = '骰子機械人〈' + diceBotInfo.game + '〉'
         }
       }
       gameName += '使用法';
@@ -566,7 +566,7 @@ export class ChatInputComponent implements OnInit, OnDestroy {
         //if (this.character.faceIcons.length > 1) {
           contextMenuActions.push(ContextMenuSeparator);
           contextMenuActions.push({
-            name: '顔アイコンの変更',
+            name: '改變大頭照icon',
             action: null,
             subActions: this.character.faceIcons.map((faceIconImage, i) => {
               return { 
@@ -587,9 +587,9 @@ export class ChatInputComponent implements OnInit, OnDestroy {
       contextMenuActions.push(ContextMenuSeparator);
       contextMenuActions.push({ name: '顯示詳情', action: () => { this.showDetail(this.character); } });
       if (!this.onlyCharacters) {
-        contextMenuActions.push({ name: 'チャットパレットを表示', action: () => { this.showChatPalette(this.character) } });
+        contextMenuActions.push({ name: '顯示聊天面板', action: () => { this.showChatPalette(this.character) } });
       }
-      contextMenuActions.push({ name: 'スタンド設定', action: () => { this.showStandSetting(this.character) } });
+      contextMenuActions.push({ name: '立繪設定', action: () => { this.showStandSetting(this.character) } });
     }
     this.contextMenuService.open(position, contextMenuActions, this.character.name);
   }

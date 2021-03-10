@@ -406,12 +406,12 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
       (this.gameCharacter.imageFiles.length <= 1 ? null : ContextMenuSeparator),
       (this.isUseIconToOverviewImage
         ? {
-          name: '☑ 使用顏IC', action: () => {
+          name: '☑ 使用大頭照icon', action: () => {
             this.isUseIconToOverviewImage = false;
             EventSystem.trigger('UPDATE_INVENTORY', null);
           }
         } : {
-          name: '☐ 使用顏IC', action: () => {
+          name: '☐ 使用大頭照icon', action: () => {
             this.isUseIconToOverviewImage = true;
             EventSystem.trigger('UPDATE_INVENTORY', null);
           }
@@ -494,12 +494,12 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
       ContextMenuSeparator,
       (!this.isNotRide
         ? {
-          name: '☑ 乘上其他角色', action: () => {
+          name: '☑ 疊到其他角色頂部', action: () => {
             this.isNotRide = true;
             EventSystem.trigger('UPDATE_INVENTORY', null);
           }
         } : {
-          name: '☐ 乘上其他角色', action: () => {
+          name: '☐ 疊到其他角色頂部', action: () => {
             this.isNotRide = false;
             EventSystem.trigger('UPDATE_INVENTORY', null);
           }
@@ -528,7 +528,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
       ContextMenuSeparator,
       { name: '顯示詳細', action: () => { this.showDetail(this.gameCharacter); } },
       { name: '顯示聊天面板', action: () => { this.showChatPalette(this.gameCharacter) } },
-      { name: 'Stand設置', action: () => { this.showStandSetting(this.gameCharacter) } },
+      { name: '立繪設定', action: () => { this.showStandSetting(this.gameCharacter) } },
       ContextMenuSeparator,
       {
         name: '打開參考網址', action: null,

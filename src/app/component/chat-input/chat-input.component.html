@@ -18,7 +18,7 @@
   </div>
   <div class="table-cell">
     <div>
-      <label style="margin-right: 2px"><input type="checkbox" [(ngModel)]="isUseFaceIcon" checked="{{isUseFaceIcon ? 'checked' : ''}}" (change)="isUseFaceIcon = (isUseFaceIcon ? true : false)" /><b style="font-size: smaller;">顔IC</b></label>
+      <label style="margin-right: 2px"><input type="checkbox" [(ngModel)]="isUseFaceIcon" checked="{{isUseFaceIcon ? 'checked' : ''}}" (change)="isUseFaceIcon = (isUseFaceIcon ? true : false)" /><b style="font-size: smaller;">大頭照icon</b></label>
       <select style="max-width: 10em" [(ngModel)]="sendFrom" (change)="standName = ''" [ngStyle]="{'color': color, 'font-weight': (sendFrom != myPeer?.identifier ? 'normal' : 'bolder')}">
         <option *ngIf="!onlyCharacters" value="{{myPeer?.identifier}}" [style.color]="myColor" style="font-weight: bolder;">{{myPeer?.name}}（你）</option>
         <option *ngFor="let gameCharacter of gameCharacters" style="font-weight: normal;" [style.color]="gameCharacter.chatPalette && gameCharacter.chatPalette.color && gameCharacter.chatPalette.color != '#ffffff' ? gameCharacter.chatPalette.color : '#444'" value="{{gameCharacter.identifier}}">{{gameCharacter.name}}</option>
@@ -50,7 +50,7 @@
     <div *ngIf="hasStand" [ngClass]="{'disabled-stand': !isUseStandImageOnChatTab}" style="font-size: smaller;">
       <label style="margin-right: 2px">
         <input type="checkbox" [(ngModel)]="isUseStandImage" checked="{{isUseStandImage ? 'checked' : ''}}" (change)="isUseStandImage = (isUseStandImage ? true : false)" [attr.disabled]="!isUseStandImageOnChatTab ? '' : null" />
-        <b style="font-size: smaller;">Stand: </b>
+        <b style="font-size: smaller;">立繪: </b>
       </label>
       <select style="width: 8em; margin-right: 6px;" (change)="isUseStandImage = true" [(ngModel)]="standName" [ngModelOptions]="{standalone: true}" [ngClass]="{'not-specified': standName == ''}" [attr.disabled]="!isUseStandImageOnChatTab ? '' : null" >
         <option value="" class="not-specified">未選擇</option>
