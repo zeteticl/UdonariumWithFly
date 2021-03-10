@@ -37,7 +37,7 @@
     <option value="{{networkService.peerId}}">個人倉庫</option>
     <option value="graveyard">墓地</option>
   </select>
-  <button (click)="openModal('shadowImageIdentifier', tabletopObject.shadowImageFile.url.length > 0)" [disabled]="!tabletopObject.imageElement || tabletopObject.imageElement.value == 'null'">改變圖片的陰影</button>
+  <button (click)="openModal('shadowImageIdentifier', tabletopObject.shadowImageFile.url.length > 0)" [disabled]="!tabletopObject.imageElement || tabletopObject.imageElement.value == 'null'">設定陰影圖案</button>
 </ng-container>
 <div *ngIf="tabletopObject" class="flex-container">
   <img class="shadow-image" [src]="tabletopObject.shadowImageFile.url | safe: 'resourceUrl'" [alt]="tabletopObject.shadowImageFile.name" (click)="openModal('shadowImageIdentifier', true)">
