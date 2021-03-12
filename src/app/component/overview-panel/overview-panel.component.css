@@ -547,5 +547,5 @@ input[type='range']::-ms-tooltip {
 }
 
 button[type='submit']{
-  font-size: 5px;
+  font-size: 9px;
 }
