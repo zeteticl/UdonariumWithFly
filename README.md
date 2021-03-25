@@ -3,7 +3,7 @@
 
 配布用ファイルは（まだ）用意していないので、自分で配置したい場合はcloneしてbuildしてください。また、config.yamlも同梱していないので本家ユドナを設置したことのない方は本家等からコピーしてください。
 
-[お試しページ](https://nanasunana.github.io/)
+[お試しページ](https://z01.hktrpg.com/udonWithFly1.13.2/)
 
 ## ToDo的なもの（優先順位ではない）
 
