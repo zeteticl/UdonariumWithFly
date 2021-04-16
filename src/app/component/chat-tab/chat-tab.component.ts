@@ -59,6 +59,13 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
       tag: "",
       name: "連結:",
       text: "根據 https://nanasunana.github.io/ 私家改造版 重新中文化 及 加入各種功能. \n升級1.13.2版本"
+    }, {
+      from: "System",
+      timestamp: 1615253220000,
+      imageIdentifier: "",
+      tag: "",
+      name: "連結:",
+      text: "升級成1.13.3b版本"
     }
     , {
       from: "System",
@@ -66,7 +73,7 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
       imageIdentifier: "",
       tag: "",
       name: "連結:",
-      text: "https://udonarium.app/ 原版連結\nhttps://nanasunana.github.io/ 改版連結\nhttps://discord.gg/vx4kcm7 意見留言DISCORD群\nhttps://www.facebook.com/groups/HKTRPG 香港TRPG研究社\nhttps://www.hktrpg.com/ TRPG百科\nhttps://www.patreon.com/HKTRPG HKTPRG開發支援"
+      text: "https://udonarium.app/ 原版連結\nhttps://nanasunana.github.io/ 改版連結\nhttps://discord.gg/vx4kcm7 支援用DISCORD群\nhttps://www.facebook.com/groups/HKTRPG 香港TRPG研究社\nhttps://www.hktrpg.com/ TRPG百科\nhttps://www.patreon.com/HKTRPG HKTPRG開發支援"
     }
   ];
 
