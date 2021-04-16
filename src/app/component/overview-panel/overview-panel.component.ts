@@ -20,6 +20,10 @@ import { GameCharacter } from '@udonarium/game-character';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
+import { StringUtil } from '@udonarium/core/system/util/string-util';
+import { OpenUrlComponent } from 'component/open-url/open-url.component';
+import { ModalService } from 'service/modal.service';
+
 @Component({
   selector: 'overview-panel',
   templateUrl: './overview-panel.component.html',
@@ -48,6 +52,8 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
 
   @Input() left: number = 0;
   @Input() top: number = 0;
+
+  stringUtil = StringUtil;
 
   private _imageFile: ImageFile = ImageFile.Empty;
 
@@ -144,7 +150,8 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
   constructor(
     private inventoryService: GameObjectInventoryService,
     private changeDetector: ChangeDetectorRef,
-    private pointerDeviceService: PointerDeviceService
+    private pointerDeviceService: PointerDeviceService,
+    private modalService: ModalService
   ) { }
   ngAfterViewInit() {
     this.initPanelPosition();
@@ -248,6 +255,13 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
     this.isOpenImageView = isOpen;
   }
 
+  openUrl(url, title=null, subTitle=null) {
+    if (StringUtil.sameOrigin(url)) {
+      window.open(url.trim(), '_blank', 'noopener');
+    } else {
+      this.modalService.open(OpenUrlComponent, { url: url, title: title, subTitle: subTitle });
+    } 
+  }
   private getInventoryTags(gameObject: TabletopObject): DataElement[] {
     return this.inventoryService.tableInventory.dataElementMap.get(gameObject.identifier);
   }

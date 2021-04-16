@@ -276,10 +276,16 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
           const url = urlElement.value.toString();
           return {
             name: urlElement.name ? urlElement.name : url,
-            action: () => { this.modalService.open(OpenUrlComponent, { url: url, title: this.card.name, subTitle: urlElement.name }); },
+            action: () => {
+              if (StringUtil.sameOrigin(url)) {
+                window.open(url.trim(), '_blank', 'noopener');
+              } else {
+                this.modalService.open(OpenUrlComponent, { url: url, title: this.card.name, subTitle: urlElement.name });
+              } 
+            },
             disabled: !StringUtil.validUrl(url),
             error: !StringUtil.validUrl(url) ? '網址無效' : null,
-            materialIcon: 'open_in_new'
+            isOuterLink: StringUtil.validUrl(url) && !StringUtil.sameOrigin(url)
           };
         })
       } : null),

@@ -35,6 +35,8 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
 
   isEdit: boolean = false;
 
+  stringUtil = StringUtil;
+
   get sortTag(): string { return this.inventoryService.sortTag; }
   set sortTag(sortTag: string) { this.inventoryService.sortTag = sortTag; }
   get sortOrder(): SortOrder { return this.inventoryService.sortOrder; }
@@ -294,10 +296,16 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
         const url = urlElement.value.toString();
         return {
           name: urlElement.name ? urlElement.name : url,
-          action: () => { this.modalService.open(OpenUrlComponent, { url: url, title: gameObject.name, subTitle: urlElement.name }); },
+          action: () => {
+            if (StringUtil.sameOrigin(url)) {
+              window.open(url.trim(), '_blank', 'noopener');
+            } else {
+              this.modalService.open(OpenUrlComponent, { url: url, title: gameObject.name, subTitle: urlElement.name });
+            } 
+          },
           disabled: !StringUtil.validUrl(url),
           error: !StringUtil.validUrl(url) ? '網址無效' : null,
-          materialIcon: 'open_in_new'
+          isOuterLink: StringUtil.validUrl(url) && !StringUtil.sameOrigin(url)
         };
       }),
       disabled: gameObject.getUrls().length <= 0
@@ -439,5 +447,13 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
 
   trackByGameObject(index: number, gameObject: GameObject) {
     return gameObject ? gameObject.identifier : index;
+  }
+
+  openUrl(url, title=null, subTitle=null) {
+    if (StringUtil.sameOrigin(url)) {
+      window.open(url.trim(), '_blank', 'noopener');
+    } else {
+      this.modalService.open(OpenUrlComponent, { url: url, title: title, subTitle: subTitle  });
+    } 
   }
 }

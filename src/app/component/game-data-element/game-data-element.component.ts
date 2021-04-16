@@ -8,10 +8,14 @@ import {
   OnInit,
 } from '@angular/core';
 import { EventSystem } from '@udonarium/core/system';
+import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { DataElement } from '@udonarium/data-element';
 import { ChatMessageService } from 'service/chat-message.service';
 import { ChatTab } from '@udonarium/chat-tab';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
+import { OpenUrlComponent } from 'component/open-url/open-url.component';
+import { ModalService } from 'service/modal.service';
+
 @Component({
   selector: 'game-data-element, [game-data-element]',
   templateUrl: './game-data-element.component.html',
@@ -19,10 +23,13 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewInit {
+  @Input() tableTopObjectName: string = null;
   @Input() gameDataElement: DataElement = null;
   @Input() isEdit: boolean = false;
   @Input() isTagLocked: boolean = false;
   @Input() isValueLocked: boolean = false;
+
+  stringUtil = StringUtil;
 
   private _name: string = '';
   get name(): string { return this._name; }
@@ -55,7 +62,8 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
 
   constructor(
     public chatMessageService: ChatMessageService,
-    private changeDetector: ChangeDetectorRef
+    private changeDetector: ChangeDetectorRef,
+    private modalService: ModalService
   ) { }
 
   ngOnInit() {
@@ -115,6 +123,14 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
 
   isNum(n: any): boolean {
     return isFinite(n);
+  }
+
+  openUrl(url) {
+    if (StringUtil.sameOrigin(url)) {
+      window.open(url.trim(), '_blank', 'noopener');
+    } else {
+      this.modalService.open(OpenUrlComponent, { url: url, title: this.tableTopObjectName, subTitle: this.name });
+    } 
   }
 
   private setValues(object: DataElement) {
