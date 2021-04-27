@@ -110,10 +110,6 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   get isMine(): boolean { return this.gameCharacter.isMine; }
   get hasGM(): boolean { return this.gameCharacter.hasGM; }
   get isDisabled(): boolean {
-    console.log('PeerCursor.myCursor.name', PeerCursor.myCursor.name)
-    console.log('GM', this.GM)
-    console.log('isDisabled', this.gameCharacter.isDisabled)
-    console.log('isMine', this.gameCharacter.isMine)
     return this.gameCharacter.isDisabled;
   }
   get isDropShadow(): boolean { return this.gameCharacter.isDropShadow; }
