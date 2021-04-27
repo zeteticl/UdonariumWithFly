@@ -1,3 +1,4 @@
+import { ChatMessage } from './chat-message';
 import { ChatTab } from './chat-tab';
 import { SyncObject } from './core/synchronize-object/decorator';
 import { ObjectNode } from './core/synchronize-object/object-node';
@@ -45,5 +46,32 @@ export class ChatTabList extends ObjectNode implements InnerXml {
 
     super.parseInnerXml.apply(ChatTabList.instance, [element]);
     this.destroy();
+  }
+
+  log(type): string {
+    if (!this.chatTabs) return '';
+    return `<!DOCTYPE html>
+<html lang="ja-JP">
+<head>
+<meta charset="UTF-8">
+<title>チャットログ：全タブ</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+${ ChatMessage.logCss() }
+</style>
+</head>
+<body>
+${
+  this.chatTabs.reduce((ac, chatTab) => {
+      if (chatTab) ac.push(...chatTab.chatMessages.filter(chatMessage => chatMessage.isDisplayable)
+        .map(chatMessage => ({ index: chatMessage.index, tabName: chatTab.name, chatMessage: chatMessage }))); 
+      return ac;
+    }, [])
+    .sort((a, b) => a.index - b.index)
+    .map(obj => obj.chatMessage.logFragmentHtml(obj.tabName))
+    .join("\n")
+}
+</body>
+</html>`;
   }
 }

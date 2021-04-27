@@ -17,6 +17,8 @@ import { TextNote } from '@udonarium/text-note';
 import { ContextMenuAction } from './context-menu.service';
 import { PointerCoordinate } from './pointer-device.service';
 
+import { ImageTag } from '@udonarium/image-tag';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -52,8 +54,12 @@ export class TabletopActionService {
   createTerrain(position: PointerCoordinate): Terrain {
     if (this.GuestMode()) return;
     let url: string = './assets/images/tex.jpg';
-    let image: ImageFile = ImageStorage.instance.get(url)
-    if (!image) image = ImageStorage.instance.add(url);
+    let image: ImageFile = ImageStorage.instance.get(url);
+    //if (!image) image = ImageStorage.instance.add(url);
+    if (!image) {
+      image = ImageStorage.instance.add(url);
+      ImageTag.create(image.identifier).tag = '*default 地形';
+    }
 
     let viewTable = this.getViewTable();
     if (!viewTable) return;
@@ -84,14 +90,22 @@ export class TabletopActionService {
     diceSymbol.nothingFaces.forEach(face => {
       let url: string = `./assets/images/dice/${imagePathPrefix}/${imagePathPrefix}[0].png`;
       image = ImageStorage.instance.get(url)
-      if (!image) { image = ImageStorage.instance.add(url); }
+      //if (!image) { image = ImageStorage.instance.add(url); }
+      if (!image) {
+        image = ImageStorage.instance.add(url);
+        ImageTag.create(image.identifier).tag = '*default ダイス';
+      }
       diceSymbol.imageDataElement.getFirstElementByName(face).value = image.identifier;
     });
 
     diceSymbol.faces.forEach(face => {
       let url: string = `./assets/images/dice/${imagePathPrefix}/${imagePathPrefix}[${face}].png`;
       image = ImageStorage.instance.get(url);
-      if (!image) { image = ImageStorage.instance.add(url); }
+      //if (!image) { image = ImageStorage.instance.add(url); }
+      if (!image) {
+        image = ImageStorage.instance.add(url);
+        ImageTag.create(image.identifier).tag = '*default ダイス';
+      }
       diceSymbol.imageDataElement.getFirstElementByName(face).value = image.identifier;
     });
 
@@ -110,7 +124,9 @@ export class TabletopActionService {
 
     let back: string = './assets/images/trump/z02.gif';
     if (!ImageStorage.instance.get(back)) {
-      ImageStorage.instance.add(back);
+      //ImageStorage.instance.add(back);
+      const image = ImageStorage.instance.add(back);
+      ImageTag.create(image.identifier).tag = '*default カード';
     }
 
     let suits: string[] = ['c', 'd', 'h', 's'];
@@ -128,7 +144,9 @@ export class TabletopActionService {
     for (let trump of trumps) {
       let url: string = './assets/images/trump/' + trump + '.gif';
       if (!ImageStorage.instance.get(url)) {
-        ImageStorage.instance.add(url);
+        //ImageStorage.instance.add(url);
+        const image = ImageStorage.instance.add(url);
+        ImageTag.create(image.identifier).tag = '*default カード';
       }
       let card = Card.create('卡牌', url, back);
       cardStack.putOnBottom(card);
@@ -145,6 +163,7 @@ export class TabletopActionService {
     let bgFileContext = ImageFile.createEmpty('testTableBackgroundImage_image').toContext();
     bgFileContext.url = './assets/images/BG10a_80.jpg';
     testBgFile = ImageStorage.instance.add(bgFileContext);
+    ImageTag.create(testBgFile.identifier).tag = '*default 桌面';
     gameTable.name = '最初的桌面';
     gameTable.imageIdentifier = testBgFile.identifier;
     gameTable.width = 20;
@@ -163,6 +182,7 @@ export class TabletopActionService {
     fileContext = ImageFile.createEmpty('testCharacter_1_image').toContext();
     fileContext.url = './assets/images/mon_052.gif';
     testFile = ImageStorage.instance.add(fileContext);
+    ImageTag.create(testFile.identifier).tag = '*default キャラクター';
     testCharacter.location.x = 5 * 50;
     testCharacter.location.y = 9 * 50;
     testCharacter.initialize();
@@ -178,6 +198,7 @@ export class TabletopActionService {
     fileContext = ImageFile.createEmpty('testCharacter_3_image').toContext();
     fileContext.url = './assets/images/mon_128.gif';
     testFile = ImageStorage.instance.add(fileContext);
+    ImageTag.create(testFile.identifier).tag = '*default キャラクター';
     testCharacter.location.x = 4 * 50;
     testCharacter.location.y = 2 * 50;
     testCharacter.initialize();
@@ -187,6 +208,7 @@ export class TabletopActionService {
     fileContext = ImageFile.createEmpty('testCharacter_4_image').toContext();
     fileContext.url = './assets/images/mon_150.gif';
     testFile = ImageStorage.instance.add(fileContext);
+    ImageTag.create(testFile.identifier).tag = '*default キャラクター';
     testCharacter.location.x = 6 * 50;
     testCharacter.location.y = 11 * 50;
     testCharacter.initialize();
@@ -196,6 +218,7 @@ export class TabletopActionService {
     fileContext = ImageFile.createEmpty('testCharacter_5_image').toContext();
     fileContext.url = './assets/images/mon_211.gif';
     testFile = ImageStorage.instance.add(fileContext);
+    ImageTag.create(testFile.identifier).tag = '*default キャラクター';
     testCharacter.location.x = 12 * 50;
     testCharacter.location.y = 12 * 50;
     testCharacter.initialize();
@@ -205,6 +228,7 @@ export class TabletopActionService {
     fileContext = ImageFile.createEmpty('testCharacter_6_image').toContext();
     fileContext.url = './assets/images/mon_135.gif';
     testFile = ImageStorage.instance.add(fileContext);
+    ImageTag.create(testFile.identifier).tag = '*default キャラクター';
     testCharacter.initialize();
     testCharacter.location.x = 5 * 50;
     testCharacter.location.y = 13 * 50;

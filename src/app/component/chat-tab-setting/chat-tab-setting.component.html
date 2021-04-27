@@ -1,9 +1,9 @@
 <div class="flex-container">
   <div class="flex-item no-grow">
     <div>
-      <button (click)="create()">新增聊天標籤</button>
+      <button (click)="create()" style="font-size: smaller; margin-bottom: 2px">新增聊天標籤</button>
     </div>
-    <select style="width: 10em;" size="10" (change)="onChangeSelectTab($event.target.value)" [ngModel]="selectedTab?.identifier">
+    <select style="width: 100%" size="10" (change)="onChangeSelectTab($event.target.value)" [ngModel]="selectedTab?.identifier">
       <option *ngFor="let chatTab of chatTabs" value="{{chatTab.identifier}}">{{chatTab.name}}</option>
     </select>
   </div>
@@ -12,11 +12,12 @@
       <div>標籤名稱 :
         <input [(ngModel)]="tabName" placeholder="Name" [attr.disabled]="!isEditable ? '' : null" />
       </div>
-      <div style="font-weight: bolder; font-size: smaller">
+      <div style="font-weight: bolder; font-size: smaller; padding-top: 3px">
         <label>
           <input type="checkbox" [(ngModel)]="isUseStandImage" checked="{{isUseStandImage ? 'checked' : ''}}" (change)="isUseStandImage = (isUseStandImage ? true : false)" [attr.disabled]="!isEditable ? '' : null" />
           有效立繪
         </label>
+        <button (click)="saveLog()" style="font-size: smaller; margin-left: 1em" [attr.disabled]="!isEditable ? '' : null">ログ出力</button>
       </div>
       <hr/>
       <div>
@@ -24,6 +25,7 @@
           <button (click)="save_log()">Export Log(.HTML)</button>
           <button (click)="upTabIndex()">↑</button>
           <button (click)="downTabIndex()">↓</button>
+          <button (click)="saveLogAll()" style="font-size: smaller; margin-left: 1em">ログ出力 (全タブ)</button>
           <button [disabled]="isSaveing" (click)="save()">
             <div style="position: relative;">
               <div [ngClass]="{'is-hidden': isSaveing}">保存</div>

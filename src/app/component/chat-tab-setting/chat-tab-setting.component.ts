@@ -31,6 +31,13 @@ export class ChatTabSettingComponent implements OnInit, OnDestroy {
   get isDeleted(): boolean { return this.selectedTab ? ObjectStore.instance.get(this.selectedTab.identifier) == null : false; }
   get isEditable(): boolean { return !this.isEmpty && !this.isDeleted; }
 
+  get roomName():string {
+    let roomName = Network.peerContext && 0 < Network.peerContext.roomName.length
+      ? Network.peerContext.roomName
+      : 'ルームデータ';
+    return roomName;
+  }
+  
   isSaveing: boolean = false;
   progresPercent: number = 0;
 
@@ -168,5 +175,14 @@ export class ChatTabSettingComponent implements OnInit, OnDestroy {
       let nextElement = parentElement.children[index + 1];
       parentElement.insertBefore(nextElement, this.selectedTab);
     }
+  }
+
+  saveLog() {
+    if (!this.selectedTab) return;
+    this.saveDataService.saveChatLog(1, this.roomName + '_log_' + this.selectedTab.name, this.selectedTab);
+  }
+
+  saveLogAll() {
+    this.saveDataService.saveChatLog(1, this.roomName + '_log_全タブ');
   }
 }
