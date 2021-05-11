@@ -48,29 +48,31 @@ export class ChatTabList extends ObjectNode implements InnerXml {
     this.destroy();
   }
 
-  log(type): string {
+  log(logFormat, dateFormat): string {
     if (!this.chatTabs) return '';
-    return `<!DOCTYPE html>
+    const logBody = this.chatTabs.reduce((ac, chatTab) => {
+        if (chatTab) ac.push(...chatTab.chatMessages.filter(chatMessage => chatMessage.isDisplayable)
+          .map(chatMessage => ({ index: chatMessage.index, tabName: chatTab.name, chatMessage: chatMessage }))); 
+        return ac;
+      }, [])
+      .sort((a, b) => a.index - b.index)
+      .map(obj => obj.chatMessage.logFragment(logFormat, obj.tabName, dateFormat))
+      .join("\n");
+
+    return logFormat == 0 
+      ? logBody
+      : `<!DOCTYPE html>
 <html lang="ja-JP">
 <head>
 <meta charset="UTF-8">
-<title>チャットログ：全タブ</title>
+<title>チャットログ：全てのタブ</title>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <style>
 ${ ChatMessage.logCss() }
 </style>
 </head>
 <body>
-${
-  this.chatTabs.reduce((ac, chatTab) => {
-      if (chatTab) ac.push(...chatTab.chatMessages.filter(chatMessage => chatMessage.isDisplayable)
-        .map(chatMessage => ({ index: chatMessage.index, tabName: chatTab.name, chatMessage: chatMessage }))); 
-      return ac;
-    }, [])
-    .sort((a, b) => a.index - b.index)
-    .map(obj => obj.chatMessage.logFragmentHtml(obj.tabName))
-    .join("\n")
-}
+${ logBody }
 </body>
 </html>`;
   }

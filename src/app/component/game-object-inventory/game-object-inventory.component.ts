@@ -178,6 +178,18 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
           EventSystem.trigger('UPDATE_INVENTORY', null);
         }
       }));
+    actions.push((gameObject.isShowChatBubble
+      ? {
+        name: '☑ 💭の表示', action: () => {
+          gameObject.isShowChatBubble = false;
+          EventSystem.trigger('UPDATE_INVENTORY', null);
+        }
+      } : {
+        name: '☐ 💭の表示', action: () => {
+          gameObject.isShowChatBubble = true;
+          EventSystem.trigger('UPDATE_INVENTORY', null);
+        }
+      }));
     actions.push(
       (gameObject.isDropShadow
       ? {

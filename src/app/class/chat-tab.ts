@@ -66,8 +66,15 @@ export class ChatTab extends ObjectNode implements InnerXml {
     return super.parseInnerXml(element);
   };
 
-  log(type): string {
-    return `<!DOCTYPE html>
+  log(logFormat, dateFormat): string {
+    const logBody = this.chatMessages
+    .filter(chatMessage => chatMessage.isDisplayable)
+    .map(chatMessage => chatMessage.logFragment(logFormat, null, dateFormat))
+    .join("\n");
+
+    return logFormat == 0 
+      ? logBody
+      : `<!DOCTYPE html>
 <html lang="ja-JP">
 <head>
 <meta charset="UTF-8">
@@ -78,12 +85,7 @@ ${ ChatMessage.logCss() }
 </style>
 </head>
 <body>
-${ 
-  this.chatMessages
-    .filter(chatMessage => chatMessage.isDisplayable)
-    .map(chatMessage => chatMessage.logFragmentHtml())
-    .join("\n") 
-}
+${ logBody }
 </body>
 </html>`
   }

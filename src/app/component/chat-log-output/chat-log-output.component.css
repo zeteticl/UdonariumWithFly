@@ -10,7 +10,7 @@
 
   -webkit-align-items: stretch; /* Safari */
   align-items: stretch;
-
+  
 }
 .flex-item {
   margin: 5px;
@@ -43,7 +43,19 @@
   font-size: 0.9em;
 }
 
-.small-font {
-  font-size: 16px;
-  vertical-align: middle;
+label+label {
+  margin-left: 0.5em;
+}
+
+.self-only {
+  color: red;
+}
+
+.log-sample-text,
+.log-sample-html {
+  background-color: white;
+  font-size: smaller;
+  overflow-y: hidden;
+  width: 100%;
+  min-height: 1.6em;
 }

@@ -26,6 +26,9 @@
 
 .image:hover {
   border: 2px dotted red;
+  transform: scale(1.05);
+  z-index: 200;
+  transition-duration: 60ms;
 }
 
 .image img {
@@ -38,8 +41,12 @@
 }
 
 .selecter .image:not(.selected) img {
-  filter: brightness(50%);
-  opacity: 0.7;
+  filter: saturate(40%) opacity(90%) blur(2px);
+}
+
+.image:hover img {
+  backdrop-filter: blur(1px);
+  filter: none !important;
 }
 
 .badge {

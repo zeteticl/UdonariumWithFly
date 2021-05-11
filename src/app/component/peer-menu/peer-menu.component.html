@@ -1,10 +1,14 @@
 <div *ngIf="myPeer">
-  <button (click)="changeIcon()">變更圖示</button>
-  <div *ngIf="myPeer.image" class="image cover" [style.background-image]="'url(' + myPeer.image.url + ')' | safe: 'style' "
-    (click)="changeIcon()">
-    <!--<img *ngIf="myPeer.image" [src]="myPeer.image.url | safe: 'resourceUrl'" />-->
+  <div style="display: flex; align-items: flex-end; margin-bottom: 4px">
+    <div *ngIf="myPeer.image" class="image cover" [style.background-image]="'url(' + myPeer.image.url + ')' | safe: 'style' "
+      (click)="changeIcon()">
+      <!--<img *ngIf="myPeer.image" [src]="myPeer.image.url | safe: 'resourceUrl'" />-->
+    </div>
+    <div>
+      <button (click)="changeIcon()">變更圖示</button>
+    </div>
   </div>
-  <span>您的顏色和暱稱：<input type="color" style="width:1em; margin-right: 0.5em" [(ngModel)]="myPeerColor">　<input [(ngModel)]="myPeerName" [style.color]="myPeerColor" style="font-weight: bolder;" placeholder="ニックネーム" />
+  <span>您的顏色和暱稱：<input type="color" style="width:1em; margin-right: 0.5em" [(ngModel)]="myPeerColor">　<input [(ngModel)]="myPeerName" [style.color]="myPeerColor" style="font-weight: bolder;" placeholder="暱稱" />
   <br>※在瀏覽器中保存上次使用的顏色和暱稱、<br>　選擇白色（255,255,255）將顏色恢復為初始值。</span>
 </div>
 <div>

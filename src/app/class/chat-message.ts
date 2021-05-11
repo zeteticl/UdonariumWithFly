@@ -6,6 +6,7 @@ import { Network } from './core/system';
 import { StringUtil } from './core/system/util/string-util';
 import { Autolinker } from 'autolinker';
 import { PeerCursor } from './peer-cursor';
+import { formatDate } from '@angular/common';
 
 export interface ChatMessageContext {
   identifier?: string;
@@ -48,9 +49,12 @@ export class ChatMessage extends ObjectNode implements ChatMessageContext {
   @SyncVar() standIdentifier: string;
   @SyncVar() standName: string;
   @SyncVar() isUseStandImage: boolean;
+  @SyncVar() lastUpdate: number = 0
 
   get tabIdentifier(): string { return this.parent.identifier; }
-  get text(): string { return <string>this.value }
+  get text(): string { return <string>this.value; }
+  set text(text: string) { this.value = (text == null) ? '' : text; }
+  
   get timestamp(): number {
     let timestamp = this.getAttribute('timestamp');
     let num = timestamp ? +timestamp : 0;
@@ -64,6 +68,10 @@ export class ChatMessage extends ObjectNode implements ChatMessageContext {
       this._sendTo = this.to != null && 0 < this.to.trim().length ? this.to.trim().split(/\s+/) : [];
     }
     return this._sendTo;
+  }
+
+  get isEdited(): boolean {
+    return this.lastUpdate > 0;
   }
 
   private _tag: string;
@@ -86,23 +94,45 @@ export class ChatMessage extends ObjectNode implements ChatMessageContext {
   get isDicebot(): boolean { return this.isSystem && this.from.indexOf('Dice') >= 0 && this.text.indexOf(': 計算結果 →') < 0 ? true : false; }
   get isCalculate(): boolean { return this.isSystem && this.from.indexOf('Dice') >= 0 && this.text.indexOf(': 計算結果 →') > -1 ? true : false; }
   get isSecret(): boolean { return -1 < this.tags.indexOf('secret') ? true : false; }
+  get isEmptyDice(): boolean { return !this.isDicebot || -1 < this.tags.indexOf('empty'); }
   get isSpecialColor(): boolean { return this.isDirect || this.isSecret || this.isSystem || this.isDicebot || this.isCalculate; }
+  get isEditable(): boolean { return !this.isSystem && this.from === Network.peerContext.userId }
+  get isFaceIcon(): boolean { return !this.isSystem && (!this.characterIdentifier || this.tags.indexOf('noface') < 0); }
 
-  logFragmentText(tabName: string=null, shortDateTime=false): string {
-    tabName = (!tabName || tabName.trim() == '') ? '' : `[${ tabName }]`;
-    const date = new Date(this.timestamp);
-    let dateStr = ('00' + date.getHours()).slice(-2) + ':' + ('00' + date.getMinutes()).slice(-2);
-    if (!shortDateTime) dateStr = date.getFullYear() + '/' + ('00' + (date.getMonth() + 1)).slice(-2) + '/' + ('00' + date.getDate()).slice(-2) + ' ' + dateStr + ':' + ('00' + date.getSeconds()).slice(-2);
-    return `${ tabName } ${ dateStr }：${ this.name }：${ (this.isSecret && !this.isSendFromSelf) ? '（シークレットダイス）' : this.text }`
+  //とりあえず
+  private locale = 'en-US';
+  
+  logFragment(logForamt: number, tabName: string=null, dateFormat='HH:mm', noImage=true) {
+    if (logForamt == 0) {
+      return this.logFragmentText(tabName, dateFormat);
+    } else {
+      return this.logFragmentHtml(tabName, dateFormat, logForamt != 2);
+    }
   }
 
-  logFragmentHtml(tabName: string=null, shortDateTime=true, compact=true): string {
+  logFragmentText(tabName: string=null, dateFormat='HH:mm'): string {
+    tabName = (!tabName || tabName.trim() == '') ? '' : `[${ tabName }] `;
+    const dateStr = (dateFormat == '') ? '' : formatDate(new Date(this.timestamp), dateFormat, this.locale) + '：';
+    const lastUpdateStr = !this.isEdited ? '' : 
+      (dateFormat == '') ? ' (編集済)' : ` (編集済 ${ formatDate(new Date(this.lastUpdate), dateFormat, this.locale) })`;
+    return `${ tabName }${ dateStr }${ this.name }：${ (this.isSecret && !this.isSendFromSelf) ? '（シークレットダイス）' : this.text + lastUpdateStr }`
+  }
+
+  logFragmentHtml(tabName: string=null, dateFormat='HH:mm', noImage=true): string {
     const tabNameHtml = (!tabName || tabName.trim() == '') ? '' : `<span class="tab-name">${ StringUtil.escapeHtml(tabName) }</span> `;
     const date = new Date(this.timestamp);
-    const shortDateTimeStr = ('00' + date.getHours()).slice(-2) + ':' + ('00' + date.getMinutes()).slice(-2);
-    const longDateTimeStr = date.getFullYear() + '/' + ('00' + (date.getMonth() + 1)).slice(-2) + '/' + ('00' + date.getDate()).slice(-2) + ' ' + shortDateTimeStr + ':' + ('00' + date.getSeconds()).slice(-2);
+    const dateHtml = (dateFormat == '') ? '' : `<time datetime="${ date.toISOString() }">${ StringUtil.escapeHtml(formatDate(date, dateFormat, this.locale)) }</time>：`;
     const nameHtml = StringUtil.escapeHtml(this.name);
-    
+    let lastUpdateHtml = '';
+    if (this.isEdited) {
+      if (dateFormat == '') {
+        lastUpdateHtml = '<span class="is-edited">編集済</span>';
+      } else {
+        const lastUpdate = new Date(this.lastUpdate);
+        lastUpdateHtml = `<span class="is-edited"><b>編集済</b> <time datetime="${ lastUpdate.toISOString() }">${ StringUtil.escapeHtml(formatDate(lastUpdate, dateFormat, this.locale)) }</time></span>`;
+      }
+    }
+
     let messageClassNames = ['message'];
     if (this.isDirect || this.isSecret) messageClassNames.push('direct-message');
     if (this.isSystem) messageClassNames.push('system-message');
@@ -110,10 +140,10 @@ export class ChatMessage extends ObjectNode implements ChatMessageContext {
     const color = StringUtil.escapeHtml(this.color ? this.color : PeerCursor.CHAT_DEFAULT_COLOR);
     const colorStyle = this.isSpecialColor ? '' : ` style="color: ${ color }"`;
 
-    const textAutoLinkHtml = (this.isSecret && !this.isSendFromSelf) ? '<s>（シークレットダイス）</s>' 
+    const textAutoLinkedHtml = (this.isSecret && !this.isSendFromSelf) ? '<s>（シークレットダイス）</s>' 
       : Autolinker.link(StringUtil.escapeHtml(this.text), {
         urls: {schemeMatches: true, wwwMatches: true, tldMatches: false}, 
-        truncate: {length: 48, location: 'end'}, 
+        truncate: {length: 96, location: 'end'}, 
         decodePercentEncoding: false, 
         stripPrefix: false, 
         stripTrailingSlash: false, 
@@ -125,19 +155,22 @@ export class ChatMessage extends ObjectNode implements ChatMessageContext {
         }
       });
     return `<div class="${ messageClassNames.join(' ') }" style="border-left-color: ${ color }">
-  <div title="${ longDateTimeStr }">${ tabNameHtml }<span class="msg-header"><time datetime="${ date.toISOString() }">${ shortDateTime ? shortDateTimeStr : longDateTimeStr }</time>：<span class="msg-name"${ colorStyle }>${ nameHtml }</span>：</span></div>
-  <div class="msg-text"${ colorStyle }>${ textAutoLinkHtml }</div>
+  <div class="msg-header">${ tabNameHtml }${ dateHtml }<span class="msg-name"${ colorStyle }>${ nameHtml }</span>：</div>
+  <div class="msg-text"><span${ colorStyle }>${ textAutoLinkedHtml }</span>${ lastUpdateHtml }</div>
 </div>`;
   }
 
-  static logCss(compact=true): string {
-    return `.message {
+  static logCss(noImage=true): string {
+    return `body {
+  color: #444;
+  background-color: #FFF;
+}
+.message {
   display: flex;
   width: 100%;
   word-wrap: break-word;
   overflow-wrap: anywhere;
   word-break: break-word;
-  padding-left: 2px;
   border-left: 4px solid transparent;
   margin-top: 1px;
 }
@@ -166,17 +199,25 @@ export class ChatMessage extends ObjectNode implements ChatMessageContext {
 }
 .msg-header {
   white-space: nowrap;
+  border-left: 1px solid #FFF;
+  padding-left: 2px;
 }
 .msg-name {
   font-weight: bolder;
 }
-.tab-name,
-.msg-name,
-time {
-  white-space: nowrap;
-}
 .msg-text {
   white-space: pre-wrap;
+  width: 100%
+}
+.is-edited {
+  margin-left: 2px;
+  font-size: 8px;
+}
+.is-edited::before {
+  content: '(';
+}
+.is-edited::after {
+  content: ')';
 }
 a[target=_blank] {
   text-decoration: none;

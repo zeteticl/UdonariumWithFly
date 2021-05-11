@@ -47,6 +47,17 @@ import { PointerDeviceService } from 'service/pointer-device.service';
         ]))
       ])
     ]),
+    trigger('coinFlip', [
+      transition('* => active', [
+        animate('800ms ease-in-out', keyframes([
+          style({ transform: 'scale3d(0.8, 0.8, 0.8) translateY(0%) rotateX(-0deg) rotateY(-0deg)', offset: 0 }),
+          style({ transform: 'scale3d(1.2, 1.2, 1.2)  translateY(-28%) rotateX(-360deg) rotateY(-360deg)', offset: 0.5 }),
+          style({ transform: 'scale3d(0.75, 0.75, 0.75) translateY(-40%) rotateX(-520deg) rotateY(-520deg)', offset: 0.75 }),
+          style({ transform: 'scale3d(1.125, 1.125, 1.125) translateY(-28%) rotateX(-630deg) rotateY(-630deg)', offset: 0.875 }),
+          style({ transform: 'scale3d(1.0, 1.0, 1.0) translateY(0%) rotateX(-720deg) rotateY(-720deg)', offset: 1.0 })
+        ]))
+      ])
+    ]),
     trigger('diceRollNameTag', [
       transition('* => active', [
         animate('800ms ease', keyframes([
@@ -63,6 +74,14 @@ import { PointerDeviceService } from 'service/pointer-device.service';
         animate('200ms ease', keyframes([
           style({ transform: 'scale3d(0.8, 0.8, 0.8) rotateZ(0deg)', offset: 0 }),
           style({ transform: 'scale3d(1.0, 1.0, 1.0) rotateZ(-360deg)', offset: 1.0 })
+        ]))
+      ])
+    ]),
+    trigger('changeFaceCoin', [
+      transition(':increment,:decrement', [
+        animate('200ms ease', keyframes([
+          style({ transform: 'scale3d(0.8, 0.8, 0.8) rotateX(0deg)', offset: 0 }),
+          style({ transform: 'scale3d(1.0, 1.0, 1.0) rotateX(-180deg)', offset: 1.0 })
         ]))
       ])
     ]),
@@ -122,6 +141,8 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
 
   get isLock(): boolean { return this.diceSymbol.isLock; }
   set isLock(isLock: boolean) { this.diceSymbol.isLock = isLock; }
+
+  get isCoin(): boolean { return this.diceSymbol.faces.length === 2; }
 
   animeState: string = 'inactive';
 
@@ -288,18 +309,18 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
     let actions: ContextMenuAction[] = [];
 
     //if (this.isVisible) {
-    actions.push({
-      name: '擲骰子', action: () => {
-        this.diceRoll();
-      },
-      disabled: !this.isVisible,
-      default: this.isVisible
-    });
+      actions.push({
+        name: this.isCoin ? 'Coin' : '骰子', action: () => {
+          this.diceRoll();
+        },
+        disabled: !this.isVisible,
+        default: this.isVisible
+      });
     //}
     actions.push(ContextMenuSeparator);
     if (this.isMine || this.hasOwner) {
       actions.push({
-        name: '公開骰子', action: () => {
+        name: `${this.isCoin ? 'Coin' : '骰子'}公開`, action: () => {
           this.owner = '';
           SoundEffect.play(PresetSound.unlock);
         }
@@ -347,7 +368,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
           }
         });
       });
-      actions.push({ name: '骰子', action: null, subActions: subActions });
+      actions.push({ name: this.isCoin ? '裏／表' : '骰子', action: null, subActions: subActions });
     }
 
     actions.push(ContextMenuSeparator);
@@ -416,7 +437,11 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
   diceRoll(): string {
     if (this.GuestMode()) return;
     EventSystem.call('ROLL_DICE_SYNBOL', { identifier: this.diceSymbol.identifier });
-    SoundEffect.play(PresetSound.diceRoll1);
+    if (this.isCoin) {
+      SoundEffect.play(PresetSound.coinToss);
+    } else {
+      SoundEffect.play(PresetSound.diceRoll1);
+    }
     return this.diceSymbol.diceRoll();
   }
 
