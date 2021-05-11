@@ -42,7 +42,7 @@ export class ChatLogOutputComponent implements OnInit {
   get roomName():string {
     let roomName = Network.peerContext && 0 < Network.peerContext.roomName.length
       ? Network.peerContext.roomName
-      : 'ルームデータ';
+      : '房間資料z';
     return roomName;
   }
 
@@ -54,7 +54,7 @@ export class ChatLogOutputComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    Promise.resolve().then(() => { this.modalService.title = this.panelService.title = 'チャットログ出力'; this.panelService.isAbleFullScreenButton = false });
+    Promise.resolve().then(() => { this.modalService.title = this.panelService.title = '聊天記錄匯出'; this.panelService.isAbleFullScreenButton = false });
     EventSystem.register(this)
       .on('DELETE_GAME_OBJECT', 1000, event => {
         if (!this.selectedTab || event.data.identifier !== this.selectedTab.identifier) return;
@@ -62,7 +62,9 @@ export class ChatLogOutputComponent implements OnInit {
       });
     this.panelId = UUID.generateUuid();
   }
-
+  GuestMode() {
+    return Network.GuestMode();
+  }
   ngOnDestroy() {
     EventSystem.unregister(this);
   }
@@ -72,8 +74,9 @@ export class ChatLogOutputComponent implements OnInit {
   }
 
   saveLog() {
+    if (this.GuestMode()) return;
     if (this.isDiable) return;
-    const fileName = this.roomName + '_chatLog_' + (this.isAllTabs ? '全てのタブ' : this.selectedTab.name);
+    const fileName = this.roomName + '_chatLog_' + (this.isAllTabs ? '所有標籤' : this.selectedTab.name);
     const tab = this.isAllTabs ? null : this.selectedTab;
     this.saveDataService.saveChatLog(this.logFormat, fileName, tab, this.dateFormat);
   }

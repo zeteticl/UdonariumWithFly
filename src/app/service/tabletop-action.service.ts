@@ -93,7 +93,7 @@ export class TabletopActionService {
       //if (!image) { image = ImageStorage.instance.add(url); }
       if (!image) {
         image = ImageStorage.instance.add(url);
-        ImageTag.create(image.identifier).tag = `*default ${ diceType === DiceType.D2 ? 'コイン' : 'ダイス'}`;
+        ImageTag.create(image.identifier).tag = `*default ${ diceType === DiceType.D2 ? 'Coin' : '骰子'}`;
       }
       diceSymbol.imageDataElement.getFirstElementByName(face).value = image.identifier;
     });
@@ -104,7 +104,7 @@ export class TabletopActionService {
       //if (!image) { image = ImageStorage.instance.add(url); }
       if (!image) {
         image = ImageStorage.instance.add(url);
-        ImageTag.create(image.identifier).tag = `*default ${ diceType === DiceType.D2 ? 'コイン' : 'ダイス'}`;
+        ImageTag.create(image.identifier).tag = `*default ${ diceType === DiceType.D2 ? 'Coin' : '骰子'}`;
       }
       diceSymbol.imageDataElement.getFirstElementByName(face).value = image.identifier;
     });
@@ -126,7 +126,7 @@ export class TabletopActionService {
     if (!ImageStorage.instance.get(back)) {
       //ImageStorage.instance.add(back);
       const image = ImageStorage.instance.add(back);
-      ImageTag.create(image.identifier).tag = '*default カード';
+      ImageTag.create(image.identifier).tag = '*default 卡牌';
     }
 
     let suits: string[] = ['c', 'd', 'h', 's'];
@@ -146,7 +146,7 @@ export class TabletopActionService {
       if (!ImageStorage.instance.get(url)) {
         //ImageStorage.instance.add(url);
         const image = ImageStorage.instance.add(url);
-        ImageTag.create(image.identifier).tag = '*default カード';
+        ImageTag.create(image.identifier).tag = '*default 卡牌';
       }
       let card = Card.create('卡牌', url, back);
       cardStack.putOnBottom(card);
@@ -182,7 +182,7 @@ export class TabletopActionService {
     fileContext = ImageFile.createEmpty('testCharacter_1_image').toContext();
     fileContext.url = './assets/images/mon_052.gif';
     testFile = ImageStorage.instance.add(fileContext);
-    ImageTag.create(testFile.identifier).tag = '*default キャラクター';
+    ImageTag.create(testFile.identifier).tag = '*default 特點';
     testCharacter.location.x = 5 * 50;
     testCharacter.location.y = 9 * 50;
     testCharacter.initialize();
@@ -198,7 +198,7 @@ export class TabletopActionService {
     fileContext = ImageFile.createEmpty('testCharacter_3_image').toContext();
     fileContext.url = './assets/images/mon_128.gif';
     testFile = ImageStorage.instance.add(fileContext);
-    ImageTag.create(testFile.identifier).tag = '*default キャラクター';
+    ImageTag.create(testFile.identifier).tag = '*default 特點';
     testCharacter.location.x = 4 * 50;
     testCharacter.location.y = 2 * 50;
     testCharacter.initialize();
@@ -208,7 +208,7 @@ export class TabletopActionService {
     fileContext = ImageFile.createEmpty('testCharacter_4_image').toContext();
     fileContext.url = './assets/images/mon_150.gif';
     testFile = ImageStorage.instance.add(fileContext);
-    ImageTag.create(testFile.identifier).tag = '*default キャラクター';
+    ImageTag.create(testFile.identifier).tag = '*default 特點';
     testCharacter.location.x = 6 * 50;
     testCharacter.location.y = 11 * 50;
     testCharacter.initialize();
@@ -218,7 +218,7 @@ export class TabletopActionService {
     fileContext = ImageFile.createEmpty('testCharacter_5_image').toContext();
     fileContext.url = './assets/images/mon_211.gif';
     testFile = ImageStorage.instance.add(fileContext);
-    ImageTag.create(testFile.identifier).tag = '*default キャラクター';
+    ImageTag.create(testFile.identifier).tag = '*default 特點';
     testCharacter.location.x = 12 * 50;
     testCharacter.location.y = 12 * 50;
     testCharacter.initialize();
@@ -228,7 +228,7 @@ export class TabletopActionService {
     fileContext = ImageFile.createEmpty('testCharacter_6_image').toContext();
     fileContext.url = './assets/images/mon_135.gif';
     testFile = ImageStorage.instance.add(fileContext);
-    ImageTag.create(testFile.identifier).tag = '*default キャラクター';
+    ImageTag.create(testFile.identifier).tag = '*default 特點';
     testCharacter.initialize();
     testCharacter.location.x = 5 * 50;
     testCharacter.location.y = 13 * 50;
@@ -301,7 +301,7 @@ export class TabletopActionService {
   private getCreateDiceSymbolMenu(position: PointerCoordinate): ContextMenuAction {
     if (this.GuestMode()) return;
     let dices: { menuName: string, diceName: string, type: DiceType, imagePathPrefix: string }[] = [
-      { menuName: 'コイン (裏/表)', diceName: 'コイン', type: DiceType.D2, imagePathPrefix: '2_coin' },
+      { menuName: 'Coin (裏/表)', diceName: 'Coin', type: DiceType.D2, imagePathPrefix: '2_coin' },
       { menuName: 'D4', diceName: 'D4', type: DiceType.D4, imagePathPrefix: '4_dice' },
       { menuName: 'D6', diceName: 'D6', type: DiceType.D6, imagePathPrefix: '6_dice' },
       { menuName: 'D6 (Black)', diceName: 'D6', type: DiceType.D6, imagePathPrefix: '6_dice_black' },

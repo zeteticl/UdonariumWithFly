@@ -17,9 +17,9 @@
         <div style="font-family: Cambria, Georgia; font-size: 0.9rem;">{{name}}</div>
       </ng-container>
       <ng-container *ngIf="!isTagLocked">
-        <div class="hidden-spacer" style="font-family: Cambria, Georgia; font-size: 0.9rem;">{{name}}</div>
-        <button
+           <button
           (click)="sendLogMessage(name,value, currentValue)"><i class="material-icons icon-size">send</i></button>
+        <div class="hidden-spacer" style="font-family: Cambria, Georgia; font-size: 0.9rem;">{{name}}</div>
         <input style="width:100%; min-width:10px; font-family: Cambria, Georgia; font-size: 0.9rem;" size="1"
           [(ngModel)]="name" placeholder="Value" />
       </ng-container>

@@ -21,12 +21,12 @@
   </span>
   <span style="white-space: nowrap">
     <select [(ngModel)]="serchCondIsOr" style="margin-left: 3px">
-      <option value="true">いずれか (OR)</option>
-      <option value="">すべて (AND)</option>
+      <option value="true">符合任何一個條件(OR)</option>
+      <option value="">符合全部條件(AND)</option>
     </select>
-    <label sytle="white-space: nowrap" title="最近使ったタグの画像を前に">
+    <label sytle="white-space: nowrap" title="在最近使用的標籤的圖像前面">
       <input name="is-sort" value="Sort" type="checkbox" [(ngModel)]="isSort" checked="{{isSort ? 'checked' : ''}}" (change)="isSort = (isSort ? true : false)">
-      <b style="font-size: smaller; margin-right: 3px">ソート</b>
+      <b style="font-size: smaller; margin-right: 3px">種類</b>
     </label>
   </span>
 </div>

@@ -73,7 +73,6 @@ export class DiceBot extends GameObject {
     let langName;
     if (lang && lang[1]) {
       langName = (lang[1] == 'ChineseTraditional') ? '正體中文'
-        : (lang[1] == 'Korean') ? '한국어' 
         : (lang[1] == 'English') ? 'English' : 'Other';
     }
     return {
