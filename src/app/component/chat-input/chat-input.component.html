@@ -18,7 +18,7 @@
   </div>
   <div class="table-cell">
     <div>
-      <label style="margin-right: 5px">
+      <label style="margin-right: 5px" *ngIf="!ClarifyMode()">
         <input *ngIf="character" type="checkbox" [(ngModel)]="isUseFaceIcon" checked="{{isUseFaceIcon ? 'checked' : ''}}" (change)="isUseFaceIcon = (isUseFaceIcon ? true : false)" />
         <b *ngIf="character" style="font-size: smaller;">大頭照icon</b>
       </label>
@@ -34,7 +34,7 @@
           </option>
         </select>
       </span>
-      <span style="white-space: nowrap">
+      <span style="white-space: nowrap"*ngIf="!ClarifyMode()">
         <select *ngIf="diceBotInfosIndexed.length < 1" style="width: 12em;" (change)="loadDiceBot($event.target.value)" [(ngModel)]="gameType" [ngModelOptions]="{standalone: true}"
           [ngClass]="{'not-specified': gameType == ''}">
           <option value="" class="not-specified">未指定骰子機械人</option>
@@ -49,6 +49,8 @@
         </select>
         <button (click)="showDicebotHelp()">?</button>
       </span>
+      <input type="checkbox" (click)="ClarifyModeChanged()" id="Clarify" name="Clarify">
+      <label for="Clarify">隱藏</label>
     </div>
     <div *ngIf="hasStand" [ngClass]="{'disabled-stand': !isUseStandImageOnChatTab}" style="font-size: smaller">
       <label style="margin-right: 2px">

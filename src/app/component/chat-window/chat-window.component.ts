@@ -18,7 +18,6 @@ import { GameObjectInventoryService} from 'service/game-object-inventory.service
 })
 export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
   sendFrom: string = 'Guest';
-
   get gameType(): string { return this.chatMessageService.gameType; }
   set gameType(gameType: string) { this.chatMessageService.gameType = gameType; }
 
@@ -32,6 +31,12 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
       this.scrollToBottom(true);
     }
   }
+
+  public static ClarifyMode: boolean = false;
+  public ClarifyMode() {
+    return ChatWindowComponent.ClarifyMode;
+  }
+
   public static SoundEffectSwitch: boolean = true;
   public onSoundEffectSwitchChanged() {
     if (ChatWindowComponent.SoundEffectSwitch)
