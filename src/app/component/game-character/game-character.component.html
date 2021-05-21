@@ -14,7 +14,7 @@
       </div>
       <div class="is-pointer-events-none" >
         <div class="image-box is-3d" [style.width.px]="size * gridSize" [style.height.px]="size * gridSize * heightWidthRatio" style="pointer-events: none;"
-          [ngStyle]="{'transform-origin': '50% ' + ((gridSize) + 'px'), 'transform': 'translateY(-' + (15+size) + '%) scale(1.0,' + (1.0 / heightWidthRatio) + ') translateY(-' + (99 / heightWidthRatio+(altitude*50)) + '%) rotateZ(' + roll + 'deg)'}">
+          [ngStyle]="{'transform-origin': '50% ' + ((gridSize) + 'px'), 'transform': 'translateY(-' + (15+size) + '%) scale(1.0,' + ((1.0 / heightWidthRatio)-(altitude/50)) + ') translateY(-' + (99 / heightWidthRatio+(altitude*50)) + '%) rotateZ(' + roll + 'deg)'}">
           <div class="aura is-3d" style="pointer-events: none;" [ngClass]="{black: aura == 0, blue: aura == 1, green: aura == 2, cyan: aura == 3, red: aura == 4, magenta: aura == 5, yellow: aura == 6, white: aura == 7}">
             <div style="pointer-events: none; transition: transform 132ms 0s ease;"
               [ngStyle]="{'transform': 'scaleX(' + (isInverse ? '-1' : '1') + ')'}">  
