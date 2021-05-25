@@ -14,6 +14,7 @@ import { DiceRollTableList } from './dice-roll-table-list';
 
 import Loader from 'bcdice/lib/loader/loader';
 import GameSystemClass from 'bcdice/lib/game_system';
+import { CutInList } from './cut-in-list';
 
 export interface DiceBotInfo {
   script: string;
@@ -288,10 +289,12 @@ export class DiceBot extends GameObject {
             }
           }
           if (!isDiceRollTableMatch) {
-            //ダイスボット切り替えた時点で読み込む前提（chat-inputの動作依存、良くない）
-            if (!DiceBot.loadedDiceBots[gameType]) gameType = 'DiceBot';
-            if (!DiceBot.apiUrl && !DiceBot.loadedDiceBots[gameType].COMMAND_PATTERN.test(rollText)) return;
-
+            // COMMAND_PATTERN使用。ダイスボット切り替えた時点で読み込む前提（chat-inputの動作依存、良くない）
+            if (!DiceBot.apiUrl) {
+              if (!DiceBot.loadedDiceBots[gameType]) gameType = 'DiceBot';
+              if (!DiceBot.loadedDiceBots[gameType].COMMAND_PATTERN.test(rollText)) return;
+            }
+            
             // スペース区切りのChoiceコマンドへの対応
             let isChoice = false;
             //ToDO バージョン調べる
@@ -370,11 +373,12 @@ export class DiceBot extends GameObject {
       isUseStandImage: originalMessage.isUseStandImage
     };
 
+    let matchMostLongText = '';
     // ダイスボットへのスタンドの反応
-    if (!isSecret && !originalMessage.standName && originalMessage.isUseStandImage) {
-      const gameCharacter = ObjectStore.instance.get(originalMessage.characterIdentifier);
-      if (gameCharacter instanceof GameCharacter) {
-        const standInfo = gameCharacter.standList.matchStandInfo(result, originalMessage.imageIdentifier);
+    const gameCharacter = ObjectStore.instance.get(originalMessage.characterIdentifier);
+    if (gameCharacter instanceof GameCharacter) {
+      const standInfo = gameCharacter.standList.matchStandInfo(result, originalMessage.imageIdentifier);
+      if (!isSecret && !originalMessage.standName && originalMessage.isUseStandImage) {
         if (standInfo.farewell) {
           const sendObj = {
             characterIdentifier: gameCharacter.identifier
@@ -411,10 +415,36 @@ export class DiceBot extends GameObject {
             }
           }
         }
-        if (standInfo.matchMostLongText && diceBotMessage.text) {
-          diceBotMessage.text = diceBotMessage.text.slice(0, diceBotMessage.text.length - standInfo.matchMostLongText.length);
+      }
+      matchMostLongText = standInfo.matchMostLongText;
+    }
+    
+    const chatTab = ObjectStore.instance.get<ChatTab>(originalMessage.tabIdentifier);
+    // ダイスによるカットイン発生
+    const cutInInfo = CutInList.instance.matchCutInInfo(result);
+    if (!isSecret && chatTab.isUseStandImage) {
+      for (const identifier of cutInInfo.identifiers) {
+        const sendObj = {
+          identifier: identifier, 
+          secret: originalMessage.to ? true : false,
+          sender: PeerCursor.myCursor.peerId
+        };
+        if (sendObj.secret) {
+          const targetPeer = PeerCursor.findByUserId(originalMessage.to);
+          if (targetPeer) {
+            if (targetPeer.peerId != PeerCursor.myCursor.peerId) EventSystem.call('PLAY_CUT_IN', sendObj, targetPeer.peerId);
+            EventSystem.call('PLAY_CUT_IN', sendObj, PeerCursor.myCursor.peerId);
+          }
+        } else {
+          EventSystem.call('PLAY_CUT_IN', sendObj);
         }
       }
+    }
+
+    // 切り取り
+    if (matchMostLongText.length < cutInInfo.matchMostLongText.length) matchMostLongText = cutInInfo.matchMostLongText;
+    if (matchMostLongText && diceBotMessage.text) {
+      diceBotMessage.text = diceBotMessage.text.slice(0, diceBotMessage.text.length - matchMostLongText.length);
     }
 
     if (originalMessage.to != null && 0 < originalMessage.to.length) {
@@ -423,7 +453,6 @@ export class DiceBot extends GameObject {
         diceBotMessage.to += ' ' + originalMessage.from;
       }
     }
-    let chatTab = ObjectStore.instance.get<ChatTab>(originalMessage.tabIdentifier);
     if (chatTab) chatTab.addMessage(diceBotMessage);
   }
 

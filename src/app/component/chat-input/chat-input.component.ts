@@ -24,6 +24,8 @@ import { StandSettingComponent } from 'component/stand-setting/stand-setting.com
 
 import { PeerMenuComponent } from 'component/peer-menu/peer-menu.component';
 import { ChatTab } from '@udonarium/chat-tab';
+import { CutInList } from '@udonarium/cut-in-list';
+import { element } from 'protractor';
 
 interface StandGroup {
   name: string,
@@ -318,10 +320,11 @@ export class ChatInputComponent implements OnInit, OnDestroy {
     if (event) event.preventDefault();
     //if (!this.text.length) return;
     if (event && event.keyCode !== 13) return;
-
     if (!this.sendFrom.length) this.sendFrom = this.myPeer.identifier;
 
     let text = this.text;
+    let matchMostLongText = '';
+    // スタンド
     let standIdentifier = null;
     // 空文字でもスタンド反応するのは便利かと思ったがメッセージ送信後にもう一度エンター押すだけで誤爆するので指定時のみ
     if (this.character && (StringUtil.cr(text).trim() || this.standName)) {
@@ -334,34 +337,57 @@ export class ChatInputComponent implements OnInit, OnDestroy {
         } else {
           imageIdentifier = this.character.imageFile ? this.character.imageFile.identifier : null;
         }
-        
         const standInfo = this.character.standList.matchStandInfo(text, imageIdentifier, this.standName);
-        if (standInfo.farewell) {
-          this.farewellStand();
-        } else if (this.isUseStandImage && this.isUseStandImageOnChatTab && standInfo.standElementIdentifier) {
-          standIdentifier = standInfo.standElementIdentifier;
-          const sendObj = {
-            characterIdentifier: this.character.identifier, 
-            standIdentifier: standInfo.standElementIdentifier, 
-            color: this.character.chatPalette ? this.character.chatPalette.color : PeerCursor.CHAT_DEFAULT_COLOR,
-            secret: this.sendTo ? true : false
-          };
-          if (sendObj.secret) {
-            const targetPeer = ObjectStore.instance.get<PeerCursor>(this.sendTo);
-            if (targetPeer) {
-              if (targetPeer.peerId != PeerCursor.myCursor.peerId) EventSystem.call('POPUP_STAND_IMAGE', sendObj, targetPeer.peerId);
-              EventSystem.call('POPUP_STAND_IMAGE', sendObj, PeerCursor.myCursor.peerId);
+        if (this.isUseStandImage && this.isUseStandImageOnChatTab) {
+          if (standInfo.farewell) {
+            this.farewellStand();
+          } else if (standInfo.standElementIdentifier) {
+            standIdentifier = standInfo.standElementIdentifier;
+            const sendObj = {
+              characterIdentifier: this.character.identifier, 
+              standIdentifier: standInfo.standElementIdentifier, 
+              color: this.character.chatPalette ? this.character.chatPalette.color : PeerCursor.CHAT_DEFAULT_COLOR,
+              secret: this.sendTo ? true : false
+            };
+            if (sendObj.secret) {
+              const targetPeer = ObjectStore.instance.get<PeerCursor>(this.sendTo);
+              if (targetPeer) {
+                if (targetPeer.peerId != PeerCursor.myCursor.peerId) EventSystem.call('POPUP_STAND_IMAGE', sendObj, targetPeer.peerId);
+                EventSystem.call('POPUP_STAND_IMAGE', sendObj, PeerCursor.myCursor.peerId);
+              }
+            } else {
+              EventSystem.call('POPUP_STAND_IMAGE', sendObj);
             }
-          } else {
-            EventSystem.call('POPUP_STAND_IMAGE', sendObj);
           }
         }
-
-        if (standInfo.matchMostLongText) {
-          text = text.slice(0, text.length - standInfo.matchMostLongText.length);
+        matchMostLongText = standInfo.matchMostLongText;
+      }
+    }
+    // カットイン
+    const cutInInfo = CutInList.instance.matchCutInInfo(text);
+    if (this.isUseStandImageOnChatTab) {
+      for (const identifier of cutInInfo.identifiers) {
+        const sendObj = {
+          identifier: identifier, 
+          secret: this.sendTo ? true : false,
+          sender: PeerCursor.myCursor.peerId
+        };
+        if (sendObj.secret) {
+          const targetPeer = ObjectStore.instance.get<PeerCursor>(this.sendTo);
+          if (targetPeer) {
+            if (targetPeer.peerId != PeerCursor.myCursor.peerId) EventSystem.call('PLAY_CUT_IN', sendObj, targetPeer.peerId);
+            EventSystem.call('PLAY_CUT_IN', sendObj, PeerCursor.myCursor.peerId);
+          }
+        } else {
+          EventSystem.call('PLAY_CUT_IN', sendObj);
         }
       }
-
+    }
+    // 切り取り
+    if (matchMostLongText.length < cutInInfo.matchMostLongText.length) matchMostLongText = cutInInfo.matchMostLongText;
+    text = text.slice(0, text.length - matchMostLongText.length);
+    // 💭
+    if (this.character && StringUtil.cr(text).trim()) { 
       //💭はEvant機能使うようにする
       const dialogRegExp = /「([\s\S]+?)」/gm;
       // const dialogRegExp = /(?:^|[^\￥])「([\s\S]+?[^\￥])」/gm; 
@@ -401,6 +427,7 @@ export class ChatInputComponent implements OnInit, OnDestroy {
         EventSystem.call('FAREWELL_CHAT_BALLOON', { characterIdentifier: this.character.identifier });
       }
     }
+
     if (StringUtil.cr(text).trim()) {
       this.chat.emit({
         text: text,

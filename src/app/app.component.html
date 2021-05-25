@@ -34,10 +34,10 @@
           <div>播放音樂</div>
         </a>
       </li>
-      <li (click)="open('DiceRollTableSettingComponent')" *ngIf="!GuestMode()">
+      <li (click)="toolBox()" *ngIf="!GuestMode()">
         <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons">table_rows</i></div>
-          <div>簡易骰子表</div>
+          <div><i class="material-icons">build</i></div>
+          <div>工具箱</div>
         </a>
       </li>
       <li (click)="open('GameObjectInventoryComponent')" *ngIf="!GuestMode()">

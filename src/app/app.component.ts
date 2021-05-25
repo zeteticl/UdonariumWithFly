@@ -45,8 +45,12 @@ import { StandImageComponent } from 'component/stand-image/stand-image.component
 import { DiceRollTable } from '@udonarium/dice-roll-table';
 import { DiceRollTableList } from '@udonarium/dice-roll-table-list';
 import { DiceRollTableSettingComponent } from 'component/dice-roll-table-setting/dice-roll-table-setting.component';
+import { CutInSettingComponent } from 'component/cut-in-setting/cut-in-setting.component';
 
 import { ImageTag } from '@udonarium/image-tag';
+import { CutInService } from 'service/cut-in.service';
+import { CutIn } from '@udonarium/cut-in';
+import { CutInList } from '@udonarium/cut-in-list';
 
 @Component({
   selector: 'app-root',
@@ -71,7 +75,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     private saveDataService: SaveDataService,
     private ngZone: NgZone,
     private contextMenuService: ContextMenuService,
-    private standImageService: StandImageService
+    private standImageService: StandImageService,
+    private cutInService: CutInService
   ) {
 
     this.ngZone.runOutsideAngular(() => {
@@ -104,6 +109,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     ChatTabList.instance.addChatTab('主要標籤', 'MainTab');
     ChatTabList.instance.addChatTab('閒聊標籤', 'SubTab');
+
+    CutInList.instance.initialize();
 
     let sampleDiceRollTable = new DiceRollTable('SampleDiceRollTable');
     sampleDiceRollTable.initialize();
@@ -310,6 +317,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       .on('DISCONNECT_PEER', event => {
         this.lazyNgZoneUpdate(event.isSendFromSelf);
       })
+      .on('PLAY_CUT_IN', -1000, event => {
+        let cutIn = ObjectStore.instance.get<CutIn>(event.data.identifier);
+        this.cutInService.play(cutIn, event.data.secret ? event.data.secret : false, event.data.test ? event.data.test : false, event.data.sender);
+      })
+      .on('STOP_CUT_IN', -1000, event => {
+        this.cutInService.stop(event.data.identifier);
+      })
       .on('POPUP_STAND_IMAGE', -1000, event => {
         let standElement = ObjectStore.instance.get<DataElement>(event.data.standIdentifier);
         let gameCharacter = ObjectStore.instance.get<GameCharacter>(event.data.characterIdentifier);
@@ -318,13 +332,16 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       .on('FAREWELL_STAND_IMAGE', -1000, event => {
         this.standImageService.farewell(event.data.characterIdentifier);
       })
+      .on('DELETE_STAND_IMAGE', -1000, event => {
+        this.standImageService.destroy(event.data.characterIdentifier, event.data.identifier);
+      })
       .on('DESTORY_STAND_IMAGE_ALL', -1000, event => {
         this.standImageService.destroyAll();
       });
   }
 
   ngAfterViewInit() {
-    PanelService.defaultParentViewContainerRef = ModalService.defaultParentViewContainerRef = ContextMenuService.defaultParentViewContainerRef = StandImageService.defaultParentViewContainerRef = this.modalLayerViewContainerRef;
+    PanelService.defaultParentViewContainerRef = ModalService.defaultParentViewContainerRef = ContextMenuService.defaultParentViewContainerRef = StandImageService.defaultParentViewContainerRef = CutInService.defaultParentViewContainerRef = this.modalLayerViewContainerRef;
     setTimeout(() => {
       this.panelService.open(PeerMenuComponent, { width: 520, height: 450, left: 100 });
       this.panelService.open(ChatWindowComponent, { width: 700, height: 400, left: 100, top: 450 });
@@ -373,7 +390,11 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         break;
       case 'DiceRollTableSettingComponent':
         component = DiceRollTableSettingComponent;
-        option = { width: 645, height: 470 };
+        option = { width: 645, height: 475 };
+        break;
+      case 'CutInSettingComponent':
+        component = CutInSettingComponent;
+        option = { width: 700, height: 570 };
         break;
     }
     if (component) {
@@ -433,6 +454,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         this.ngZone.run(() => { });
       }, 100);
     }
+  }
+
+  toolBox() {
+    this.contextMenuService.open(this.pointerDeviceService.pointers[0], [
+      { name: 'カットイン', materialIcon: 'movie_creation', action: () => this.open('CutInSettingComponent') },
+      { name: 'ダイスボット表', materialIcon: 'table_rows', action: () => this.open('DiceRollTableSettingComponent') }
+    ], 'ツールボックス');
   }
 
   resetPointOfView() {

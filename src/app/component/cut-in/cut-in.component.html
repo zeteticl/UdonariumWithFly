@@ -1,0 +1,127 @@
+<div *ngIf="isVisible && animationType == -1" appDraggable [draggable.allowOverHalf]="true"
+  #cutInContainerElement class="container" 
+  @cutInNone (@cutInNone.done)="isVisible ? null : end()"
+  style="position: absolute"
+  [style.width.px]="pixcelWidth - (isBordered ? 6 : 0)"
+  [style.height.px]="pixcelHeight - (isBordered ? 6 : 0)"
+  [style.left.px]="pixcelPosX"
+  [style.top.px]="pixcelPosY"
+  [style.z-index]="zIndex"
+  [style.pointer-events]="isVisible ? 'auto' : 'none'"
+  [ngClass]="{video: videoId, test: isTest, secret: isSecret, minimaize: isMinimize, 'is-bordered': isBordered, 'is-grab': !isPointerDragging, 'is-grabbing': isPointerDragging}"
+  (dblclick)="stop()"
+  (mousedown)="draggstart()"
+  (mouseup)="draggend()"
+  (mouseleave)="draggend()"
+  (mouseout)="draggend()"
+  (mousemove)="isPointerDragging ? draggstart() : false">
+  <ng-container *ngTemplateOutlet="image"></ng-container>
+</div>
+<div *ngIf="isVisible && animationType == 0" appDraggable [draggable.allowOverHalf]="true"
+  #cutInContainerElement class="container" 
+  @cutInFadeInOut (@cutInFadeInOut.done)="isVisible ? null : end()"
+  style="position: absolute"
+  [style.width.px]="pixcelWidth - (isBordered ? 6 : 0)"
+  [style.height.px]="pixcelHeight - (isBordered ? 6 : 0)"
+  [style.left.px]="pixcelPosX"
+  [style.top.px]="pixcelPosY"
+  [style.z-index]="zIndex"
+  [style.pointer-events]="isVisible ? 'auto' : 'none'"
+  [ngClass]="{video: videoId, test: isTest, secret: isSecret, minimaize: isMinimize, 'is-bordered': isBordered, 'is-grab': !isPointerDragging, 'is-grabbing': isPointerDragging}"
+  (dblclick)="stop()"
+  (mousedown)="draggstart()"
+  (mouseup)="draggend()"
+  (mouseleave)="draggend()"
+  (mouseout)="draggend()"
+  (mousemove)="isPointerDragging ? draggstart() : false">
+  <ng-container *ngTemplateOutlet="image"></ng-container>
+</div>
+<div *ngIf="isVisible && animationType == 1" appDraggable [draggable.allowOverHalf]="true"
+  #cutInContainerElement class="container" 
+  @cutInBounceInOut (@cutInBounceInOut.done)="isVisible ? null : end()"
+  style="position: absolute"
+  [style.width.px]="pixcelWidth - (isBordered ? 6 : 0)"
+  [style.height.px]="pixcelHeight - (isBordered ? 6 : 0)"
+  [style.left.px]="pixcelPosX"
+  [style.top.px]="pixcelPosY"
+  [style.z-index]="zIndex"
+  [style.pointer-events]="isVisible ? 'auto' : 'none'"
+  [ngClass]="{video: videoId, test: isTest, secret: isSecret, minimaize: isMinimize, 'is-bordered': isBordered, 'is-grab': !isPointerDragging, 'is-grabbing': isPointerDragging}"
+  (dblclick)="stop()"
+  (mousedown)="draggstart()"
+  (mouseup)="draggend()"
+  (mouseleave)="draggend()"
+  (mouseout)="draggend()"
+  (mousemove)="isPointerDragging ? draggstart() : false">
+  <ng-container *ngTemplateOutlet="image"></ng-container>
+</div>
+<div *ngIf="isVisible && animationType == 2" appDraggable [draggable.allowOverHalf]="true"
+  #cutInContainerElement class="container" 
+  @cutInOpenInOut (@cutInOpenInOut.done)="isVisible ? null : end()"
+  style="position: absolute"
+  [style.width.px]="pixcelWidth - (isBordered ? 6 : 0)"
+  [style.height.px]="pixcelHeight - (isBordered ? 6 : 0)"
+  [style.left.px]="pixcelPosX"
+  [style.top.px]="pixcelPosY"
+  [style.z-index]="zIndex"
+  [style.pointer-events]="isVisible ? 'auto' : 'none'"
+  [ngClass]="{video: videoId, test: isTest, secret: isSecret, minimaize: isMinimize, 'is-bordered': isBordered, 'is-grab': !isPointerDragging, 'is-grabbing': isPointerDragging}"
+  (dblclick)="stop()"
+  (mousedown)="draggstart()"
+  (mouseup)="draggend()"
+  (mouseleave)="draggend()"
+  (mouseout)="draggend()"
+  (mousemove)="isPointerDragging ? draggstart() : false">
+  <ng-container *ngTemplateOutlet="image"></ng-container>
+</div>
+<div *ngIf="isVisible && animationType == 3" appDraggable [draggable.allowOverHalf]="true"
+  #cutInContainerElement class="container" 
+  @cutInOpenInOut2 (@cutInOpenInOut2.done)="isVisible ? null : end()"
+  style="position: absolute"
+  [style.width.px]="pixcelWidth - (isBordered ? 6 : 0)"
+  [style.height.px]="pixcelHeight - (isBordered ? 6 : 0)"
+  [style.left.px]="pixcelPosX"
+  [style.top.px]="pixcelPosY"
+  [style.z-index]="zIndex"
+  [style.pointer-events]="isVisible ? 'auto' : 'none'"
+  [ngClass]="{video: videoId, test: isTest, secret: isSecret, minimaize: isMinimize, 'is-bordered': isBordered, 'is-grab': !isPointerDragging, 'is-grabbing': isPointerDragging}"
+  (dblclick)="stop()"
+  (mousedown)="draggstart()"
+  (mouseup)="draggend()"
+  (mouseleave)="draggend()"
+  (mouseout)="draggend()"
+  (mousemove)="isPointerDragging ? draggstart() : false">
+  <ng-container *ngTemplateOutlet="image"></ng-container>
+</div>
+<ng-template #image>
+  <div *ngIf="isTest" class="test-indicator grow left-top">TEST</div>
+  <div *ngIf="isTest" class="test-indicator grow right-top">TEST</div>
+  <div *ngIf="isTest" class="test-indicator grow left-bottom">TEST</div>
+  <div *ngIf="isTest" class="test-indicator grow right-bottom">TEST</div>
+  <div *ngIf="isSecret" class="secret-indicator grow left-top"><i class="material-icons" style="font-size: smaller">visibility</i> For Your Eyes Only</div>
+  <div *ngIf="isSecret" class="secret-indicator grow right-bottom" style="text-align: right">For Your Eyes Only <i class="material-icons" style="font-size: smaller">visibility</i></div>
+  <div *ngIf="isIndicateSender" class="name-indicator grow right-top" style="text-align: right"><span [style.color]="senderColor"><span style="display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis" [style.width.px]="pixcelWidth - (isBordered ? 6 : 0)">{{ senderName }}{{ isMine ? '（あなた）' : '' }}</span></span></div>
+  <div *ngIf="isIndicateSender" class="name-indicator grow left-bottom"><span [style.color]="senderColor"><span style="display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis" [style.width.px]="pixcelWidth - (isBordered ? 6 : 0)">{{ senderName }}{{ isMine ? '（あなた）' : '' }}</span></span></div>
+  <youtube-player #videoPlayerComponent *ngIf="videoId" 
+    style="position: absolute; pointer-events: none"
+    [style.visibility]="isPlayerVisible ? 'visible' : 'hidden'"
+    [videoId]="videoId" 
+    suggestedQuality="default" 
+    [height]="pixcelHeight - (isBordered ? 6 : 0)" 
+    [width]="pixcelWidth - (isBordered ? 6 : 0)"
+    [playerVars]="{controls: 0, loop: (cutIn && cutIn.isLoop ? 1 : 0), playsinline: 1, rel: 0, listType: 'playlist', playlist: videoId, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1}"
+    (ready)="onPlayerReady($event)"
+    (stateChange)="onPlayerStateChange($event)"
+  ></youtube-player>
+  <img *ngIf="videoId" #cutInImageElement 
+    [style.pointer-events]="isVisible ? 'auto' : 'none'"
+    [style.object-fit]="objectFit"
+    [src]="'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg'"
+    (contextmenu)="onContextMenu($event)">
+  <img *ngIf="!videoId" #cutInImageElement 
+    [style.pointer-events]="isVisible ? 'auto' : 'none'"
+    [style.object-fit]="objectFit"
+    [src]="cutInImage.url | safe: 'resourceUrl'"
+    (load)="onImageLoad()"
+    (contextmenu)="onContextMenu($event)">
+</ng-template>

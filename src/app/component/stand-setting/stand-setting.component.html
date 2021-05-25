@@ -33,4 +33,7 @@
     <hr>
   </div>
 </div>
-<button (click)="add()">新增立繪</button>
+<button (click)="add()">新增立繪設定</button>
+<ng-container *ngIf="standSettingXML">
+  <button (click)="restore()">還原先前刪除的立繪</button>
+</ng-container>

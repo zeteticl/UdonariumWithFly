@@ -65,9 +65,13 @@ import { StandImageComponent } from './component/stand-image/stand-image.compone
 
 import { StandImageService } from 'service/stand-image.service';
 import { DiceRollTableSettingComponent } from './component/dice-roll-table-setting/dice-roll-table-setting.component';
+import { CutInComponent } from './component/cut-in/cut-in.component';
+import { CutInSettingComponent } from './component/cut-in-setting/cut-in-setting.component';
 
 import { LinkyModule } from 'ngx-linky';
 import { ChatLogOutputComponent } from './component/chat-log-output/chat-log-output.component';
+
+import { YouTubePlayerModule } from "@angular/youtube-player";
 
 @NgModule({
   declarations: [
@@ -120,6 +124,8 @@ import { ChatLogOutputComponent } from './component/chat-log-output/chat-log-out
     StandElementComponent,
     StandImageComponent,
     DiceRollTableSettingComponent,
+    CutInComponent,
+    CutInSettingComponent,
     ChatLogOutputComponent
   ],
   imports: [
@@ -128,6 +134,7 @@ import { ChatLogOutputComponent } from './component/chat-log-output/chat-log-out
     CommonModule,
     FormsModule,
     LinkyModule,
+    YouTubePlayerModule,
     ServiceWorkerModule.register('ngsw-worker.js', { enabled: environment.production })
   ],
   providers: [

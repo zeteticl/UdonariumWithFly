@@ -9,9 +9,9 @@
     </select>
   </div>
   <div class="flex-item">
+    <button style="float: right;" (click)="helpDiceRollTable()">?</button>
     <ng-container *ngIf="!isEmpty && selectedDiceRollTable">
       <div style="font-size: smaller;">
-        <button style="float: right;" (click)="helpDiceRollTable()">?</button>
         <div style="margin-bottom: 3px;">
           <b>name: </b>
           <input style="width: 60%; min-width: 5em" [(ngModel)]="diceRollTableName" placeholder="Name"
@@ -31,24 +31,24 @@
         </div>
       </div>
       <div>
-        <textarea style="width: 100%; height: 20em; margin-top: 3px; resize: vertical;"
-          placeholder="1：描述數字和結果，並用:（冒號）分隔&#13;&#10;2:結果２&#13;&#10;3:結果３&#13;&#10;4:…"
-          [(ngModel)]="diceRollTableText"></textarea>
+        <textarea style="width: 100%; height: 20em; margin-top: 3px; resize: vertical;" placeholder="1：描述數字和結果，並用:（冒號）分隔&#13;&#10;2:結果２&#13;&#10;3:結果３&#13;&#10;4:…" [(ngModel)]="diceRollTableText" [attr.disabled]="!isEditable ? '' : null" ></textarea>
       </div>
       <hr />
       <div>
         <ng-container *ngIf="!isDeleted">
           <button (click)="upTabIndex()">↑</button>
           <button (click)="downTabIndex()">↓</button>
-          <button [disabled]="isSaveing" (click)="save()">
-            <div style="position: relative;">
-              <div [ngClass]="{'is-hidden': isSaveing}">保存</div>
-              <div *ngIf="isSaveing" class="progress">{{progresPercent}}%</div>
-            </div>
-          </button>
-          <button class="danger" (click)="delete()">刪除</button>
+          <div style="float: right">
+            <button [disabled]="isSaveing" (click)="save()">
+              <div style="position: relative;">
+                <div [ngClass]="{'is-hidden': isSaveing}">保存</div>
+                <div *ngIf="isSaveing" class="progress">{{progresPercent}}%</div>
+              </div>
+            </button>
+            <button class="danger" (click)="delete()">刪除</button>
+          </div>
         </ng-container>
-        <ng-container *ngIf="isDeleted">
+        <ng-container *ngIf="isDeleted && selectedDiceRollTableXml">
           <button (click)="restore()">Undo</button>
         </ng-container>
       </div>
@@ -56,5 +56,10 @@
   </div>
 </div>
 <ng-container *ngIf="isEmpty">
-  <div style="font-size: 12px;">※沒有骰子機械人表。</div>
+  <div style="font-size: 12px;">
+    ※沒有骰子機械人表。
+    <ng-container *ngIf="isDeleted && selectedDiceRollTableXml">
+      <button (click)="restore()">Undo</button>
+    </ng-container>
+  </div>
 </ng-container>
