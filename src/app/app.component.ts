@@ -232,11 +232,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
                 let sentinel = tempInfos[0].normalize.substr(0, 1);
                 let group = { index: tempInfos[0].normalize.substr(0, 1), infos: [] };
                 for (let info of tempInfos) {
-                  let index = info.lang == 'B' ? '特殊'
+                  let index = info.lang == 'Other' ? '其他' 
                     : info.lang == 'ChineseTraditional' ? '正體中文'
-                      : info.lang == 'Korean' ? '한국어'
-                        : info.lang == 'English' ? 'English'
-                          : info.normalize.substr(0, 1);
+                    : info.lang == 'English' ? 'English'
+                    : info.normalize.substr(0, 1);
                   if (index !== sentinel) {
                     sentinel = index;
                     DiceBot.diceBotInfosIndexed.push(group);
@@ -245,7 +244,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
                   group.infos.push({ script: info.system, game: info.name });
                 }
                 DiceBot.diceBotInfosIndexed.push(group);
-
+                DiceBot.diceBotInfosIndexed.sort((a, b) => a.index == b.index ? 0 : a.index < b.index ? -1 : 1);
               }
             });
         } else {
@@ -272,13 +271,21 @@ export class AppComponent implements AfterViewInit, OnDestroy {
             //return info;
             //console.log(info.index + ': ' + normalize);
           });
-          DiceBot.diceBotInfos.sort((b, a) => {
-            return a.sort_key == b.sort_key ? 0
-              : a.sort_key < b.sort_key ? -1 : 1;
+          DiceBot.diceBotInfos.sort((a, b) => {
+            if (a.sort_key == 'Other' && b.sort_key == 'Other') {
+              return 0;
+            } else if (a.sort_key == 'Other') {
+              return 1;
+            } else if (b.sort_key == 'Other') {
+              return -1;
+            }
+            return a.sort_key == b.sort_key ? 0 
+            : a.sort_key < b.sort_key ? -1 : 1;
           });
           let sentinel = DiceBot.diceBotInfos[0].sort_key[0];
           let group = { index: sentinel, infos: [] };
           for (let info of DiceBot.diceBotInfos) {
+            if (info.lang == 'Other') info.lang = '简体中文'; //手抜き
             if ((info.lang ? info.lang : info.sort_key[0]) !== sentinel) {
               sentinel = info.lang ? info.lang : info.sort_key[0];
               DiceBot.diceBotInfosIndexed.push(group);
@@ -288,6 +295,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
           }
           DiceBot.diceBotInfosIndexed.push(group);
         }
+        DiceBot.diceBotInfosIndexed.sort((a, b) => a.index == b.index ? 0 : a.index < b.index ? -1 : 1);
         Network.setApiKey(event.data.webrtc.key);
         Network.open();
       })
@@ -394,7 +402,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         break;
       case 'CutInSettingComponent':
         component = CutInSettingComponent;
-        option = { width: 700, height: 570 };
+        option = { width: 700, height: 600 };
         break;
     }
     if (component) {

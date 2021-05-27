@@ -14,14 +14,14 @@
     <ng-container *ngIf="!isEmpty && selectedCutIn">
       <div style="display: flex">
         <div>
-          <div (dblclick)="isEditable && !cutInVideoId ? openModal() : false" style="position: relative; overflow: hidden">
-            <div *ngIf="!cutInVideoId && getHidden(cutInImage)" style="position: absolute; text-align: right; top: 0px; right: 0px; pointer-events: none; z-index: 5">
+          <div (dblclick)="isEditable && (!cutInVideoId || cutInisSoundOnly) ? openModal() : false" style="position: relative; overflow: hidden">
+            <div *ngIf="(!cutInVideoId || cutInisSoundOnly) && getHidden(cutInImage)" style="position: absolute; text-align: right; top: 0px; right: 0px; pointer-events: none; z-index: 5">
               <i class="material-icons" [class]="isShowHideImages ? 'red-eye': 'grow'" style="margin-right: 2px; font-size: 16px; display: block">{{ isShowHideImages ? 'visibility' : 'visibility_off' }}</i>
             </div>
             <div *ngIf="isEditable" style="position: absolute; top: 1px; left: -1px; z-index: 5">
-              <button *ngIf="!cutInVideoId" (click)="openModal()"><b>画像変更</b></button>
+              <button *ngIf="!cutInVideoId || cutInisSoundOnly" (click)="openModal()"><b>画像変更</b></button>
             </div>
-            <img style="width: 160px; height: 160px; object-fit: contain" [ngClass]="{ blackout: !cutInVideoId && !isShowHideImages && getHidden(cutInImage) }" [src]="cutInImageUrl | safe: 'resourceUrl'">
+            <img style="width: 160px; height: 160px; object-fit: contain" [ngClass]="{ blackout: (!cutInVideoId || cutInisSoundOnly) && !isShowHideImages && getHidden(cutInImage) }" [src]="cutInImageUrl | safe: 'resourceUrl'">
           </div>
         </div>
         <div style="display: flex; flex-direction: column; width: 100%">
@@ -76,7 +76,7 @@
         <div class="section">
           <div>
             <b class="header">位置</b>
-            <label style="margin-left: 0.6em"><input name="cutInIsPreventOutBounds" type="checkbox" [(ngModel)]="cutInIsPreventOutBounds" [checked]="cutInIsPreventOutBounds" [value]="true" [attr.disabled]="!isEditable ? '' : null"><b>見切れ防止</b></label>
+            <label style="margin-left: 0.6em"><input name="cutInIsPreventOutBounds" type="checkbox" [(ngModel)]="cutInIsPreventOutBounds" [checked]="cutInIsPreventOutBounds" [value]="true" [attr.disabled]="!isEditable || cutInVideoId ? '' : null"><b>見切れ防止</b></label>
           </div>
           <div style="padding-left: 1em">
             <b>PosX: </b><input [(ngModel)]="cutInPosX" type="range" title="{{cutInPosX}}" min="{{minSize}}" max="{{maxSize}}" style="width: 180px" name="cutInPosX" [attr.disabled]="!isEditable ? '' : null" />
@@ -87,8 +87,8 @@
             <input [(ngModel)]="cutInPosY" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 3.5em" [attr.disabled]="!isEditable ? '' : null"><b style="padding-left: 2px">%</b>
           </div>
           <div style="padding-left: 1em">
-            <b>Z-Index (大きいものが前): </b><input [(ngModel)]="cutInZIndex" type="number" min="{{-maxSize}}" max="{{maxSize}}" style="width: 3.5em" [attr.disabled]="!isEditable ? '' : null">
-            <label style="margin-left: 0.6em"><input name="cutInIsFrontOfStand" type="checkbox" [(ngModel)]="cutInIsFrontOfStand" [checked]="cutInIsFrontOfStand" [value]="true" [attr.disabled]="!isEditable ? '' : null"><b>スタンドの前面に表示</b></label>
+            <b>Z-Index (大きいものが前): </b><input [(ngModel)]="cutInZIndex" type="number" min="{{-maxSize}}" max="{{maxSize}}" style="width: 3.5em" [attr.disabled]="!isEditable  || cutInVideoId ? '' : null">
+            <label style="margin-left: 0.6em"><input name="cutInIsFrontOfStand" type="checkbox" [(ngModel)]="cutInIsFrontOfStand" [checked]="cutInIsFrontOfStand" [value]="true" [attr.disabled]="!isEditable || cutInVideoId ? '' : null"><b>スタンドの前面に表示</b></label>
           </div>
         </div>
         <div class="section">
@@ -105,7 +105,7 @@
           </div>
           <div style="padding-left: 1em">
             <b>元画像と縦横比が異なる場合: </b>
-            <select [(ngModel)]="objectFitType" [attr.disabled]="cutInVideoId || !isEditable ? '' : null">
+            <select [(ngModel)]="objectFitType" [attr.disabled]="(cutInVideoId && !cutInisSoundOnly) || !isEditable ? '' : null">
               <option [value]="0" [selected]="objectFitType == 0">伸縮する</option>
               <option [value]="1" [selected]="objectFitType == 1">切り取る</option>
               <!-- <option [value]="2" [selected]="objectFitType == 2">範囲に収める</option> -->
@@ -137,7 +137,10 @@
           </div>
           <div style="padding-left: 1em">
             <input type="radio" name="{{panelId}}-media" id="{{panelId}}-media-video" [(ngModel)]="cutInIsVideo" [checked]="cutInIsVideo" [value]="true" [attr.disabled]="!isEditable || isPlaying ? '' : null">
-            <label for="{{panelId}}-media-video"><b>動画URL: </b></label><input type="text" style="width: 24em" [(ngModel)]="cutInVideoURL" [attr.disabled]="!cutInIsVideo || !isEditable || isPlaying ? '' : null"> 
+            <label for="{{panelId}}-media-video"><b>動画URL: </b></label><input type="text" style="width: 24em" [(ngModel)]="cutInVideoURL" [attr.disabled]="!cutInIsVideo || !isEditable || isPlaying ? '' : null">
+          </div>
+          <div style="padding-left: 2.5em">
+            <a href="https://www.youtube.com/terms" target="_blank" class="outer-link" (click)="openYouTubeTerms()">YouTube 利用規約</a>
           </div>
         </div>
       </div>

@@ -18,6 +18,8 @@ import { PeerCursor } from '@udonarium/peer-cursor';
 import { AudioFile } from '@udonarium/core/file-storage/audio-file';
 import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
 import { UUID } from '@udonarium/core/system/util/uuid';
+import { OpenUrlComponent } from 'component/open-url/open-url.component';
+import { CutInComponent } from 'component/cut-in/cut-in.component';
 
 
 @Component({
@@ -99,6 +101,9 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
   get cutInVideoURL(): string { return this.selectedCutIn.videoUrl; }
   set cutInVideoURL(videoUrl: string) { if (this.isEditable) this.selectedCutIn.videoUrl = videoUrl; }
 
+  get cutInisSoundOnly(): boolean { return this.selectedCutIn.isSoundOnly; }
+  set cutInisSoundOnly(isSoundOnly: boolean) { if (this.isEditable)  this.selectedCutIn.isSoundOnly = isSoundOnly; }
+
   get cutInVideoId(): string {
     if (!this.selectedCutIn) return '';
     return this.selectedCutIn.videoId;
@@ -112,7 +117,7 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
   
   get cutInImageUrl(): string {
     if (!this.selectedCutIn) return ImageFile.Empty.url;
-    return (!this.selectedCutIn.videoId) ? this.cutInImage.url : `https://img.youtube.com/vi/${this.selectedCutIn.videoId}/hqdefault.jpg`;
+    return (!this.selectedCutIn.videoId || this.cutInisSoundOnly) ? this.cutInImage.url : `https://img.youtube.com/vi/${this.selectedCutIn.videoId}/hqdefault.jpg`;
   }
 
   get isPlaying(): boolean {
@@ -343,26 +348,33 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
     this.cutInAudioFileName = audio ? audio.name : '';
   }
 
+  openYouTubeTerms() {
+    this.modalService.open(OpenUrlComponent, { url: 'https://www.youtube.com/terms', title: 'YouTube 利用規約' });
+    return false;
+  }
+
   helpCutIn() {
     let coordinate = this.pointerDeviceService.pointers[0];
-    let option: PanelOption = { left: coordinate.x, top: coordinate.y, width: 600, height: 550 };
+    let option: PanelOption = { left: coordinate.x, top: coordinate.y, width: 600, height: 620 };
     let textView = this.panelService.open(TextViewComponent, option);
     textView.title = 'カットインヘルプ';
     textView.text = 
-`　カットインの名前、表示時間、位置と画像の幅と高さ（それぞれ画面サイズに対する相対指定）、チャット送信時にカットインが表示される条件を設定できます。サイズの幅（Width）と高さ（Height）のどちらかを0とした場合、元画像の縦横比を保って拡大縮小します。
-　横位置（PosX）と縦位置（PosY）は、画面の左上隅からカットイン画像の中心位置までの距離となります。また、「見切れ防止」にチェックを入れた場合、画面内に収まるように位置とサイズが調整されます（ただし、カットインの最小幅、高さは100ピクセルとなります）。
+`　カットインの名前、表示時間、位置と幅と高さ（それぞれ画面サイズに対する相対指定）、チャット送信時にカットインが表示される条件を設定できます。また、動画を再生する場合および「見切れ防止」にチェックを入れた場合、画面内に収まるように位置とサイズが調整されます。
+　
+　横位置（PosX）と縦位置（PosY）は、画面の左上隅からカットインの中心位置までの距離となります。サイズの幅（Width）と高さ（Height）のどちらかを0とした場合、元画像の縦横比を保って拡大縮小します（ただし、カットインの最小幅、高さは${CutInComponent.MIN_SIZE}ピクセルとなります）。
+　
+　動画を再生するカットインは必ず前面、その他は後から表示されるカットイン画像がより前面になりますが、重なり順（Z-Index）を指定することで制御可能です。同じカットイン、動画を再生するカットイン、同じタグが指定されたカットインを再生する場合は、以前のものは停止します。また、チャット末尾条件を満たすカットインが複数ある場合、
 
-　デフォルトでは後から表示されるカットイン画像がより前面になりますが、重なり順（Z-Index）を指定することで制御可能です。カットインにタグを設定した場合、同じタグが指定されたカットインが表示される際に、以前のものは停止します。また、チャット末尾条件を満たすカットインが複数ある場合、
-
-　　・タグが設定されていないものはすべて表示
-　　・タグが設定されたものは、同じタグのものの中からランダムに1つ表示
+　　・タグが設定されていないものはすべて
+　　・タグが設定されたものは、同じタグのものの中からランダムに1つ
+　　・動画を再生するカットインは上記の中からランダムに1つを選択
 
 となります。
 
-　カットイン画像はドラッグによって移動可能です。またダブルクリックで閉じる（自分だけ停止）、右クリックでコンテキストメニューから操作が可能です（現在、「閉じる」「ウィンドウの背面に表示」「最小化」が可能）。
+　カットインはドラッグによって移動可能です（動画を再生するカットインは端をドラッグ）。またダブルクリックで閉じる（自分だけ停止）、右クリックでコンテキストメニューから操作が可能です（「閉じる」「ウィンドウの背面に表示」「最小化」が可能、動画を再生するカットインは端で受付）。
 
 　アップロードされた音楽ファイルをカットイン表示時の効果音として設定できます。音量にはジュークボックスの設定（「テスト (自分だけ見る)」の場合は試聴音量）が使用されます。表示時間や手動操作によってカットインが停止した際には、途中であっても音声も停止します。カットインや部屋のセーブデータ（zip）には音楽ファイルは含まれませんので、必要でしたら別途アップロードしてください（カットインと音楽ファイルのリンクはファイルの内容によります、同名の別ファイルをアップロードしても再リンクされません）。
 
-　カットインに動画を使用する場合、URLは現在YouTubeのもののみ、また再生リストには対応していません。`;
+　カットインに動画を使用する場合、URLは現在YouTubeのみ、再生リストのURLには対応していません。動画を利用する際は権利者およびYouTubeの定めた利用規約を参照し、順守してください。`;
   }
 }

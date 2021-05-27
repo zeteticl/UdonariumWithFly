@@ -91,12 +91,16 @@ export class CutInComponent implements OnInit, OnDestroy {
   @Input() cutIn: CutIn;
   @Input() animationType: number = 0;
 
+  static readonly MIN_SIZE = 250;
+
   private _imageFile: ImageFile = ImageFile.Empty;
   private _timeoutId;
+  private _timeoutIdVideo;
 
   private _isVisible = false;
   private _isEnd = false;
   
+  videoStateTransition = false;
   isPlayerVisible = false;
 
   isMinimize = false;
@@ -105,11 +109,21 @@ export class CutInComponent implements OnInit, OnDestroy {
   isTest = false;
   isIndicateSender = false;
   sender = '';
-  
+  videoId = '';
+
   cutInImageTransformOrigin = 'center';
 
-  private naturalWidth = 0;
-  private naturalHeight = 0;
+  private _naturalWidth = 0;
+  private _naturalHeight = 0;
+  private get naturalWidth(): number {
+    if (this.videoId && !this.isSoundOnly) return 480;
+    return this._naturalWidth;
+  }
+  private get naturalHeight(): number {
+    if (this.videoId && !this.isSoundOnly) return 270;
+    return this._naturalHeight;
+  }
+
   private _dragging = false;
 
   private readonly audioPlayer = new AudioPlayer();
@@ -117,7 +131,6 @@ export class CutInComponent implements OnInit, OnDestroy {
   constructor(
     private pointerDeviceService: PointerDeviceService,
     private contextMenuService: ContextMenuService,
-    private modalService: ModalService,
     private ngZone: NgZone
   ) { }
 
@@ -125,18 +138,20 @@ export class CutInComponent implements OnInit, OnDestroy {
     EventSystem.register(this)
       .on('CHANGE_JUKEBOX_VOLUME', -100, event => {
         if (this.videoPlayer) this.videoPlayer.setVolume(this.videoVolume);
+      })
+      .on('PLAY_VIDEO_CUT_IN', -1000, event => {
+        if (this.cutIn && this.cutIn.identifier != event.data.identifier && !!this.videoId) {
+          this.stop();
+        }
       });
-    // YoutubePlayerのサイズ
-    if (this.cutIn && this.cutIn.videoId) {
-      this.naturalWidth = 480;
-      this.naturalHeight = 270;
-    }
   }
 
   ngOnDestroy(): void {
     EventSystem.unregister(this, 'UPDATE_AUDIO_RESOURE');
     EventSystem.unregister(this, 'CHANGE_JUKEBOX_VOLUME');
+    EventSystem.unregister(this, 'PLAY_VIDEO_CUT_IN');
     clearTimeout(this._timeoutId);
+    clearTimeout(this._timeoutIdVideo);
   }
 
   get isPointerDragging(): boolean { return this._dragging; }
@@ -166,7 +181,7 @@ export class CutInComponent implements OnInit, OnDestroy {
   }
 
   get pixcelWidthPreAdjust(): number {
-    if (this.isMinimize) return 100;
+    if (this.isMinimize) return CutInComponent.MIN_SIZE;
     let ret = 0;
     if (!this.cutIn) return ret;
     if (this.cutIn.width <= 0 && this.cutIn.height <= 0) {
@@ -181,7 +196,7 @@ export class CutInComponent implements OnInit, OnDestroy {
 
   get pixcelWidth(): number {
     let ret = this.pixcelWidthPreAdjust;
-    if (this.cutIn.isPreventOutBounds) {
+    if (this.cutIn.isPreventOutBounds || this.videoId) {
       if (this.isAjustAspect) {
         if (this.isAjustAspectWidth) {
           ret = document.documentElement.clientWidth;
@@ -194,14 +209,14 @@ export class CutInComponent implements OnInit, OnDestroy {
     }
     if (!this.isMinimize && (this.cutIn.width <= 0 || this.cutIn.height <= 0) && this.pixelWidthAspectMinimun > ret) {
       ret = this.pixelWidthAspectMinimun;
-    } else if (ret < 100) {
-      ret = 100;
+    } else if (ret < CutInComponent.MIN_SIZE) {
+      ret = CutInComponent.MIN_SIZE;
     }
     return ret;
   }
 
   get pixcelHeightPreAdjust(): number {
-    if (this.isMinimize) return 100;
+    if (this.isMinimize) return CutInComponent.MIN_SIZE;
     let ret = 0;
     if (!this.cutIn) return ret;
     if (this.cutIn.width <= 0 && this.cutIn.height <= 0) { 
@@ -215,17 +230,17 @@ export class CutInComponent implements OnInit, OnDestroy {
   }
 
   get pixelWidthAspectMinimun() {
-    let ret = 100;
+    let ret = CutInComponent.MIN_SIZE;
     if (!this.cutIn) return ret;
     if (this.naturalWidth > this.naturalHeight) {
-      ret = 100 * this.naturalWidth / this.naturalHeight;
+      ret = CutInComponent.MIN_SIZE * this.naturalWidth / this.naturalHeight;
     } 
     return ret;
   }
 
   get pixcelHeight(): number {
     let ret = this.pixcelHeightPreAdjust;
-    if (this.cutIn.isPreventOutBounds) {
+    if (this.cutIn.isPreventOutBounds || this.videoId) {
       if (this.isAjustAspect) {
         if (this.isAjustAspectWidth) {
           ret = ret * (document.documentElement.offsetWidth / this.pixcelWidthPreAdjust)
@@ -238,17 +253,17 @@ export class CutInComponent implements OnInit, OnDestroy {
     }
     if (!this.isMinimize && (this.cutIn.width <= 0 || this.cutIn.height <= 0) && this.pixelHeightAspectMinimun > ret) {
       ret = this.pixelHeightAspectMinimun;
-    } else if (ret < 100) {
-      ret = 100;
+    } else if (ret < CutInComponent.MIN_SIZE) {
+      ret = CutInComponent.MIN_SIZE;
     }
     return ret;
   }
 
   get pixelHeightAspectMinimun() {
-    let ret = 100;
+    let ret = CutInComponent.MIN_SIZE;
     if (!this.cutIn) return ret;
     if (this.naturalWidth < this.naturalHeight) {
-      ret = 100 * this.naturalHeight / this.naturalWidth;
+      ret = CutInComponent.MIN_SIZE * this.naturalHeight / this.naturalWidth;
     } 
     return ret;
   }
@@ -280,7 +295,7 @@ export class CutInComponent implements OnInit, OnDestroy {
     let ret = 0;
     if (!this.cutIn) return ret;
     ret = (document.documentElement.clientWidth * this.cutIn.posX / 100) - this.pixcelWidth / 2;
-    if (this.cutIn.isPreventOutBounds) {
+    if (this.cutIn.isPreventOutBounds || this.videoId) {
       const leftOffset = (this.pixcelWidth / 2) - (document.documentElement.clientWidth * this.cutIn.posX / 100);
       if (leftOffset > 0) {
         ret += leftOffset;
@@ -297,7 +312,7 @@ export class CutInComponent implements OnInit, OnDestroy {
     let ret = 0;
     if (!this.cutIn) return ret;
     ret = (document.documentElement.offsetHeight * this.cutIn.posY / 100) - this.pixcelHeight / 2;
-    if (this.cutIn.isPreventOutBounds) {
+    if (this.cutIn.isPreventOutBounds || this.videoId) {
       const topOffset = (this.pixcelHeight / 2) - (document.documentElement.offsetHeight * this.cutIn.posY / 100)
       if (topOffset > 0) {
         ret += topOffset;
@@ -312,26 +327,29 @@ export class CutInComponent implements OnInit, OnDestroy {
 
   get zIndex(): number {
     if (!this.cutIn || this.isBackyard) return 0;
-    return (this.cutIn.isFrontOfStand ? 1500000 : 500000) + this.cutIn.zIndex;
+    return (this.cutIn.isFrontOfStand || this.videoId ? 1500000 : 500000) + this.cutIn.zIndex + (this.videoId ? 1000 : 0);
   }
 
   get objectFit(): string {
     if (!this.cutIn) return 'none';
-    //if (this.isMinimize) return 'contain';
-    if (this.videoId || this.cutIn.objectFitType == 2) return 'contain';
+    if (this.isMinimize) return 'contain';
+    if ((this.videoId && !this.isSoundOnly) || this.cutIn.objectFitType == 2) return 'contain';
     return this.cutIn.objectFitType == 1 ? 'cover' : 'fill';
   }
 
+  /*
   get videoId(): string {
     if (!this.cutIn) return '';
     return this.cutIn.videoId;
   }
-
+*/
   get videoVolume(): number {
     return (this.isTest ? AudioPlayer.auditionVolume : AudioPlayer.volume) * 100;
   }
 
-  get isBordered() { return this.cutIn && this.cutIn.borderStyle > 0; }
+  get isBordered(): boolean { return this.cutIn && this.cutIn.borderStyle > 0; }
+
+  get isSoundOnly(): boolean { return this.cutIn && this.cutIn.isSoundOnly; }
 
   get senderName() {
     let ret = ''; 
@@ -370,6 +388,7 @@ export class CutInComponent implements OnInit, OnDestroy {
       if (this.cutIn.duration > 0) {
         this._timeoutId = setTimeout(() => {
           this.stop();
+          clearTimeout(this._timeoutId);
           this._timeoutId = null;
         }, this.cutIn.duration * 1000);
       }
@@ -411,8 +430,8 @@ export class CutInComponent implements OnInit, OnDestroy {
   }
 
   onImageLoad() {
-    this.naturalWidth = this.cutInImageElement.nativeElement.naturalWidth;
-    this.naturalHeight = this.cutInImageElement.nativeElement.naturalHeight;
+    this._naturalWidth = this.cutInImageElement.nativeElement.naturalWidth;
+    this._naturalHeight = this.cutInImageElement.nativeElement.naturalHeight;
   }
 
   onPlayerReady($event) {
@@ -424,10 +443,43 @@ export class CutInComponent implements OnInit, OnDestroy {
   onPlayerStateChange($event) {
     const state = $event.data;
     //console.log($event.data)
-    if (state == 1) this.isPlayerVisible = true;
-    if (state == 0 || state == 5) {
-      this.isPlayerVisible = false;
+    if (state == 1) {
+      this.isPlayerVisible = true;
+      this.videoStateTransition = true;
+      this._timeoutIdVideo = setTimeout(() => {
+        this.ngZone.run(() => {
+          this.videoStateTransition = false;
+          this._timeoutIdVideo = null;
+        });
+      }, 200);
+      if (this.cutIn) EventSystem.trigger('PLAY_VIDEO_CUT_IN', {identifier: this.cutIn.identifier})
     }
+    if (state == 2) {
+      this.videoStateTransition = true;
+      this._timeoutIdVideo = setTimeout(() => {
+        this.ngZone.run(() => {
+          this.videoStateTransition = false;
+          this._timeoutIdVideo = null;
+        });
+      }, 200);
+    }
+    if (state == 5) {
+      this.isPlayerVisible = false;
+      this.videoStateTransition = true;
+      this._timeoutIdVideo = setTimeout(() => {
+        this.ngZone.run(() => {
+          this.videoStateTransition = false;
+          this._timeoutIdVideo = null;
+        });
+      }, 200);
+    }
+  }
+
+  // ToDo
+  onErrorFallback() {
+    console.log('fallback')
+    if (!this.videoId) return;
+    this.cutInImageElement.nativeElement.src = 'https://img.youtube.com/vi/' + this.videoId + '/default.jpg'
   }
 
   @HostListener('contextmenu', ['$event'])
@@ -460,6 +512,7 @@ export class CutInComponent implements OnInit, OnDestroy {
         action: () => { this.isMinimize = !this.isMinimize; },
         selfOnly: true
       },
+            /*
       (!this.videoId ? null : ContextMenuSeparator),
       (!this.videoId ? null :
         {
@@ -472,7 +525,6 @@ export class CutInComponent implements OnInit, OnDestroy {
           isOuterLink: true
         }
       )
-      /*
       ContextMenuSeparator,
       {
         name: '効果音の開始／最初から',
@@ -491,5 +543,4 @@ export class CutInComponent implements OnInit, OnDestroy {
       */
     ], this.cutIn.name);
   }
-
 }
