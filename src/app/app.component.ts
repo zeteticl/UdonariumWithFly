@@ -466,7 +466,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
   toolBox() {
     this.contextMenuService.open(this.pointerDeviceService.pointers[0], [
-      { name: 'CutIN', materialIcon: 'movie_creation', action: () => this.open('CutInSettingComponent') },
+      { name: 'CutIn', materialIcon: 'movie_creation', action: () => this.open('CutInSettingComponent') },
       { name: '筆記倉庫', materialIcon: 'folder_shared', action: () => this.open('NoteInventoryComponent') },
       { name: '簡易骰子表', materialIcon: 'table_rows', action: () => this.open('DiceRollTableSettingComponent') }
     ], '工具箱');

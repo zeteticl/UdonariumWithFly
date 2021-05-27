@@ -65,7 +65,7 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
       imageIdentifier: "",
       tag: "",
       name: "連結:",
-      text: "升級成1.13.3b版本\n2021/05/11 改良HTML及TXT匯出功能，增加COIN功能\n2021/05/13 更新底部框的大小\n2021/05/27 更新CutIn功能，可以使用YouTube。陰影會根據高度改變。底框縮少。"
+      text: "升級成1.13.3b版本\n2021/05/11 改良HTML及TXT匯出功能，增加COIN功能\n2021/05/13 更新TOKEN底部框的大小\n2021/05/27 更新CutIn功能，可以使用YouTube。陰影會根據高度改變。"
     }
     , {
       from: "System",

@@ -50,7 +50,7 @@
         <button (click)="showDicebotHelp()">?</button>
       </span>
       <input type="checkbox" (click)="ClarifyModeChanged()" id="Clarify" name="Clarify">
-      <label for="Clarify">隱藏</label>
+      <label for="Clarify">最小化</label>
     </div>
     <div *ngIf="hasStand" [ngClass]="{'disabled-stand': !isUseStandImageOnChatTab}" style="font-size: smaller">
       <label style="margin-right: 2px">
