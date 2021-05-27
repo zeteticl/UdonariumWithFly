@@ -164,7 +164,7 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
   ) { }
 
   ngOnInit(): void {
-    Promise.resolve().then(() => this.modalService.title = this.panelService.title = 'カットイン設定');
+    Promise.resolve().then(() => this.modalService.title = this.panelService.title = 'CutIn設定');
     EventSystem.register(this)
       .on('SYNCHRONIZE_AUDIO_LIST', -1000, event => {
         this.onAudioFileChange();
@@ -190,7 +190,7 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
     this.selectedCutInXml = '';
   }
 
-  create(name: string = 'カットイン'): CutIn {
+  create(name: string = 'CutIn'): CutIn {
     return CutInList.instance.addCutIn(name)
   }
 
@@ -357,7 +357,7 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
     let coordinate = this.pointerDeviceService.pointers[0];
     let option: PanelOption = { left: coordinate.x, top: coordinate.y, width: 600, height: 620 };
     let textView = this.panelService.open(TextViewComponent, option);
-    textView.title = 'カットインヘルプ';
+    textView.title = 'CutIn 說明';
     textView.text = 
 `　カットインの名前、表示時間、位置と幅と高さ（それぞれ画面サイズに対する相対指定）、チャット送信時にカットインが表示される条件を設定できます。また、動画を再生する場合および「見切れ防止」にチェックを入れた場合、画面内に収まるように位置とサイズが調整されます。
 　

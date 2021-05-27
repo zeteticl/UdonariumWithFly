@@ -491,19 +491,19 @@ export class CutInComponent implements OnInit, OnDestroy {
     let position = this.pointerDeviceService.pointers[0];
     this.contextMenuService.open(position, [
       {
-        name: '閉じる（自分のみ終了）',
+        name: '關閉（僅針對自己）',
         action: () => { this.stop(); },
         default: true,
         selfOnly: true
       },
       ContextMenuSeparator,
       {
-        name: `${this.isIndicateSender ? '☑' : '☐'}送信者を表示`,
+        name: `${this.isIndicateSender ? '☑' : '☐'}顯示發訊者`,
         action: () => { this.isIndicateSender = !this.isIndicateSender; },
         selfOnly: true
       },
       {
-        name: `${this.isBackyard ? '☑' : '☐'}ウィンドウの背後に表示`,
+        name: `${this.isBackyard ? '☑' : '☐'}顯示在視窗後面`,
         action: () => { this.isBackyard = !this.isBackyard; },
         selfOnly: true
       },
