@@ -2,15 +2,15 @@
   <div class="flex-item no-grow">
     <div>
       <button style="font-size: smaller; margin-bottom: 3px" (click)="add()">添加CutIn</button>
+      <div style="float: right; margin-top: 3px; margin-right: 3px">
+        <button (click)="helpCutIn()">?</button>
+      </div>
     </div>
     <select #cutInSelecter style="width: 12em;" size="15" (change)="onChangeCutIn($event.target.value)">
       <option *ngFor="let cutIn of cutIns" value="{{ cutIn.identifier }}" [style.color]="cutIn.isValidAudio ? '' : 'red'">{{(cutIn.isValidAudio ? '' : '⚠️' ) + cutIn.name }}</option>
     </select>
   </div>
   <div class="flex-item">
-    <div style="float: right; margin-top: 3px; margin-right: 3px">
-      <button (click)="helpCutIn()">?</button>
-    </div>
     <ng-container *ngIf="!isEmpty && selectedCutIn">
       <div style="display: flex">
         <div>
@@ -54,7 +54,7 @@
           </div>
           <div style="padding-left: 2px">
             <b style="font-size: smaller">觸發文字: </b><br>
-            <textarea style="width: 100%; height: 3em" placeholder="每行一個，如聊天輸入的文字結尾符合即會觸發，如&#13;&#10;@Sad" [(ngModel)]="cutInCond" [attr.disabled]="!isEditable ? '' : null"></textarea>
+            <textarea style="width: 90%; height: 3em" placeholder="每行一個，如聊天輸入的文字結尾符合即會觸發，如&#13;&#10;@Sad" [(ngModel)]="cutInCond" [attr.disabled]="!isEditable ? '' : null"></textarea>
           </div>
         </div>
       </div>
@@ -138,7 +138,7 @@
           </div>
           <div style="padding-left: 1em">
             <input type="radio" name="{{panelId}}-media" id="{{panelId}}-media-video" [(ngModel)]="cutInIsVideo" [checked]="cutInIsVideo" [value]="true" [attr.disabled]="!isEditable || isPlaying ? '' : null">
-            <label for="{{panelId}}-media-video"><b>動畫URL(支援YT): </b></label><input type="text" style="width: 20em" [(ngModel)]="cutInVideoURL" [attr.disabled]="!cutInIsVideo || !isEditable || isPlaying ? '' : null">
+            <label for="{{panelId}}-media-video"><b>動畫URL(支援YT): </b></label><input type="text" style="width: 18em" [(ngModel)]="cutInVideoURL" [attr.disabled]="!cutInIsVideo || !isEditable || isPlaying ? '' : null">
           </div>
           <div style="padding-left: 2.5em">
             <a href="https://www.youtube.com/terms" target="_blank" class="outer-link" (click)="openYouTubeTerms()">YouTube 使用規則</a>
