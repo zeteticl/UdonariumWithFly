@@ -49,8 +49,15 @@
         </select>
         <button (click)="showDicebotHelp()">?</button>
       </span>
-      <input type="checkbox" (click)="ClarifyModeChanged()" id="Clarify" name="Clarify">
-      <label for="Clarify">最小化</label>
+
+
+
+      <button class="tab-setting small-font"style="padding: 1px 4px 1px 2px; margin-left: 2px; height: 24px; box-sizing: border-box" (click)="ClarifyModeChanged()">
+        <i *ngIf="!ClarifyMode()" class="material-icons icon-size">highlight_off</i>
+        <i *ngIf="ClarifyMode()" class="material-icons icon-size">radio_button_checked</i>
+        最小化
+      </button>
+
     </div>
     <div *ngIf="hasStand" [ngClass]="{'disabled-stand': !isUseStandImageOnChatTab}" style="font-size: smaller">
       <label style="margin-right: 2px">
@@ -80,7 +87,7 @@
       <ng-container *ngIf="0 < writingPeerNameAndColors.length">
         <span *ngFor="let peerNameAndColor of writingPeerNameAndColors; index as i" style="font-weight: bold;" [style.color]="peerNameAndColor.color">{{peerNameAndColor.name}}<span
             *ngIf="writingPeerNameAndColors.length !== (i + 1)">, </span></span>
-        <span> 打字中...</span>
+        <span> 輸入中...</span>
       </ng-container>
     </div>
   </div>

@@ -14,13 +14,9 @@
       <button class="tab-setting small-font" (click)="showTabSetting()"*ngIf="!GuestMode()"><i class="material-icons small-font">settings</i>標籤設定</button>
       <button class="tab-setting small-font" (click)="showLogOutput()"*ngIf="!GuestMode()"><i class="material-icons small-font">history_edu</i>LOG</button>
       <button class="tab-setting small-font" (click)="onSoundEffectSwitchChanged()">
-        <i *ngIf="!SoundEffectSwitch2()" class="material-icons icon-size">toggle_on</i>
-        <i *ngIf="SoundEffectSwitch2()" class="material-icons icon-size">toggle_off</i>
+        <i *ngIf="!SoundEffectSwitch2()" class="material-icons icon-size">highlight_off</i>
+        <i *ngIf="SoundEffectSwitch2()" class="material-icons icon-size">radio_button_checked</i>
         效果音
-      </button>
-      <button class="tab-setting small-font" (click)="diceAllOpne()" *ngIf="!GuestMode()">
-        <i class="material-icons icon-size">all_out</i>
-        公開骰子
       </button>
       <button class="tab-setting small-font" (click)="resetPointOfView()">
         <div><i class="material-icons icon-size">remove_red_eye</i>改變視點</div>
