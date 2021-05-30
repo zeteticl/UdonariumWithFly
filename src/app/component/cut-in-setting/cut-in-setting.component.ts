@@ -109,6 +109,11 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.selectedCutIn.videoId;
   }
 
+  get cutInPlayListId(): string {
+    if (!this.cutInVideoId) return '';
+    return this.selectedCutIn.playListId;
+  }
+
   get cutInImage(): ImageFile {
     if (!this.selectedCutIn) return ImageFile.Empty;
     let file = ImageStorage.instance.get(this.selectedCutIn.imageIdentifier);
@@ -123,6 +128,11 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
   get isPlaying(): boolean {
     if (!this.selectedCutIn) return false;
     return CutInService.nowShowingIdentifiers().includes(this.selectedCutIn.identifier);
+  }
+
+  isPlayingNow(cutIn: CutIn): boolean {
+    if (!cutIn) return false;
+    return CutInService.nowShowingIdentifiers().includes(cutIn.identifier);
   }
 
   get isValidAudio(): boolean {
@@ -208,7 +218,7 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isSaveing = true;
     this.progresPercent = 0;
 
-    let fileName: string = 'cutIn_' + this.selectedCutIn.name;
+    let fileName: string = 'fly_cutIn_' + this.selectedCutIn.name;
 
     await this.saveDataService.saveGameObjectAsync(this.selectedCutIn, fileName, percent => {
       this.progresPercent = percent;
@@ -375,6 +385,6 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
 
 　アップロードされた音楽ファイルをカットイン表示時の効果音として設定できます。音量にはジュークボックスの設定（「テスト (自分だけ見る)」の場合は試聴音量）が使用されます。表示時間や手動操作によってカットインが停止した際には、途中であっても音声も停止します。カットインや部屋のセーブデータ（zip）には音楽ファイルは含まれませんので、必要でしたら別途アップロードしてください（カットインと音楽ファイルのリンクはファイルの内容によります、同名の別ファイルをアップロードしても再リンクされません）。
 
-　カットインに動画を使用する場合、URLは現在YouTubeのみ、再生リストのURLには対応していません。動画を利用する際は権利者およびYouTubeの定めた利用規約を参照し、順守してください。`;
+　カットインに動画を使用する場合、URLは現在YouTubeのもののみ有効です。動画を利用する際は権利者およびYouTubeの定めた利用規約を参照し、順守してください。`;
   }
 }

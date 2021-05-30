@@ -33,15 +33,33 @@ export class CutIn extends ObjectNode {
 
   get videoId(): string {
     if (!this.isVideoCutIn || !this.videoUrl) return '';
-    let ret = this.videoUrl;
+    let ret = '';
     if (StringUtil.validUrl(this.videoUrl)) {
       const hostname = (new URL(this.videoUrl)).hostname
-      if (hostname != 'youtube.com' && hostname != 'www.youtube.com') return '';
-      let tmp = this.videoUrl.split('v=');
-      if (tmp[1]) ret = encodeURI(tmp[1].split(/[\&\#\/]/)[0]);
+      if (hostname == 'youtube.com' || hostname == 'www.youtube.com') { 
+        let tmp = this.videoUrl.split('v=');
+        if (tmp[1]) ret = encodeURI(tmp[1].split(/[\&\#\/]/)[0]);
+      } else if (hostname == 'youtu.be') {
+        let tmp = this.videoUrl.split('youtu.be/');
+        if (tmp[1]) ret = encodeURI(tmp[1].split(/[\&\#\/]/)[0]);
+      } else {
+        return '';
+      }
     } else {
       // IDだけを許可すべきか？
-      return '';
+      return ret = '';
+    }
+    return ret.replace(/[\<\>\/\:\s\r\n]/g, '');
+  }
+
+  get playListId(): string {
+    if (!this.isVideoCutIn || !this.videoId) return '';
+    let ret = '';
+    if (StringUtil.validUrl(this.videoUrl)) {
+      let tmp = this.videoUrl.split('list=');
+      if (tmp[1]) ret = encodeURI(tmp[1].split(/[\&\#\/]/)[0]);
+    } else {
+      return ret = '';
     }
     return ret.replace(/[\<\>\/\:\s\r\n]/g, '');
   }

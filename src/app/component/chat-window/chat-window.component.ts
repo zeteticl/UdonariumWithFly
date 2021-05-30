@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ChatMessage } from '@udonarium/chat-message';
 import { ChatTab } from '@udonarium/chat-tab';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
@@ -6,6 +6,7 @@ import { EventSystem, Network } from '@udonarium/core/system';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { ChatLogOutputComponent } from 'component/chat-log-output/chat-log-output.component';
 import { ChatTabSettingComponent } from 'component/chat-tab-setting/chat-tab-setting.component';
+import { ChatTabComponent } from 'component/chat-tab/chat-tab.component';
 import { ChatMessageService } from 'service/chat-message.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
@@ -17,7 +18,18 @@ import { GameObjectInventoryService} from 'service/game-object-inventory.service
   styleUrls: ['./chat-window.component.css']
 })
 export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('chatTabComponemt', { static: false }) chatTabComponemt: ChatTabComponent;
   sendFrom: string = 'Guest';
+  
+  private _isCompact = false;
+  get isCompact(): boolean {
+    return this._isCompact;
+  }
+  set isCompact(isCompact: boolean) {
+    this._isCompact = isCompact;
+    this.chatTabComponemt.onScroll();
+  }
+
   get gameType(): string { return this.chatMessageService.gameType; }
   set gameType(gameType: string) { this.chatMessageService.gameType = gameType; }
 

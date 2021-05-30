@@ -7,7 +7,7 @@
       </div>
     </div>
     <select #cutInSelecter style="width: 12em;" size="15" (change)="onChangeCutIn($event.target.value)">
-      <option *ngFor="let cutIn of cutIns" value="{{ cutIn.identifier }}" [style.color]="cutIn.isValidAudio ? '' : 'red'">{{(cutIn.isValidAudio ? '' : '⚠️' ) + cutIn.name }}</option>
+      <option *ngFor="let cutIn of cutIns" value="{{ cutIn.identifier }}" [style.color]="cutIn.isValidAudio ? '' : 'red'">{{( isPlayingNow(cutIn) ? '▶ ' : '■ ') + (cutIn.isValidAudio ? '' : '⚠️' ) + cutIn.name }}</option>
     </select>
   </div>
   <div class="flex-item">
@@ -21,7 +21,7 @@
             <div *ngIf="isEditable" style="position: absolute; top: 1px; left: -1px; z-index: 5">
               <button *ngIf="!cutInVideoId || cutInisSoundOnly" (click)="openModal()"><b>變更圖片</b></button>
             </div>
-            <div *ngIf="cutInVideoId && !cutInisSoundOnly" class="grow" style="opacity: 0.8; position: absolute; bottom: 1px; right: -1px; z-index: 5"><i style="font-size: 32px" class="material-icons">movie</i></div>
+            <div *ngIf="cutInVideoId && !cutInisSoundOnly" class="grow" style="opacity: 0.8; position: absolute; bottom: 1px; right: -1px; z-index: 5"><i style="font-size: 32px" class="material-icons">{{ cutInPlayListId ? 'featured_play_list' : 'movie' }}</i></div>
             <img style="width: 160px; height: 160px; object-fit: contain" [ngClass]="{ blackout: (!cutInVideoId || cutInisSoundOnly) && !isShowHideImages && getHidden(cutInImage) }" [src]="cutInImageUrl | safe: 'resourceUrl'">
           </div>
         </div>

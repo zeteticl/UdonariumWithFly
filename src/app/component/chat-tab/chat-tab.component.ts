@@ -36,6 +36,8 @@ const isiOS = ua.indexOf('iphone') > -1 || ua.indexOf('ipad') > -1 || ua.indexOf
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges, AfterViewChecked {
+  @Input() compact: boolean = false;
+  
   sampleMessages: ChatMessageContext[] = [
     {
       from: "System",
@@ -93,7 +95,11 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
   private topIndex = 0;
   private bottomIndex = 0;
 
-  private minMessageHeight: number = 61;
+  // private minMessageHeight: number = 61;
+  private get minMessageHeight(): number {
+    return this.compact ? 26 : 61;
+  }
+
 
   private preScrollTop = 0;
   private scrollSpeed = 0;
@@ -331,7 +337,7 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
     }
   }
 
-  private onScroll() {
+  onScroll() {
     this.scrollEventShortTimer.reset();
     if (!this.scrollEventLongTimer.isActive) {
       this.scrollEventLongTimer.reset();
