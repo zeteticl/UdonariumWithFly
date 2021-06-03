@@ -52,7 +52,25 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
   get isDisabled(): boolean {
     return this.gameTableMask.isDisabled;
   }
+  
+  get fontSize(): number { return this.gameTableMask.fontsize; }
+  set fontSize(fontSize: number) { this.gameTableMask.fontsize = fontSize; }
+  get text(): string { return this.gameTableMask.text; }
+  set text(text: string) { this.gameTableMask.text = text; }
+
+  get altitude(): number { return this.gameTableMask.altitude; }
+  set altitude(altitude: number) { this.gameTableMask.altitude = altitude; }
+
+  get isAltitudeIndicate(): boolean { return this.gameTableMask.isAltitudeIndicate; }
+  set isAltitudeIndicate(isAltitudeIndicate: boolean) { this.gameTableMask.isAltitudeIndicate = isAltitudeIndicate; }
+
+  get gameTableMaskAltitude(): number {
+    return +this.altitude.toFixed(1); 
+  }
+
   gridSize: number = 50;
+  math = Math;
+  viewRotateZ = 10;
 
   movableOption: MovableOption = {};
 
@@ -86,11 +104,17 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
       })
       .on('UPDATE_FILE_RESOURE', -1000, event => {
         this.changeDetector.markForCheck();
+      })
+      .on<object>('TABLE_VIEW_ROTATE', -1000, event => {
+        this.ngZone.run(() => {
+          this.viewRotateZ = event.data['z'];
+          this.changeDetector.markForCheck();
+        });
       });
     this.movableOption = {
       tabletopObject: this.gameTableMask,
       transformCssOffset: 'translateZ(0.15px)',
-      colideLayers: ['terrain', 'text-note']
+      colideLayers: ['terrain']
     };
   }
 
@@ -159,6 +183,26 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
           }
         }),
       ContextMenuSeparator,
+      (this.isAltitudeIndicate
+        ? {
+          name: '☑ 高度の表示', action: () => {
+            this.isAltitudeIndicate = false;
+          }
+        } : {
+          name: '☐ 高度の表示', action: () => {
+            this.isAltitudeIndicate = true;
+          }
+        }),
+      {
+        name: '高度を0にする', action: () => {
+          if (this.altitude != 0) {
+            this.altitude = 0;
+            SoundEffect.play(PresetSound.sweep);
+          }
+        },
+        altitudeHande: this.gameTableMask
+      },
+      ContextMenuSeparator,
       { name: 'マップマスクを編集', action: () => { this.showDetail(this.gameTableMask); } },
       (this.gameTableMask.getUrls().length <= 0 ? null : {
         name: '打開參考網址', action: null,
@@ -219,7 +263,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '地圖遮罩設置';
     if (gameObject.name.length) title += ' - ' + gameObject.name;
-    let option: PanelOption = { title: title, left: coordinate.x - 200, top: coordinate.y - 150, width: 400, height: 330 };
+    let option: PanelOption = { title: title, left: coordinate.x - 200, top: coordinate.y - 150, width: 400, height: 440 };
     let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
     component.tabletopObject = gameObject;
   }

@@ -34,6 +34,10 @@ interface DiceRollResult {
   isDiceRollTable?: boolean;
   tableName?: string;
   isEmptyDice?: boolean;
+  isSuccess?: boolean;
+  isFailure?: boolean;
+  isCritical?: boolean;
+  isFumble?: boolean;
 }
 
 // bcdice-js custom loader class
@@ -54,6 +58,7 @@ export class DiceBot extends GameObject {
   private static readonly loadedDiceBots: { [gameType: string]: GameSystemClass } = {};
 
   public static apiUrl: string = null;
+  public static apiVersion: number = 1;
   public static adminUrl: string = null;
 
   public static diceBotInfos: DiceBotInfo[] = DiceBot.loader.listAvailableGameSystems()
@@ -244,8 +249,12 @@ export class DiceBot extends GameObject {
           const repeat: number = (regArray[3] != null) ? Number(regArray[3]) : 1;
           let rollText: string = (regArray[4] != null) ? regArray[4] : text;
 
+          //ローマ数字のⅮの置き換え
+          rollText = rollText.replace(/Ⅾ/g, 'D');
+
           if (!rollText || repeat <= 0) return;
-          let finalResult: DiceRollResult = { result: '', isSecret: false, isDiceRollTable: false, isEmptyDice: true };
+          let finalResult: DiceRollResult = { result: '', isSecret: false, isDiceRollTable: false, isEmptyDice: true,
+            isSuccess: false, isFailure: true, isCritical: false, isFumble: false };
           
           //ダイスボット表
           let isDiceRollTableMatch = false;
@@ -329,6 +338,10 @@ export class DiceBot extends GameObject {
                 finalResult.result += rollResult.result;
                 finalResult.isSecret = finalResult.isSecret || rollResult.isSecret || isRepSecret;
                 finalResult.isEmptyDice = finalResult.isEmptyDice && rollResult.isEmptyDice;
+                finalResult.isSuccess = finalResult.isSuccess || rollResult.isSuccess;
+                finalResult.isFailure = finalResult.isFailure && rollResult.isFailure;
+                finalResult.isCritical = finalResult.isCritical || rollResult.isCritical;
+                finalResult.isFumble = finalResult.isFumble || rollResult.isFumble;
                 if (1 < repeat) finalResult.result += ` #${i + 1}\n`;
               }
             }
@@ -351,6 +364,10 @@ export class DiceBot extends GameObject {
     let result: string = rollResult.result;
     const isSecret: boolean = rollResult.isSecret;
     const isEmptyDice: boolean = rollResult.isEmptyDice;
+    const isSuccess: boolean = rollResult.isSuccess;
+    const isFailure: boolean = rollResult.isFailure;
+    const isCritical: boolean = rollResult.isCritical;
+    const isFumble: boolean = rollResult.isFumble;
 
     if (result.length < 1) return;
     if (!rollResult.isDiceRollTable) result = result.replace(/[＞]/g, s => '→').trim();
@@ -358,6 +375,10 @@ export class DiceBot extends GameObject {
     let tag = 'system';
     if (isSecret) tag += ' secret';
     if (isEmptyDice) tag += ' empty';
+    if (isSuccess) tag += ' success';
+    if (isFailure) tag += ' failure';
+    if (isCritical) tag += ' critical';
+    if (isFumble) tag += ' fumble';
 
     let diceBotMessage: ChatMessageContext = {
       identifier: '',
@@ -461,7 +482,9 @@ export class DiceBot extends GameObject {
   static diceRollAsync(message: string, gameType: string, repeat: number = 1): Promise<DiceRollResult> {
     gameType = gameType ? gameType : 'DiceBot';
     if (DiceBot.apiUrl) {
-      const request = DiceBot.apiUrl + '/v1/diceroll?system=' + (gameType ? encodeURIComponent(gameType) : 'DiceBot') + '&command=' + encodeURIComponent(message);
+      const request = DiceBot.apiVersion == 1 
+        ? DiceBot.apiUrl + '/v1/diceroll?system=' + (gameType ? encodeURIComponent(gameType) : 'DiceBot') + '&command=' + encodeURIComponent(message)
+        : `${DiceBot.apiUrl}/v2/game_system/${(gameType ? encodeURIComponent(gameType) : 'DiceBot')}/roll?command=${encodeURIComponent(message)}`;
       const promisise = [];
       for (let i = 1; i <= repeat; i++) {
         promisise.push(
@@ -473,7 +496,10 @@ export class DiceBot extends GameObject {
               throw new Error(response.statusText);
             })
             .then(json => {
-              return { result: (gameType) + json.result + (repeat > 1 ? ` #${i}\n` : ''), isSecret: json.secret, isEmptyDice: (json.dices && json.dices.length == 0) };
+              console.log(JSON.stringify(json))
+              return { result: (gameType) + (DiceBot.apiVersion == 1 ? json.result : json.text) + (repeat > 1 ? ` #${i}\n` : ''), isSecret: json.secret, 
+                isEmptyDice: DiceBot.apiVersion == 1 ? (json.dices && json.dices.length == 0) : (json.rands && json.rands.length == 0),
+                isSuccess: json.success, isFailure: json.failure, isCritical: json.critical, isFumble: json.fumble };
             })
             .catch(e => {
               //console.error(e);
@@ -487,8 +513,13 @@ export class DiceBot extends GameObject {
             let result = ac.result + cv.result;
             let isSecret = ac.isSecret || cv.isSecret;
             let isEmptyDice = ac.isEmptyDice && cv.isEmptyDice;
-            return { result: result, isSecret: isSecret, isEmptyDice: isEmptyDice };
-          }, { result: '', isSecret: false, isEmptyDice: true }) })
+            let isSuccess = ac.isSuccess || cv.isSuccess;
+            let isFailure = ac.isFailure && cv.isFailure;
+            let isCritical = ac.isCritical || cv.isCritical;
+            let isFumble = ac.isFumble || cv.isFumble;
+            return { result: result, isSecret: isSecret, isEmptyDice: isEmptyDice, 
+              isSuccess: isSuccess, isFailure: isFailure, isCritical: isCritical, isFumble: isFumble };
+          }, { result: '', isSecret: false, isEmptyDice: true, isSuccess: false, isFailure: true, isCritical: false, isFumble: false }) })
       );
     } else {
       return DiceBot.queue.add((async () => {
@@ -507,7 +538,8 @@ export class DiceBot extends GameObject {
             console.log('diceRoll!!!', result);
             console.log('isSecret!!!', result.secret);
             console.log('isEmptyDice!!!', !result.rands || result.rands.length == 0);
-            return { result: result.text, isSecret: result.secret, isEmptyDice: !result.rands || result.rands.length == 0 };
+            return { result: result.text, isSecret: result.secret, isEmptyDice: !result.rands || result.rands.length == 0,
+              isSuccess: result.success, isFailure: result.failure, isCritical: result.critical, isFumble: result.fumble };
           } catch (e) {
             console.error(e);
           }
@@ -520,20 +552,22 @@ export class DiceBot extends GameObject {
     gameType = gameType ? gameType : 'DiceBot';
     if (DiceBot.apiUrl) {
       const promisise = [
-        fetch(DiceBot.apiUrl + '/v1/systeminfo?system=DiceBot', { mode: 'cors' })
+        fetch(DiceBot.apiVersion == 1 ? DiceBot.apiUrl + '/v1/systeminfo?system=DiceBot' : `${DiceBot.apiUrl}/v2/game_system/DiceBot`, {mode: 'cors'})
           .then(response => { return response.json() })
       ];
       if (gameType && gameType != 'DiceBot') {
         promisise.push(
-          fetch(DiceBot.apiUrl + '/v1/systeminfo?system=' + encodeURIComponent(gameType), { mode: 'cors' })
+          fetch(DiceBot.apiVersion == 1 ? DiceBot.apiUrl + '/v1/systeminfo?system=' + encodeURIComponent(gameType) : `${DiceBot.apiUrl}/v2/game_system/${encodeURIComponent(gameType)}`, {mode: 'cors'})
             .then(response => { return response.json() })
         );
       }
       return Promise.all(promisise)
         .then(jsons => {
           return jsons.map(json => {
-            if (json.systeminfo && json.systeminfo.info) {
+            if (DiceBot.apiVersion == 1 && json.systeminfo && json.systeminfo.info) {
               return json.systeminfo.info.replace('部屋のシステム名', 'チャットパレットなどのシステム名');
+            } else if (json.help_message) {
+              return json.help_message.replace('部屋のシステム名', 'チャットパレットなどのシステム名');
             } else {
               return 'ダイスボット情報がありません。';
             }
