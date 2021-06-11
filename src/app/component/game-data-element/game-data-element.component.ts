@@ -28,6 +28,7 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
   @Input() isEdit: boolean = false;
   @Input() isTagLocked: boolean = false;
   @Input() isValueLocked: boolean = false;
+  @Input() isHideText: boolean = false;
 
   stringUtil = StringUtil;
 
@@ -56,6 +57,10 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
         || this.gameDataElement.name === 'altitude');
     }
     return false;
+  }
+
+  get identifier(): string {
+    return this.gameDataElement.identifier;
   }
 
   private updateTimer: NodeJS.Timer = null;

@@ -52,11 +52,18 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
   get isDisabled(): boolean {
     return this.gameTableMask.isDisabled;
   }
-  
+
+  get blendType(): number { return this.gameTableMask.blendType; }
+  set blendType(blendType: number) { this.gameTableMask.blendType = blendType; }
+
   get fontSize(): number { return this.gameTableMask.fontsize; }
   set fontSize(fontSize: number) { this.gameTableMask.fontsize = fontSize; }
   get text(): string { return this.gameTableMask.text; }
   set text(text: string) { this.gameTableMask.text = text; }
+  get color(): string { return this.gameTableMask.color; }
+  set color(color: string) { this.gameTableMask.color = color; }
+  get bgcolor(): string { return this.gameTableMask.bgcolor; }
+  set bgcolor(bgcolor: string) { this.gameTableMask.bgcolor = bgcolor; }
 
   get altitude(): number { return this.gameTableMask.altitude; }
   set altitude(altitude: number) { this.gameTableMask.altitude = altitude; }
@@ -65,7 +72,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
   set isAltitudeIndicate(isAltitudeIndicate: boolean) { this.gameTableMask.isAltitudeIndicate = isAltitudeIndicate; }
 
   get gameTableMaskAltitude(): number {
-    return +this.altitude.toFixed(1); 
+    return +this.altitude.toFixed(1);
   }
 
   gridSize: number = 50;
@@ -95,7 +102,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
       .on('UPDATE_GAME_OBJECT', -1000, event => {
         let object = ObjectStore.instance.get(event.data.identifier);
         if (!this.gameTableMask || !object) return;
-        if (this.gameTableMask === object || (object instanceof ObjectNode && this.gameTableMask.contains(object)|| (object instanceof PeerCursor && object.peerId === this.gameTableMask.GM))) {
+        if (this.gameTableMask === object || (object instanceof ObjectNode && this.gameTableMask.contains(object) || (object instanceof PeerCursor && object.peerId === this.gameTableMask.GM))) {
           this.changeDetector.markForCheck();
         }
       })
@@ -170,18 +177,28 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
       ), ContextMenuSeparator,
       (!this.isMine
         ? {
-          name: 'GM圖層-只供自己看見', action: () => {
+          name: '☑ GM圖層-只供自己看見', action: () => {
             this.GM = PeerCursor.myCursor.name;
             this.gameTableMask.setLocation('table')
             SoundEffect.play(PresetSound.lock);
           }
         } : {
-          name: '回到普通圖層', action: () => {
+          name: '☐ 回到普通圖層', action: () => {
             this.GM = '';
             this.gameTableMask.setLocation('table')
             SoundEffect.play(PresetSound.unlock);
           }
         }),
+      {
+        name: '画像と色',
+        subActions: [
+          { name: `${this.blendType == 0 ? '◉' : '○'} 画像のみ`, action: () => { this.blendType = 0; SoundEffect.play(PresetSound.cardDraw) } },
+          { name: `${this.blendType == 1 ? '◉' : '○'} 背景色と重ねる`, action: () => { this.blendType = 1; SoundEffect.play(PresetSound.cardDraw) } },
+          { name: `${this.blendType == 2 ? '◉' : '○'} 背景色と混ぜる`, action: () => { this.blendType = 2; SoundEffect.play(PresetSound.cardDraw) } },
+          ContextMenuSeparator,
+          { name: '色の初期化', action: () => { this.color = '#555555'; this.bgcolor = '#0a0a0a'; SoundEffect.play(PresetSound.cardDraw) } }
+        ]
+      },
       ContextMenuSeparator,
       (this.isAltitudeIndicate
         ? {
@@ -215,7 +232,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
                 window.open(url.trim(), '_blank', 'noopener');
               } else {
                 this.modalService.open(OpenUrlComponent, { url: url, title: this.gameTableMask.name, subTitle: urlElement.name });
-              } 
+              }
             },
             disabled: !StringUtil.validUrl(url),
             error: !StringUtil.validUrl(url) ? '網址無效' : null,
@@ -263,7 +280,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '地圖遮罩設置';
     if (gameObject.name.length) title += ' - ' + gameObject.name;
-    let option: PanelOption = { title: title, left: coordinate.x - 200, top: coordinate.y - 150, width: 400, height: 440 };
+    let option: PanelOption = { title: title, left: coordinate.x - 200, top: coordinate.y - 150, width: 400, height: 560 };
     let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
     component.tabletopObject = gameObject;
   }

@@ -6,6 +6,8 @@ import { PeerCursor } from './peer-cursor';
 export class GameTableMask extends TabletopObject {
   @SyncVar() isLock: boolean = false;
   @SyncVar() GM: string = '';
+  @SyncVar() blendType: number = 0;
+
   get name(): string { return this.getCommonValue('name', ''); }
   get width(): number { return this.getCommonValue('width', 1); }
   get height(): number { return this.getCommonValue('height', 1); }
@@ -41,6 +43,31 @@ export class GameTableMask extends TabletopObject {
   }
   set text(text: string) { this.setCommonValue('text', text); }
 
+  get color(): string { 
+    let element = this.getElement('color', this.commonDataElement);
+    /*
+    if (!element && this.commonDataElement) {
+      this.commonDataElement.appendChild(DataElement.create('color', "#555555", { type: 'colors', currentValue: '#0a0a0a' }, 'color_' + this.identifier));
+    }
+    */
+    return element ? element.value + '' : '#555555';
+  }
+  set color(color: string) { this.setCommonValue('color', color); }
+
+  get bgcolor(): string { 
+    let element = this.getElement('color', this.commonDataElement);
+    /*
+    if (!element && this.commonDataElement) {
+      this.commonDataElement.appendChild(DataElement.create('color', "#555555", { type: 'colors', currentValue: '#0a0a0a' }, 'color_' + this.identifier));
+    }
+    */
+    return element ? element.currentValue + '' : '#0a0a0a';
+  }
+  set bgcolor(bgcolor: string) { 
+    let element = this.getElement('color', this.commonDataElement);
+    if (element) element.currentValue = bgcolor;
+  }
+
   static create(name: string, width: number, height: number, opacity: number, identifier?: string): GameTableMask {
     let object: GameTableMask = null;
 
@@ -57,6 +84,7 @@ export class GameTableMask extends TabletopObject {
     object.commonDataElement.appendChild(DataElement.create('opacity', opacity, { type: 'numberResource', currentValue: opacity }, 'opacity_' + object.identifier));
     object.commonDataElement.appendChild(DataElement.create('fontsize', 18, { }, 'fontsize_' + object.identifier));
     object.commonDataElement.appendChild(DataElement.create('text', '', { type: 'note', currentValue: '' }, 'text_' + object.identifier));
+    object.commonDataElement.appendChild(DataElement.create('color', "#555555", { type: 'colors' , currentValue: '#0a0a0a' }, 'ccolor_' + object.identifier));
     object.commonDataElement.appendChild(DataElement.create('altitude', 0, { }, 'altitude_' + object.identifier));
     object.initialize();
 
