@@ -37,7 +37,7 @@ const isiOS = ua.indexOf('iphone') > -1 || ua.indexOf('ipad') > -1 || ua.indexOf
 })
 export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges, AfterViewChecked {
   @Input() compact: boolean = false;
-  
+
   sampleMessages: ChatMessageContext[] = [
     {
       from: "System",
@@ -68,6 +68,14 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
       tag: "",
       name: "連結:",
       text: "升級成1.13.3b版本\n2021/05/11 改良HTML及TXT匯出功能，增加COIN功能\n2021/05/13 更新TOKEN底部框的大小\n2021/05/27 更新CutIn功能，可以使用YouTube。陰影會根據高度改變。"
+    }
+    , {
+      from: "System",
+      timestamp: 1635253220000,
+      imageIdentifier: "",
+      tag: "",
+      name: "連結:",
+      text: "2021/08/17 更新成F版，更新組件版本。修正角色卡不能擲骰的BUG，感謝吐司兔的回報。"
     }
     , {
       from: "System",
