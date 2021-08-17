@@ -75,11 +75,15 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
     if (this.tabletopObject instanceof GameCharacter && this.tabletopObject.standList && this.tabletopObject.standList.overviewIndex > -1) {
       const standElement = this.tabletopObject.standList.standElements[this.tabletopObject.standList.overviewIndex];
       if (!standElement) return '';
-      const element = standElement.getFirstElementByName('imageIdentifier')
-      if (!element) return '';
-      if (this._imageFile.identifier != element.value) {
-        const file: ImageFile = ImageStorage.instance.get(<string>element.value);
-        this._imageFile = file ? file : ImageFile.Empty;
+      try {
+        const element = standElement.getFirstElementByName('imageIdentifier')
+        if (!element) return '';
+        if (this._imageFile.identifier != element.value) {
+          const file: ImageFile = ImageStorage.instance.get(<string>element.value);
+          this._imageFile = file ? file : ImageFile.Empty;
+        }
+      } catch(e) {
+        console.log(e);
       }
       return this._imageFile.url;
     }
@@ -95,8 +99,12 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
       if (this.tabletopObject.standList && this.tabletopObject.standList.overviewIndex > -1) {
         const standElement = this.tabletopObject.standList.standElements[this.tabletopObject.standList.overviewIndex];
         if (!standElement) return 0;
-        const element = standElement.getFirstElementByName('applyRoll');
-        return (element && element.value) ? this.tabletopObject.roll : 0;
+        try {
+          const element = standElement.getFirstElementByName('applyRoll');
+          return (element && element.value) ? this.tabletopObject.roll : 0;
+        } catch(e) {
+          console.log(e);
+        }
       }
       return this.tabletopObject.roll;
     }
@@ -108,8 +116,12 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
       if (this.tabletopObject.standList && this.tabletopObject.standList.overviewIndex > -1) {
         const standElement = this.tabletopObject.standList.standElements[this.tabletopObject.standList.overviewIndex];
         if (!standElement) return false;
-        const element = standElement.getFirstElementByName('applyImageEffect');
-        return (element && element.value) ? true : false;
+        try {
+          const element = standElement.getFirstElementByName('applyImageEffect');
+          return (element && element.value) ? true : false;
+        } catch(e) {
+          console.log(e);
+        }
       }
       return true;
     }
@@ -348,7 +360,7 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
     return card ? card.fontsize + 9 : 18;
   }
 
-  get cardText(): number {
+  get cardText(): string {
     let card = null;
     if (this.tabletopObject instanceof CardStack) {
       card = this.tabletopObject.topCard;
