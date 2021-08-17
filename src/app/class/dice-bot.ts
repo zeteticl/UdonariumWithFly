@@ -303,7 +303,11 @@ export class DiceBot extends GameObject {
             // 読み込まれていないダイスボットのロード、COMMAND_PATTERN使用
             if (!DiceBot.apiUrl) {
               if (!DiceBot.loadedDiceBots[gameType]) {
-                DiceBot.loadedDiceBots[gameType] = await DiceBot.loader.dynamicLoad(gameType);
+                try {
+                  DiceBot.loadedDiceBots[gameType] = await DiceBot.loader.dynamicLoad(gameType);
+                } catch (error) {
+                  console.error
+                }
               }
               if (!DiceBot.loadedDiceBots[gameType]) gameType = 'DiceBot';
               if (!DiceBot.loadedDiceBots[gameType].COMMAND_PATTERN.test(rollText)) return;
