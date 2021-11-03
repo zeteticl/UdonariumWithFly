@@ -29,6 +29,7 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
   @Input() isTagLocked: boolean = false;
   @Input() isValueLocked: boolean = false;
   @Input() isHideText: boolean = false;
+  @Input() isNoLogging: boolean = false;
 
   stringUtil = StringUtil;
 
@@ -47,6 +48,11 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
   get abilityScore(): number { return this.gameDataElement.calcAbilityScore(); }
   get chatTab(): ChatTab { return ObjectStore.instance.get<ChatTab>(this.chatTabidentifier); }
   chatTabidentifier: string = '';
+
+  get isTableTopObjectName() {
+    return this.isTagLocked && (this.gameDataElement.name === 'name');
+  }
+
   get isCommonValue(): boolean {
     if (this.gameDataElement) {
       return this.isTagLocked && (this.gameDataElement.name === 'size'
@@ -54,6 +60,7 @@ export class GameDataElementComponent implements OnInit, OnDestroy, AfterViewIni
         || this.gameDataElement.name === 'height'
         || this.gameDataElement.name === 'depth'
         || this.gameDataElement.name === 'fontsize'
+        || this.gameDataElement.name === 'opacity'
         || this.gameDataElement.name === 'altitude');
     }
     return false;

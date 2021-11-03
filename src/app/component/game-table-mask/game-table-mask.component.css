@@ -76,7 +76,7 @@
 
 .component:hover .border, .component:active .border,
 .is-grab .border {
-  border: 2px solid #cccccc;
+  border: 2px solid #cccccc !important;
 }
 
 .is-fit-full {

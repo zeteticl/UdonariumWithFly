@@ -41,7 +41,7 @@
       <button class="zoom-button" (click)="chanageImageView(true)" style="z-index: 10">
         <i class="material-icons">zoom_in</i>
       </button>
-      <div *ngIf="card.hasOwner && 0 < card.ownerName.length" class="component-owner position-right-bottom"
+      <div *ngIf="card.hasOwner && 0 < card.ownerName.length" class="component-owner position-right-bottom" style="z-index: 10"
         [ngClass]="{'with-button-marign': hasImage}">
         <div class="owner-tag" [style.background-color]="card.ownerColor">{{card.ownerName}}</div>
       </div>
@@ -49,7 +49,7 @@
     <div *ngIf="0 < card?.name?.length" class="component-title title-background"
       [ngClass]="{'with-button-marign': hasImage}">
       <ng-container *ngIf="card.isVisible == null || card.isVisible">{{card.name}}</ng-container>
-      <ng-container *ngIf="card.isVisible != null && !card.isVisible">カード</ng-container>
+      <ng-container *ngIf="card.isVisible != null && !card.isVisible">カード（裏面）</ng-container>
     </div>
     <div class="component-background">
       <div class="grid-container-root" *ngIf="hasDataElms && card.isVisible">
@@ -193,9 +193,7 @@
         <div class="tag" [attr.title]="dataElm.name">{{dataElm.name}}</div>
         <div class="value">
           <div class="hidden-spacer">{{dataElm.value}}</div>
-          <input class="input" style="width:4em"
-            type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1"
-            [(ngModel)]="dataElm.value" />
+          <input appLogging [logging.name]="name" [logging.dataElement]="dataElm" [logging.disable]="isNoLogging" class="input" style="width:4em" type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1" [(ngModel)]="dataElm.value" />
         </div>
       </ng-container>
       <ng-container *ngSwitchCase="'numberResource'">
@@ -203,13 +201,12 @@
         <div class="value">
           <div style="display: inline-block; width: min-content;">
             <div class="hidden-spacer" style="margin-right: 2em;">{{dataElm.currentValue}}</div>
-            <input class="input" style="width:4em" type="number" size="1" [(ngModel)]="dataElm.currentValue"
-              [disabled]="GuestMode()" />
+            <input appLogging [logging.name]="name" [logging.dataElement]="dataElm" [logging.disable]="isNoLogging" class="input" style="width:4em" type="number" size="1" [(ngModel)]="dataElm.currentValue" [disabled]="GuestMode()"/>
           </div>
           <div style="display: inline;"> / {{!+dataElm.value ? '???' : dataElm.value}}</div>
         </div>
         <div class="section" style="line-height: 1em;">
-          <input type="range" title="{{dataElm.currentValue}}"
+          <input appLogging [logging.name]="name" [logging.dataElement]="dataElm" [logging.disable]="isNoLogging" type="range" title="{{dataElm.currentValue}}"
             [style]="'font-size: 0.8em; width: 100%; --min: 0; --max:' + dataElm.value + '; --val:' + dataElm.currentValue +';' | safe: 'style'"
             min="0" max="{{!+dataElm.value ? 1000 : dataElm.value}}" [(ngModel)]="dataElm.currentValue"
             [disabled]="GuestMode()" />
@@ -220,20 +217,15 @@
             [style.textDecoration]="dataElm.value ? 'none' : 'line-through'">{{dataElm.name}}</span>
           {{ dataElm.currentValue.split(checkRegExp)[ dataElm.value ? 0 : 1 ] }}</div>
         <div class="value">
-          <input type="checkbox" style="width: 2em; margin-right:1em" [(ngModel)]="dataElm.value"
-            [disabled]="GuestMode()" checked="{{dataElm.value ? 'checked' : ''}}"
-            (change)="dataElm.value = (dataElm.value ? dataElm.name : '')">
+          <input appLogging [logging.name]="name" [logging.dataElement]="dataElm" [logging.disable]="isNoLogging" type="checkbox" style="width: 2em; margin-right:1em" [(ngModel)]="dataElm.value" [disabled]="GuestMode()" checked="{{dataElm.value ? 'checked' : ''}}" (change)="dataElm.value = (dataElm.value ? dataElm.name : '')">
         </div>
       </ng-container>
       <ng-container *ngSwitchCase="'abilityScore'">
         <div class="tag" [attr.title]="dataElm.name">{{dataElm.name}}</div>
         <div class="value">
           <div class="hidden-spacer">{{dataElm.value}}</div>
-          <input class="input" style="width:4em" [disabled]="GuestMode()"
-            type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1"
-            [(ngModel)]="dataElm.value" />
-          <span
-            style="font-size: smaller;">({{ (dataElm.calcAbilityScore() >= 0 ? '+' : '') + dataElm.calcAbilityScore() }})</span>
+            <input appLogging [logging.name]="name" [disabled]="GuestMode()" [logging.dataElement]="dataElm" [logging.disable]="isNoLogging" class="input" style="width:4em" type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1" [(ngModel)]="dataElm.value" />
+            <span *ngIf="dataElm.currentValue" style="font-size: smaller;">({{ (dataElm.calcAbilityScore() >= 0 ? '+' : '') + dataElm.calcAbilityScore() }})</span>
         </div>
       </ng-container>
       <ng-container *ngSwitchCase="'url'">

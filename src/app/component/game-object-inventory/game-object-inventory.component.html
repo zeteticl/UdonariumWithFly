@@ -1,11 +1,9 @@
-<div class="component" *ngIf="!GuestMode()">
+<div class="component" (input)="onInput()"  *ngIf="!GuestMode()">
   <ng-container *ngTemplateOutlet="inventoryTab"></ng-container>
   <ng-container *ngTemplateOutlet="inventoryViewSetting"></ng-container>
-  <div *ngIf="getGameObjects(selectTab).length < 1">{{getTabTitle(selectTab)}}庫存為空</div>
-  <div (contextmenu)="onContextMenu($event, gameObject)"
-    *ngFor="let gameObject of getGameObjects(selectTab); trackBy: trackByGameObject"
-    (click)="selectGameObject(gameObject)"
-    [ngClass]="{'box': true, 'selected': (selectedIdentifier === gameObject.identifier)}">
+  <div *ngIf="getGameObjects(selectTab).length < 1">{{getTabTitle(selectTab)}}儲存庫為空</div>
+  <div (contextmenu)="onContextMenu($event, gameObject)" *ngFor="let gameObject of getGameObjects(selectTab); trackBy: trackByGameObject"
+    (click)="selectGameObject(gameObject)" (dblclick)="focusGameObject(gameObject, $event)" [ngClass]="{'box': true, 'selected': (selectedIdentifier === gameObject.identifier)}">
     <ng-container *ngTemplateOutlet="gameObjectTags; context:{ gameObject: gameObject}"></ng-container>
   </div>
   <div *ngIf="selectTab === 'graveyard'" style="padding-top: 6px;">
@@ -26,23 +24,15 @@
 <ng-template #inventoryViewSetting>
   <ng-container *ngIf="isEdit">
     <div>
-      <div style="font-size: 12px;">排序</div>
-      <input [(ngModel)]="sortTag" placeholder="タグ名" />
-      <select [(ngModel)]="sortOrder">
+      <div style="font-size: 12px;"><b>排序: </b></div>
+      <input [(ngModel)]="sortTag" placeholder="標籤名" class="order-control" />
+      <select [(ngModel)]="sortOrder" class="order-control">
         <option value="ASC">升序</option>
         <option value="DESC">降序</option>
       </select>
     </div>
-    <div style="font-size: 12px; padding-top: 6px;">表示項目</div>
-    <input style="width: 100%; box-sizing: border-box;" [(ngModel)]="dataTag"
-      placeholder="空格分隔的標籤名稱，斜線換行，例如「 HP MP / Memo」" />
-    <div style="font-size: 12px; padding-top: 6px;">標準骰子機械人</div>
-    <select style="width: 12em;" (change)="onChangeGameType($event.target.value)" [(ngModel)]="gameType"
-      [ngModelOptions]="{standalone: true}">
-      <option value="">指定骰組</option>
-      <option *ngFor="let diceBotInfo of diceBotInfos" value="{{diceBotInfo.script}}">{{diceBotInfo.game}}</option>
-    </select>
-
+    <div style="font-size: 12px; padding-top: 6px;"><b>表示項目: </b></div>
+    <input style="width: 100%; box-sizing: border-box;" [(ngModel)]="dataTag" placeholder="空格分隔的標籤名稱，斜線換行，例如「 HP MP / Memo」" />
     <div style="padding-top: 6px;">
       <button class="tab-setting small-font" (click)="toggleEdit()"><i
           class="material-icons small-font">settings</i>完結</button>
@@ -51,17 +41,14 @@
   <ng-container *ngIf="!isEdit">
     <table style="font-size: 0.8em;">
       <tr>
-        <th style=" vertical-align:middle;">排序:</th>
-        <td style=" vertical-align:middle;">
+        <th style=" vertical-align:middle;" nowrap>排序:</th>
+        <td style=" vertical-align:middle;" nowrap>
           <ng-container *ngIf="0 < sortTag.length">{{sortTag}} ({{sortOrderName}})</ng-container>
           <ng-container *ngIf="sortTag.length < 1">-</ng-container>
         </td>
-        <td>
-          <ng-container *ngIf="selectTab === 'table'">
-            <label><input type="checkbox" [(ngModel)]="indicateAll" />顯示所有</label>
-          </ng-container>
-          <button class="tab-setting small-font" (click)="toggleEdit()"><i
-              class="material-icons small-font">settings</i>設定</button>
+        <td width="100%" nowrap>
+          <button class="tab-setting small-font" (click)="toggleEdit()"><i class="material-icons small-font">settings</i>設定</button>
+          <label *ngIf="selectTab === 'table'" style="float: right; font-size: smaller"><input type="checkbox" [(ngModel)]="indicateAll" /><b>顯示所有<sup class="self_only">*</sup></b></label>
         </td>
       </tr>
     </table>
@@ -143,9 +130,7 @@
           <div style="display: inline-block;">
             <div class="tag-value-box">
               <div class="hidden-spacer" style="font-weight: bold;">{{dataElm.value}}</div>
-              <input class="input tag-value"
-                type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1"
-                [(ngModel)]="dataElm.value" placeholder="" />
+              <input appLogging [logging.name]="name" [logging.dataElement]="dataElm" class="input tag-value" type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1" [(ngModel)]="dataElm.value" placeholder="" />
             </div>
           </div>
         </div>
@@ -153,14 +138,11 @@
       <ng-container *ngSwitchCase="'numberResource'">
         <div class="resource-tag">
           <div style="font-size: 0.8em; display: inline-block; margin-right: 0.5em;">{{dataElm.name}}</div>
-          <input class="input resource-value" type="number" size="1" [(ngModel)]="dataElm.currentValue"
-            placeholder="Value" />
+          <input appLogging [logging.name]="name" [logging.dataElement]="dataElm" class="input resource-value" type="number" size="1" [(ngModel)]="dataElm.currentValue" placeholder="Value" attr.data-init-value="{{ dataElm.currentValue }}" />
         </div>
         <div class="resource-tag">
-          <input type="range" title="{{dataElm.currentValue}}"
-            [style]="'font-size: 0.8em; min-width: 1em; width:' + (dataElm.name.length + 4.5) + 'em; --min: 0; --max: ' + dataElm.value + '; --val:' + dataElm.currentValue +';' | safe: 'style'"
-            min="0" max="{{!+dataElm.value ? 1000 : dataElm.value}}" [ngStyle]="{'background-color':'green'}"
-            [(ngModel)]="dataElm.currentValue" />
+          <input appLogging [logging.name]="name" [logging.dataElement]="dataElm" type="range" title="{{dataElm.currentValue}}" [style]="'font-size: 0.8em; min-width: 1em; width:' + (dataElm.name.length + 4.5) + 'em; --min: 0; --max: ' + dataElm.value + '; --val:' + dataElm.currentValue +';' | safe: 'style'"
+            min="0" max="{{!+dataElm.value ? 1000 : dataElm.value}}" [ngStyle]="{'background-color':'green'}" [(ngModel)]="dataElm.currentValue" attr.data-init-value="{{ dataElm.currentValue }}" />
         </div>
       </ng-container>
       <ng-container *ngSwitchCase="'checkProperty'">
@@ -168,8 +150,7 @@
         <div style="text-align: center;">
           <div style="display: inline-block;">
             <div class="tag-value-box">
-              <input type="checkbox" [(ngModel)]="dataElm.value" checked="{{dataElm.value ? 'checked' : ''}}"
-                (change)="dataElm.value = (dataElm.value ? dataElm.name : '')">
+              <input appLogging [logging.name]="name" [logging.dataElement]="dataElm" type="checkbox" [(ngModel)]="dataElm.value" checked="{{dataElm.value ? 'checked' : ''}}" (change)="dataElm.value = (dataElm.value ? dataElm.name : '')">
             </div>
           </div>
         </div>
@@ -180,37 +161,31 @@
           <div style="display: inline-block;">
             <div class="tag-value-box">
               <div class="hidden-spacer" style="font-weight: bold;">{{dataElm.value}}</div>
-              <input class="input tag-value"
-                type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1"
-                [(ngModel)]="dataElm.value" placeholder="" />
-              <span
-                style="font-size: smaller;">({{ (dataElm.calcAbilityScore() >= 0 ? '+' : '') + dataElm.calcAbilityScore() }})</span>
+              <input appLogging [logging.name]="name" [logging.dataElement]="dataElm" class="input tag-value" type="{{(dataElm.value && dataElm.value == +dataElm.value) ? 'number' : 'text'}}" size="1" [(ngModel)]="dataElm.value" placeholder="" />
+              <span *ngIf="dataElm.currentValue" style="font-size: smaller;">({{ (dataElm.calcAbilityScore() >= 0 ? '+' : '') + dataElm.calcAbilityScore() }})</span>
             </div>
           </div>
         </div>
       </ng-container>
       <ng-container *ngSwitchCase="'url'">
-        <div class="tag-name">{{dataElm.name}}</div>
-        <div style="text-align: center;">
-          <div style="display: inline-block;">
-            <div class="tag-value-box" style="white-space: nowrap">
-              <div class="hidden-spacer" style="font-weight: bold;">{{dataElm.value}}</div>
-              <input class="input tag-value" type="url" size="1" style="min-width: calc(6em - 2rem); width: calc(100% - 2rem); max-width: calc(100% - 2rem);" [(ngModel)]="dataElm.value" placeholder="https://example.com" />
-              <button class="link" style="width: 1.6rem" [attr.disabled]="!stringUtil.validUrl(dataElm.value) ? '' : null" (click)="stringUtil.validUrl(dataElm.value) ? openUrl(dataElm.value, name, dataElm.name) : false"><i class="material-icons" style="font-size: 1.0rem">{{ !stringUtil.validUrl(dataElm.value) ? 'link_off' : (stringUtil.sameOrigin(dataElm.value) ? 'link' : 'open_in_new') }}</i></button>
-            </div>
-          </div>
-        </div>
+        <div class="tag-name"><a [attr.title]="dataElm.value" [ngClass]="{'outer-link': !stringUtil.sameOrigin(dataElm.value)}" target="_blank" [attr.href]="(stringUtil.validUrl(dataElm.value) ? dataElm.value : '') | safe: 'url'" [attr.disabled]="!stringUtil.validUrl(dataElm.value) ? '' : null"
+          (click)="stringUtil.validUrl(dataElm.value) ? openUrl(dataElm.value, name, dataElm.name) : false">{{dataElm.name}}</a></div>
       </ng-container>
+      <ng-container *ngSwitchCase="'colors'"></ng-container>
+      <ng-container *ngSwitchCase="'color'"></ng-container>
+      <ng-container *ngSwitchCase="'note'"></ng-container>
       <ng-container *ngSwitchDefault>
-        <div class="tag-name">{{dataElm.name}}</div>
-        <div style="text-align: center;">
-          <div style="display: inline-block;">
-            <div class="tag-value-box">
-              <div class="hidden-spacer" style="font-weight: bold;">{{dataElm.value}}</div>
-              <input class="input tag-value" style="min-width: 4em" type="{{dataElm.name === 'size' || dataElm.name === 'altitude' ? 'number' : 'text'}}" min="{{dataElm.name === 'size' ? '0' : ''}}" size="1" [(ngModel)]="dataElm.value" />
+        <ng-container *ngIf="0 == dataElm.children.length">
+          <div class="tag-name">{{dataElm.name}}</div>
+          <div style="text-align: center;">
+            <div style="display: inline-block;">
+              <div class="tag-value-box">
+                <div class="hidden-spacer" style="font-weight: bold;">{{dataElm.value}}</div>
+                <input class="input tag-value" style="min-width: 4em" type="{{dataElm.name === 'size' || dataElm.name === 'altitude' ? 'number' : 'text'}}" min="{{dataElm.name === 'size' ? '0' : ''}}" size="1" [(ngModel)]="dataElm.value" />
+              </div>
             </div>
           </div>
-        </div>
+        </ng-container>
       </ng-container>
     </ng-container>
   </div>

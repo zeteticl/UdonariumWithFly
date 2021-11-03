@@ -29,6 +29,7 @@ import { ModalService } from 'service/modal.service';
 import { ImageService } from 'service/image.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
+import { ChatMessageService } from 'service/chat-message.service';
 
 @Component({
   selector: 'dice-symbol',
@@ -186,7 +187,8 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
     private changeDetector: ChangeDetectorRef,
     private pointerDeviceService: PointerDeviceService,
     private imageService: ImageService,
-    private modalService: ModalService
+    private modalService: ModalService,
+    private chatMessageService: ChatMessageService
   ) { }
 
   ngOnInit() {
@@ -213,6 +215,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.owner && !this.isLock) {
           this.owner = '';
           SoundEffect.play(PresetSound.unlock);
+          this.chatMessageService.sendOperationLog(`${this.diceSymbol.name} の${this.isCoin ? '表／裏' : '目'}を公開 → ${this.face}`);
         }
       })
       .on<object>('TABLE_VIEW_ROTATE', -1000, event => {
@@ -326,6 +329,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
         name: `${this.isCoin ? 'Coin' : '骰子'}公開`, action: () => {
           this.owner = '';
           SoundEffect.play(PresetSound.unlock);
+          this.chatMessageService.sendOperationLog(`${this.diceSymbol.name} の${this.isCoin ? '表／裏' : '目'}を公開 → ${this.face}`);
         }
       });
     }
@@ -333,6 +337,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
       actions.push({
         name: '只有自己看見', action: () => {
           this.owner = Network.peerContext.userId;
+          this.chatMessageService.sendOperationLog(`${this.diceSymbol.name} を自分だけ見た`);
           SoundEffect.play(PresetSound.lock);
         }
       });
@@ -366,7 +371,8 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
       this.faces.forEach(face => {
         subActions.push({
           name: `${this.face == face ? '◉' : '○'} ${face}　`, action: () => {
-            SoundEffect.play(PresetSound.dicePut);
+            if (this.owner === '') SoundEffect.play(PresetSound.dicePut);
+            if (this.owner === '' && this.face != face) this.chatMessageService.sendOperationLog(`${this.diceSymbol.name} の${this.isCoin ? '表／裏' : '目'}を変更 → ${face}`);
             this.face = face;
           }
         });
@@ -407,7 +413,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
             error: !StringUtil.validUrl(url) ? '網址無效' : null,
             isOuterLink: StringUtil.validUrl(url) && !StringUtil.sameOrigin(url)
           };
-        })
+        }),
       });
       actions.push(ContextMenuSeparator);
     }
@@ -440,12 +446,16 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
   diceRoll(): string {
     if (this.GuestMode()) return;
     EventSystem.call('ROLL_DICE_SYNBOL', { identifier: this.diceSymbol.identifier });
-    if (this.isCoin) {
-      SoundEffect.play(PresetSound.coinToss);
-    } else {
-      SoundEffect.play(PresetSound.diceRoll1);
+    if (this.owner === '') {
+      if (this.isCoin) {
+        SoundEffect.play(PresetSound.coinToss);
+      } else {
+        SoundEffect.play(PresetSound.diceRoll1);
+      }
     }
-    return this.diceSymbol.diceRoll();
+    let face = this.diceSymbol.diceRoll();
+    if (this.owner === '') this.chatMessageService.sendOperationLog(`${this.diceSymbol.name} を${this.isCoin ? 'トスした' : '振った'} → ${face}`);
+    return face;
   }
 
   showDetail(gameObject: DiceSymbol) {

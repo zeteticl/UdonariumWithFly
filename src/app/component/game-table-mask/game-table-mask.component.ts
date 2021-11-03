@@ -28,6 +28,8 @@ import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopActionService } from 'service/tabletop-action.service';
 import { PeerCursor } from '@udonarium/peer-cursor';
+import { ChatMessageService } from 'service/chat-message.service';
+
 @Component({
   selector: 'game-table-mask',
   templateUrl: './game-table-mask.component.html',
@@ -92,7 +94,8 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
     private changeDetector: ChangeDetectorRef,
     private pointerDeviceService: PointerDeviceService,
     private modalService: ModalService,
-    private coordinateService: CoordinateService
+    private coordinateService: CoordinateService,
+    //private chatMessageService: ChatMessageService
   ) { }
   GuestMode() {
     return Network.GuestMode();
@@ -165,6 +168,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
         ? {
           name: '☑ 固定', action: () => {
             this.isLock = false;
+            //this.chatMessageService.sendOperationLog(`${this.gameTableMask.name} の固定を解除した`);
             SoundEffect.play(PresetSound.unlock);
           }
         }
@@ -254,6 +258,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
       },
       {
         name: '刪除', action: () => {
+          //this.chatMessageService.sendOperationLog(`${this.gameTableMask.name} を削除した`);
           this.gameTableMask.destroy();
           SoundEffect.play(PresetSound.sweep);
         }

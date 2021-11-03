@@ -8,6 +8,7 @@ import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { TextNote } from '@udonarium/text-note';
 import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
 import { OpenUrlComponent } from 'component/open-url/open-url.component';
+import { InputHandler } from 'directive/input-handler';
 import { MovableOption } from 'directive/movable.directive';
 import { RotableOption } from 'directive/rotable.directive';
 import { ContextMenuSeparator, ContextMenuService } from 'service/context-menu.service';
@@ -90,6 +91,7 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor(
     private ngZone: NgZone,
     private contextMenuService: ContextMenuService,
+    private elementRef: ElementRef<HTMLElement>,
     private panelService: PanelService,
     private changeDetector: ChangeDetectorRef,
     private pointerDeviceService: PointerDeviceService,
@@ -97,7 +99,8 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
   ) { }
 
   viewRotateZ = 10;
-
+  private input: InputHandler = null;
+  
   ngOnInit() {
     EventSystem.register(this)
       .on('UPDATE_GAME_OBJECT', -1000, event => {
@@ -129,10 +132,24 @@ export class TextNoteComponent implements OnInit, OnDestroy, AfterViewInit {
     };
   }
 
-  ngAfterViewInit() { }
+  ngAfterViewInit() {
+    this.ngZone.runOutsideAngular(() => {
+      this.input = new InputHandler(this.elementRef.nativeElement);
+    });
+    this.input.onStart = this.onInputStart.bind(this);
+  }
 
   ngOnDestroy() {
     EventSystem.unregister(this);
+  }
+
+  onInputStart(e: any) {
+    this.input.cancel();
+
+    // TODO:もっと良い方法考える
+    if (this.textNote.isLocked) {
+      EventSystem.trigger('DRAG_LOCKED_OBJECT', {});
+    }
   }
 
   @HostListener('dragstart', ['$event'])

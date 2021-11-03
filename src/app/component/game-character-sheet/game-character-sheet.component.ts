@@ -19,6 +19,7 @@ import { GameCharacter } from '@udonarium/game-character';
 import { ChatPaletteComponent } from 'component/chat-palette/chat-palette.component';
 import { StandSettingComponent } from 'component/stand-setting/stand-setting.component';
 import { PointerDeviceService } from 'service/pointer-device.service';
+import { templateJitUrl } from '@angular/compiler';
 
 @Component({
   selector: 'game-character-sheet',
@@ -103,6 +104,36 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
       .on('DELETE_GAME_OBJECT', -1000, event => {
         if (this.tabletopObject && this.tabletopObject.identifier === event.data.identifier) {
           this.panelService.close();
+        }
+      })
+      .on('UPDATE_GAME_OBJECT', -1000, event => {
+        if (this.tabletopObject && this.tabletopObject.identifier === event.data.identifier) {
+          switch (this.tabletopObject.aliasName) {
+            case 'terrain':
+              this.panelService.title = `地形設定 - ${this.tableTopObjectName}`;
+              break;
+            case 'card':
+              const card = this.tabletopObject;
+              if (card instanceof Card) { 
+                this.panelService.title = `カード設定 - ${card.isFront ? this.tableTopObjectName : 'カード（裏面）'}`;
+              } 
+              break;
+            case 'card-stack':
+              this.panelService.title = `山札設定 - ${this.tableTopObjectName}`;
+              break;
+            case 'table-mask':
+              this.panelService.title = `マップマスク設定 - ${this.tableTopObjectName}`;
+              break;
+            case 'text-note':
+              this.panelService.title = `共有メモ設定 - ${this.tableTopObjectName}`;
+              break;
+            case 'dice-symbol':
+              this.panelService.title = `ダイスシンボル設定 - ${this.tableTopObjectName}`;
+              break;
+            case 'character':
+              this.panelService.title = `キャラクターシート - ${this.tableTopObjectName}`;
+              break;
+          }  
         }
       });
   }
@@ -425,5 +456,24 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
       card = this.tabletopObject;
     }
     return card ? card.text : '';
+  }
+
+  get isVisible(): boolean {
+    if (!this.tabletopObject) return false;
+    if (this.tabletopObject instanceof Card) return this.tabletopObject.isFront || this.tabletopObject.isHand;
+    if (this.tabletopObject instanceof DiceSymbol) return this.tabletopObject['isVisible'];
+    return true;
+  }
+
+  get isBlackPaint(): boolean {
+    if (this.tabletopObject instanceof GameCharacter) return this.tabletopObject.isBlackPaint;
+    if (this.tabletopObject instanceof DiceSymbol) return !this.isVisible;
+    return false;
+  }
+
+  get isNoLogging(): boolean {
+    if (this.tabletopObject instanceof Card) return !this.tabletopObject.isFront;
+    if (this.tabletopObject instanceof DiceSymbol) return this.tabletopObject.hasOwner;
+    return false;
   }
 }

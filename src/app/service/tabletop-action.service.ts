@@ -138,6 +138,36 @@ export class TabletopActionService {
     return card;
   }
 
+  private cardName(code: string) {
+    let ret = '';
+    const suit = code.slice(0, 1);
+    const number = parseInt(code.substr(1, 2));
+    const jqk = ['ジャック', 'クイーン', 'キング']
+    switch(suit) {
+      case 'c':
+        ret = 'クラブ'
+        break;
+      case 'd':
+        ret = 'ダイヤ'
+        break;
+      case 'h':
+        ret = 'ハート'
+        break;
+      case 's':
+        ret = 'スペード'
+        break;
+      case 'x':
+        ret = 'ジョーカー'
+        break;
+    }
+    if (suit == 'x') {
+      ret += `（${(number == 1) ? '赤' : '黒' }）`;
+    } else {
+      ret += `の${number == 1 ? 'エース' : number >= 11 ? jqk[number - 11] : number }`
+    }
+    return ret;
+  }
+
   createTrump(position: PointerCoordinate): CardStack {
     if (this.GuestMode()) return;
     let cardStack = CardStack.create('啤牌');
@@ -171,7 +201,8 @@ export class TabletopActionService {
         const image = ImageStorage.instance.add(url);
         ImageTag.create(image.identifier).tag = '*default 卡牌';
       }
-      let card = Card.create('卡牌', url, back);
+      let card = Card.create(this.cardName(trump), url, back);
+      //let card = Card.create('カード', url, back);
       cardStack.putOnBottom(card);
     }
     return cardStack;

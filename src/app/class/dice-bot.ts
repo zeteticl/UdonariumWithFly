@@ -97,9 +97,10 @@ export class DiceBot extends GameObject {
     ['크툴루', '크툴루의 부름 6판', '크툴루의 부름 6판'],
     ['克蘇魯神話', '克蘇魯的呼喚 第六版', '克蘇魯的呼喚 第六版'],
     ['克蘇魯神話第7版', '克蘇魯的呼喚 第7版', '克蘇魯的呼喚 第七版'],
-    ['トーグ', 'トオク', 'TORG'],
+    ['トーグ', 'トオク', 'トーグ（TORG）'],
     ['ワープス', 'ワアフス', 'WARPS'],
-    ['トーグ1.5版', 'トオク1.5ハン', 'TORG 1.5版'],
+    ['トーグ1.5版', 'トオク1.5ハン', 'トーグ（TORG） 1.5版'],
+    ['トーグ エタニティ', 'トオクエタニテイ', 'トーグ（TORG） エタニティ'],
     ['心衝想機TRPGアルトレイズ', 'シンシヨウソウキTRPGアルトレイス', '心衝想機TRPG アルトレイズ'],
     ['犯罪活劇RPGバッドライフ', 'ハンサイカツケキRPGハツトライフ', '犯罪活劇RPGバッドライフ'],
     ['晃天のイルージオ', 'コウテンノイルウシオ', '晃天のイルージオ'],
@@ -236,14 +237,14 @@ export class DiceBot extends GameObject {
     EventSystem.register(this)
       .on('SEND_MESSAGE', async event => {
         const chatMessage = ObjectStore.instance.get<ChatMessage>(event.data.messageIdentifier);
-        if (!chatMessage || !chatMessage.isSendFromSelf || chatMessage.isSystem) return;
+        if (!chatMessage || !chatMessage.isSendFromSelf || chatMessage.isSystem || chatMessage.isOperationLog) return;
 
         const text: string = StringUtil.toHalfWidth(chatMessage.text).replace("\u200b", ''); //ゼロ幅スペース削除
         let gameType: string = chatMessage.tag.replace('noface', '').trim();
         gameType = gameType ? gameType : 'DiceBot';
 
         try {
-          const regArray = /^((srepeat|repeat|srep|rep|sx|x)?(\d+)?\s+)?([^\n]*)?/ig.exec(text);
+          const regArray = /^((srepeat|repeat|srep|rep|sx|x)?(\d+)?[ 　]+)?([^\n]*)?/ig.exec(text);
           const repCommand = regArray[2];
           const isRepSecret = repCommand && repCommand.toUpperCase().indexOf('S') === 0;
           const repeat: number = (regArray[3] != null) ? Number(regArray[3]) : 1;
@@ -259,12 +260,16 @@ export class DiceBot extends GameObject {
           //ダイスボット表
           let isDiceRollTableMatch = false;
           for (const diceRollTable of DiceRollTableList.instance.diceRollTables) {
+            if (diceRollTable.command == null) continue;
             let isSecret = false;
-            if (diceRollTable.command != null && rollText.trim().toUpperCase() === 'S' + diceRollTable.command.trim().toUpperCase()) {
+            const commandStr = StringUtil.toHalfWidth(diceRollTable.command.trim()).toUpperCase();
+            const rollTextStr = StringUtil.toHalfWidth(rollText.trim()).toUpperCase();
+            console.log(rollTextStr)
+            if (rollTextStr.startsWith('S' + commandStr) && (!rollTextStr[('S' + commandStr).length] || /[ 　]/.test(rollTextStr.charAt(('S' + commandStr).length)))) {
               isDiceRollTableMatch = true;
               isSecret = true;
               finalResult.isFailure = false;
-            } else if (diceRollTable.command != null && rollText.trim().toUpperCase() === diceRollTable.command.trim().toUpperCase()) {
+            } else if (rollTextStr.startsWith(commandStr) && (!rollTextStr[commandStr.length] || /[ 　]/.test(rollTextStr.charAt(commandStr.length)))) {
               isDiceRollTableMatch = true;
               finalResult.isFailure = false;
             }
@@ -316,22 +321,28 @@ export class DiceBot extends GameObject {
             let isChoice = false;
             //ToDO バージョン調べる
             let choiceMatch;
-            if ((rollText.trim().toUpperCase().indexOf('SCHOICE ') === 0 || rollText.trim().toUpperCase().indexOf('CHOICE ') === 0 
-                  || rollText.trim().toUpperCase().indexOf('SCHOICE　') === 0 || rollText.trim().toUpperCase().indexOf('CHOICE　') === 0)
-                && (!DiceRollTableList.instance.diceRollTables.map(diceRollTable => diceRollTable.command).some(command => command != null && command.trim().toUpperCase() === 'CHOICE'))) {
-              rollText = rollText.trim().replace(/[　\s]+/g, ' ');
-              isChoice = true;
-            } else if ((choiceMatch = /^(S?CHOICE\[[^\[\]]+\])/ig.exec(rollText.trim())) || (choiceMatch = /^(S?CHOICE\([^\(\)]+\))/ig.exec(rollText.trim()))) {
-              rollText = choiceMatch[1];
-              isChoice = true;
-            } else {
+            if (choiceMatch = /^(S?CHOICE\d*)[ 　]+([^ 　]*)/ig.exec(rollText.trim())) {
+              //if (choiceMatch[2] && choiceMatch[2] !== '' && !DiceRollTableList.instance.diceRollTables.map(diceRollTable => diceRollTable.command).some(command => command != null && command.trim().toUpperCase() === choiceMatch[1].toUpperCase())) {
+                rollText = rollText.trim().replace(/[　\s]+/g, ' ');
+                isChoice = true;
+              //}
+            }
+            if (!isChoice) {
+              if ((choiceMatch = /^(S?CHOICE\d*\[[^\[\]]+\])/ig.exec(rollText.trim())) || (choiceMatch = /^(S?CHOICE\d*\([^\(\)]+\))/ig.exec(rollText.trim()))) {
+                if (!DiceRollTableList.instance.diceRollTables.map(diceRollTable => diceRollTable.command).some(command => command != null && command.trim().toUpperCase() === choiceMatch[1].toUpperCase())) {
+                  rollText = choiceMatch[1];
+                  isChoice = true;
+                }
+              }
+            } 
+            if (!isChoice) {
               rollText = rollText.trim().split(/\s+/)[0]
             }
 
             if (DiceBot.apiUrl) {
               // すべてBCDiceに投げずに回数が1回未満かchoice[]が含まれるか英数記号以外は門前払い
               //ToDO APIのバージョン調べて新しければCOMMAND_PATTERN使う？（いつ読み込もう？）
-              if (!isChoice && !(/choice\[.*\]/i.test(rollText) || /^[a-zA-Z0-9!-/:-@¥[-`{-~\}]+$/.test(rollText))) return;
+              if (!isChoice && !(/choice\d*\[.*\]/i.test(rollText) || /^[a-zA-Z0-9!-/:-@¥[-`{-~\}]+$/.test(rollText))) return;
               //BCDice-API の繰り返し機能を利用する、結果の形式が縦に長いのと、更新していないBCDice-APIサーバーもありそうなのでまだ実装しない
               //finalResult = await DiceBot.diceRollAsync(repCommand ? (repCommand + repeat + ' ' + rollText) : rollText, gameType, repCommand ? 1 : repeat);
               finalResult = await DiceBot.diceRollAsync(rollText, gameType, repeat);

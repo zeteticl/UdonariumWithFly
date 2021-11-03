@@ -26,8 +26,15 @@
           </div>
         </div>
         <hr/>
-        <div>
-          <button (click)="saveLog()" style="font-size: smaller" [disabled]="isDiable">匯出日誌</button>
+        <div style="width: 100%; display: flex">
+          <div>
+            <label style="font-weight: bolder; font-size: smaller; padding-top: 3px; padding-right: 1em">
+              <input type="checkbox" [(ngModel)]="isWriteOerationLog" checked="{{isWriteOerationLog ? 'checked' : ''}}" />包括操作紀錄<sup class="self-only">*</sup>
+            </label>
+          </div>
+          <div style="flex-grow: 1; text-align: right">
+            <button (click)="saveLog()" style="font-size: smaller" [disabled]="isDiable">匯出日誌</button>
+          </div>
         </div>
       </ng-container>
     </div>

@@ -46,7 +46,7 @@
 <div>
   <ng-container *ngIf="!networkService.peerContext.isRoom">
     <input [(ngModel)]="targetUserId" placeholder="您想進行連接的人的ID" name="targetUserId" />
-    <button (click)="connectPeer()" [disabled]="!networkService.isOpen">私人連接</button><br>
+    <button (click)="connectPeer()" [disabled]="!networkService.isOpen || targetUserId == null || targetUserId == ''">私人連接</button><br>
   </ng-container>
   <button *ngIf="networkService.peerIds.length <= 1" (click)="showLobby()" [disabled]="!networkService.isOpen">大廳（房間列表）</button>
 </div>

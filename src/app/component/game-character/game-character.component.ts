@@ -160,16 +160,16 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     let text = StringUtil.cr(dialog.text);
     const isEmote = StringUtil.isEmote(text);
     if (!isEmote) text = text.replace(/[。、]{3}/g, '…').replace(/[。、]{2}/g, '‥').replace(/(。|[\r\n]{2,})/g, "$1                            ").trimEnd(); //改行や。のあと時間を置くためのダーティハック
-    let speechDelay = 1000 / text.length > 36 ? 1000 / text.length : 36;
+    let speechDelay = 1000 / Array.from(text).length > 36 ? 1000 / Array.from(text).length : 36;
     if (speechDelay > 200) speechDelay = 200;
-    if (!isEmote) this.gameCharacter.text = text.slice(0, 1); // Emoteでない場合は最初の一文字は出しておく
+    if (!isEmote) this.gameCharacter.text = Array.from(text)[0]; // Emoteでない場合は最初の一文字は出しておく
     this.dialogTimeOutId = setTimeout(() => {
       this._dialog = null;
       this.gameCharacter.text = '';
       this.gameCharacter.isEmote = false;
       this.changeDetector.markForCheck();
-      //}, text.length * speechDelay + 6000 > 12000 ? text.length * speechDelay + 6000 : 12000);
-    }, text.length * speechDelay + 6000);
+    //}, text.length * speechDelay + 6000 > 12000 ? text.length * speechDelay + 6000 : 12000);
+    }, Array.from(text).length * speechDelay + 6000);
     this._dialog = dialog;
     this.gameCharacter.isEmote = isEmote;
     let count = 1;
@@ -179,9 +179,9 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
     } else {
       this.chatIntervalId = setInterval(() => {
         count++;
-        this.gameCharacter.text = text.slice(0, count);
+        this.gameCharacter.text = Array.from(text).slice(0, count).join('');
         this.changeDetector.markForCheck();
-        if (count >= text.length) {
+        if (count >= Array.from(text).length) {
           clearInterval(this.chatIntervalId);
         }
       }, speechDelay);
@@ -197,14 +197,15 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
   get dialogChatBubbleMinWidth(): number {
     const max = (this.gameCharacter.size + 1.8) * this.gridSize;
     const existIcon = this.isUseFaceIcon && this.dialogFaceIcon && this.dialogFaceIcon.url;
-    const dynamic = this.dialogText.length * 11 + 52 + (existIcon ? 32 : 0);
-    return max < dynamic ? max : dynamic;
+    const dynamic = Array.from(this.dialogText).length * 11 + 52 + (existIcon ? 32 : 0);
+    return max < dynamic ? max : dynamic; 
   }
 
   get dialog() {
     return this._dialog;
   }
 
+  selected = false;
   private _dialog = null;
   private dialogTimeOutId = null;
   private chatIntervalId = null;
@@ -309,6 +310,17 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
         this.ngZone.run(() => {
           this.viewRotateX = event.data['x'];
           this.viewRotateZ = event.data['z'];
+          this.changeDetector.markForCheck();
+        });
+      })
+      .on<object>('SELECT_TABLETOP_OBJECT', -1000, event => {
+        // とりあえず
+        this.ngZone.run(() => {
+          if (event.data['highlighting'] && event.data['identifier'] === this.gameCharacter.identifier) {
+            this.selected = true;
+          } else {
+            this.selected = false;
+          }
           this.changeDetector.markForCheck();
         });
       })
@@ -593,6 +605,37 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
           cloneObject.update();
           SoundEffect.play(PresetSound.piecePut);
         }
+      },
+      {
+        name: 'コピーを作る（自動採番）', action: () => {
+          const cloneObject = this.gameCharacter.clone();
+          const tmp = cloneObject.name.split('_');
+          let baseName;
+          if (tmp.length > 1 && /\d+/.test(tmp[tmp.length - 1])) {
+            baseName = tmp.slice(0, tmp.length - 1).join('_');
+          } else {
+            baseName = tmp.join('_');
+          }
+          let maxIndex = 0;
+          for (const character of ObjectStore.instance.getObjects(GameCharacter)) {
+            if(!character.name.startsWith(baseName)) continue;
+            let index = character.name.match(/_(\d+)$/) ? +RegExp.$1 : 0;
+            if (index > maxIndex) maxIndex = index;
+          }
+          cloneObject.name = baseName + '_' + (maxIndex + 1);
+          cloneObject.location.x += this.gridSize;
+          cloneObject.location.y += this.gridSize;
+          cloneObject.update();
+          SoundEffect.play(PresetSound.piecePut);
+        }
+      },
+      ContextMenuSeparator,
+      {
+        name: '削除する（墓場へ移動）', action: () => {
+          EventSystem.call('FAREWELL_STAND_IMAGE', { characterIdentifier: this.gameCharacter.identifier });
+          this.gameCharacter.setLocation('graveyard');
+          SoundEffect.play(PresetSound.sweep);
+        }
       }
     ], this.name);
   }
@@ -607,6 +650,7 @@ export class GameCharacterComponent implements OnInit, OnDestroy, AfterViewInit 
       EventSystem.call('FAREWELL_CHAT_BALLOON', { characterIdentifier: this.gameCharacter.identifier });
     }
     SoundEffect.play(PresetSound.piecePut);
+    this.selected = false;
   }
 
   onImageLoad() {

@@ -66,6 +66,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   isSaveing: boolean = false;
   progresPercent: number = 0;
 
+  isHorizontal = false;
+
   constructor(
     private modalService: ModalService,
     private panelService: PanelService,
@@ -108,7 +110,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     soundEffect.initialize();
 
     ChatTabList.instance.addChatTab('主要標籤', 'MainTab');
-    ChatTabList.instance.addChatTab('閒聊標籤', 'SubTab');
+    let subTab = ChatTabList.instance.addChatTab('閒聊標籤', 'SubTab');
+    subTab.recieveOperationLogLevel = 1;
 
     CutInList.instance.initialize();
 
@@ -497,13 +500,17 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       { name: `${ isShowNameTag ? '☑' : '☐' }顯示名稱標籤`, 
         action: () => {
           StandImageComponent.isShowNameTag = !isShowNameTag;
-        }
+        },
+        level: 1,
+        disabled: !StandImageComponent.isShowStand
       },
       {
         name: `${isCanBeGone ? '☑' : '☐'}透明化、自動退去`,
         action: () => {
           StandImageComponent.isCanBeGone = !isCanBeGone;
-        }
+        },
+        level: 1,
+        disabled: !StandImageComponent.isShowStand
       },
       ContextMenuSeparator,
       { name: '消除所有立繪', action: () => EventSystem.trigger('DESTORY_STAND_IMAGE_ALL', null) }
@@ -518,6 +525,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     if (confirm('公開所有未設置為「不要一次性公開」的骰子。\n您確定嗎？')) {
       EventSystem.trigger('DICE_ALL_OPEN', null);
     }
+  }
+
+  rotateChange(isHorizontal) {
+    this.isHorizontal = isHorizontal;
   }
 }
 

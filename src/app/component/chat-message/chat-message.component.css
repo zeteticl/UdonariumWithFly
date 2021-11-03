@@ -5,6 +5,7 @@
 .container {
   width: 100%;
   overflow-x: hidden;
+  box-sizing: border-box;
 }
 .message {
   display: flex;
@@ -34,6 +35,11 @@
 }
 .is-others.direct-message {
   border-right: 4px solid #555;
+}
+
+.operation-log {
+  color: #666;
+  background-color: #CCCCCCCC;
 }
 
 .message .image {
@@ -123,7 +129,9 @@
 }
 
 .dicebot-message .msg-name,
-.dicebot-message .msg-text {
+.dicebot-message .msg-text,
+.operation-log .msg-name,
+.operation-log .msg-text {
   font-style: oblique;
 }
 
@@ -227,10 +235,6 @@ textarea {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
-}
-
-.container.compact .msg-from {
-  display: none;
 }
 
 .container.compact .title {

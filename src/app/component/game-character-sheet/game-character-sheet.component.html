@@ -3,7 +3,7 @@
   <ng-container *ngSwitchCase="'numberResource'">
   </ng-container>
   <ng-container *ngSwitchCase="'card'">
-    <button (click)="openModal('front')" [disabled]="!tabletopObject.isFront && !tabletopObject.isHand">更改表面圖片</button>
+    <button (click)="openModal('front')" [disabled]="!isVisible">更改表面圖片</button>
     <button (click)="openModal('back')">更改裡側圖片</button>
   </ng-container>
   <ng-container *ngSwitchCase="'card-stack'">
@@ -13,7 +13,7 @@
     <button (click)="openModal('wall')">改變牆的圖片</button>
   </ng-container>
   <ng-container *ngSwitchCase="'dice-symbol'">
-    <button (click)="openModal(tabletopObject['face'])" [disabled]="!tabletopObject['isVisible']">改變骰子的圖片</button>
+    <button (click)="openModal(tabletopObject['face'])" [disabled]="!isVisible">改變骰子的圖片</button>
   </ng-container>
   <ng-container *ngSwitchCase="'character'">
     <button (click)="openModalReplaceImage(tabletopObject.imageFiles.length > 1 || 0 < tabletopObject.imageFile?.url.length)">圖片{{ (tabletopObject.imageFiles?.length > 1) ? '替換/刪除' : '設定' }}</button>
@@ -68,7 +68,7 @@
     <span style="display: inline-block;" class="inverser" [ngClass]="{inverse: tabletopObject.isInverse}">
       <span class="aura" [ngClass]="{black: tabletopObject.aura == 0, blue: tabletopObject.aura == 1, green: tabletopObject.aura == 2, cyan: tabletopObject.aura == 3, red: tabletopObject.aura == 4, magenta: tabletopObject.aura == 5, yellow: tabletopObject.aura == 6, white: tabletopObject.aura == 7}">
         <img #mainImage class="main-image" [src]="tabletopObject.imageFile.url | safe: 'resourceUrl'" [alt]="tabletopObject.imageFile.name" 
-          [ngClass]="{'black-paint': tabletopObject.isBlackPaint, 'hollow': tabletopObject.isHollow, small: tabletopObject.aliasName == ''}"
+          [ngClass]="{'black-paint': isBlackPaint, 'hollow': tabletopObject.isHollow, small: tabletopObject.aliasName == ''}"
           (dblclick)="openMainImageModal()" 
           (load)="onMainImageLoad()"
           [@switchImage]="tabletopObject.currntImageIndex" />
@@ -80,7 +80,7 @@
     <div class="flex-item">
       <div class="table">
         <div class="table-row" game-data-element [gameDataElement]="tabletopObject.commonDataElement" [tableTopObjectName]="tableTopObjectName" [isTagLocked]="true"
-          [isHideText]="tabletopObject.aliasName === 'card' && !tabletopObject.isFront && !tabletopObject.isHand"></div>
+          [isHideText]="tabletopObject.aliasName === 'card' && !tabletopObject.isFront && !tabletopObject.isHand" [isNoLogging]="isNoLogging"></div>
       </div>
       <div *ngIf="tabletopObject.aliasName === 'character'" style="text-align: right; margin-top: 3px;">
         <button style="font-size: 11px; color: #444;" (click)="showChatPalette()">顯示聊天面板</button>
@@ -92,7 +92,7 @@
   <ng-container *ngIf="tabletopObject.detailDataElement">
     <div class="flex-item" *ngFor="let childElement of tabletopObject.detailDataElement.children">
       <div class="table">
-        <div class="table-row" game-data-element [gameDataElement]="childElement" [tableTopObjectName]="tableTopObjectName" [isEdit]="isEdit"></div>
+        <div class="table-row" game-data-element [gameDataElement]="childElement" [tableTopObjectName]="tableTopObjectName" [isEdit]="isEdit" [isNoLogging]="isNoLogging"></div>
       </div>
     </div>
   </ng-container>

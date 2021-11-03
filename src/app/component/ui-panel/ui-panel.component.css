@@ -58,3 +58,36 @@
 .pointer-events-none {
   pointer-events: none;
 }
+
+/* chrome safari opera */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  .scrollable-panel.overlay  {
+    overflow: overlay;
+  }
+}
+
+.scrollable-panel.horizontal {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.rotateble {
+  display: inline;
+  top: -3px;
+  position: relative;
+}
+
+.is-minimized {
+  height: 27px !important;
+}
+
+.is-full-screen {
+  left: 0px !important;
+  top: 0px !important;
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
+.draggable-panel.is-full-screen {
+  border: 0px none;
+}

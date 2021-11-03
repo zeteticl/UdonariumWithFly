@@ -36,6 +36,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   isEdit: boolean = false;
 
   stringUtil = StringUtil;
+  private sortStopTimerId = null;
 
   get sortTag(): string { return this.inventoryService.sortTag; }
   set sortTag(sortTag: string) { this.inventoryService.sortTag = sortTag; }
@@ -97,6 +98,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
 
   ngOnDestroy() {
     EventSystem.unregister(this);
+    if (this.sortStopTimerId) clearTimeout(this.sortStopTimerId);
   }
 
   getTabTitle(inventoryType: string) {
@@ -147,6 +149,18 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
     let position = this.pointerDeviceService.pointers[0];
 
     let actions: ContextMenuAction[] = [];
+    if (gameObject.location.name === 'table') {
+      actions.push({
+        name: 'テーブルから探す',
+        action: () => {
+          if (gameObject.location.name === 'table') EventSystem.trigger('FOCUS_TABLETOP_OBJECT', { x: gameObject.location.x, y: gameObject.location.y, z: gameObject.posZ + (gameObject.altitude > 0 ? gameObject.altitude * 50 : 0) });
+        },
+        default: gameObject.location.name === 'table',
+        disabled: gameObject.location.name !== 'table',
+        selfOnly: true
+      });
+      actions.push(ContextMenuSeparator);
+    }
     if (gameObject.imageFiles.length > 1) {
       actions.push({
         name: '圖片切換',
@@ -379,10 +393,41 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
         SoundEffect.play(PresetSound.piecePut);
       }
     });
+    actions.push({
+      name: 'コピーを作る（自動採番）', action: () => {
+        const cloneObject = gameObject.clone();
+        const tmp = cloneObject.name.split('_');
+        let baseName;
+        if (tmp.length > 1 && /\d+/.test(tmp[tmp.length - 1])) {
+          baseName = tmp.slice(0, tmp.length - 1).join('_');
+        } else {
+          baseName = tmp.join('_');
+        }
+        let maxIndex = 0;
+        for (const character of ObjectStore.instance.getObjects(GameCharacter)) {
+          if(!character.name.startsWith(baseName)) continue;
+          let index = character.name.match(/_(\d+)$/) ? +RegExp.$1 : 0;
+          if (index > maxIndex) maxIndex = index;
+        }
+        cloneObject.name = baseName + '_' + (maxIndex + 1);
+        cloneObject.update();
+        SoundEffect.play(PresetSound.piecePut);
+      }
+    });
     if (gameObject.location.name === 'graveyard') {
+      actions.push(ContextMenuSeparator);
       actions.push({
-        name: '刪除', action: () => {
+        name: '刪除（完全刪除）', action: () => {
           this.deleteGameObject(gameObject);
+          SoundEffect.play(PresetSound.sweep);
+        }
+      });
+    } else {
+      actions.push(ContextMenuSeparator);
+      actions.push({
+        name: '刪除（移動到墓地）', action: () => {
+          EventSystem.call('FAREWELL_STAND_IMAGE', { characterIdentifier: gameObject.identifier });
+          gameObject.setLocation('graveyard');
           SoundEffect.play(PresetSound.sweep);
         }
       });
@@ -439,8 +484,14 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
 
   selectGameObject(gameObject: GameObject) {
     if (this.GuestMode()) return;
-    let aliasName: string = gameObject.aliasName;
-    EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
+    EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName, highlighting: true });
+  }
+
+  focusGameObject(gameObject: GameCharacter, e: Event, ) {
+    if (!(e.target instanceof HTMLElement)) return;
+    if (new Set(['input', 'button']).has(e.target.tagName.toLowerCase())) return;
+    if (gameObject.location.name !== 'table') return;
+    EventSystem.trigger('FOCUS_TABLETOP_OBJECT', { x: gameObject.location.x, y: gameObject.location.y, z: gameObject.posZ + (gameObject.altitude > 0 ? gameObject.altitude * 50 : 0) });
   }
 
   private deleteGameObject(gameObject: GameObject) {
@@ -466,6 +517,15 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
       window.open(url.trim(), '_blank', 'noopener');
     } else {
       this.modalService.open(OpenUrlComponent, { url: url, title: title, subTitle: subTitle  });
-    } 
+    }
+    return false;
+  }
+
+  onInput() {
+    this.inventoryService.sortStop = true;
+    if (this.sortStopTimerId) clearTimeout(this.sortStopTimerId);
+    this.sortStopTimerId = setTimeout(() => {
+      this.inventoryService.sortStop = false;
+    }, 666);
   }
 }

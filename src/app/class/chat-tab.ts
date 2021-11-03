@@ -9,6 +9,7 @@ import { StringUtil } from './core/system/util/string-util';
 export class ChatTab extends ObjectNode implements InnerXml {
   @SyncVar() name: string = 'タブ';
   @SyncVar() isUseStandImage: boolean = true;
+  @SyncVar() recieveOperationLogLevel: number = 0;
   get chatMessages(): ChatMessage[] { return <ChatMessage[]>this.children; }
 
   private _unreadLength: number = 0;
@@ -66,9 +67,10 @@ export class ChatTab extends ObjectNode implements InnerXml {
     return super.parseInnerXml(element);
   };
 
-  log(logFormat, dateFormat): string {
+  log(logFormat, dateFormat,  isWriteOerationLog=true): string {
     const logBody = this.chatMessages
-    .filter(chatMessage => chatMessage.isDisplayable)
+    .filter(chatMessage => chatMessage.isDisplayable && (isWriteOerationLog || !chatMessage.isOperationLog))
+    .sort((a, b) => a.index - b.index)
     .map(chatMessage => chatMessage.logFragment(logFormat, null, dateFormat))
     .join("\n");
 

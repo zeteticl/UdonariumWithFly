@@ -17,6 +17,8 @@ import * as Beautify from 'vkbeautify';
 import { ImageTagList } from '@udonarium/image-tag-list';
 import { ChatTab } from '@udonarium/chat-tab';
 import { CutInList } from '@udonarium/cut-in-list';
+import { ChatMessageService } from './chat-message.service';
+import { StringUtil } from '@udonarium/core/system/util/string-util';
 
 type UpdateCallback = (percent: number) => void;
 
@@ -27,10 +29,12 @@ export class SaveDataService {
   private static queue: PromiseQueue = new PromiseQueue('SaveDataServiceQueue');
 
   constructor(
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private chatMessageService: ChatMessageService
   ) { }
 
   saveRoomAsync(fileName: string = 'HKTRPG', updateCallback?: UpdateCallback): Promise<void> {
+    this.chatMessageService.sendOperationLog(`HKTRPG ${fileName}.zip 儲存`);
     return SaveDataService.queue.add((resolve, reject) => resolve(this._saveRoomAsync(fileName, updateCallback)));
   }
 
@@ -65,6 +69,7 @@ export class SaveDataService {
   }
 
   saveGameObjectAsync(gameObject: GameObject, fileName: string = 'fly_xml_data', updateCallback?: UpdateCallback): Promise<void> {
+    this.chatMessageService.sendOperationLog(`${StringUtil.aliasNameToClassName(gameObject.aliasName)}のデータ ${fileName}.zip を保存`);
     return SaveDataService.queue.add((resolve, reject) => resolve(this._saveGameObjectAsync(gameObject, fileName, updateCallback)));
   }
 
@@ -151,9 +156,11 @@ export class SaveDataService {
     return fileName + `_${year}-${month}-${day}_${hours}${minutes}`;
   }
 
-  saveChatLog(logFormat: number, fileName: string, chatTab: ChatTab=null, dateFormat='HH:mm') {
+  saveChatLog(logFormat: number, fileName: string, chatTab: ChatTab=null, dateFormat='HH:mm', isWriteOerationLog=true) {
     const mimeType = (logFormat == 0 ? 'text/plain' : 'text/html');
     const ext = (logFormat == 0 ? '.txt' : '.html');
-    saveAs(new Blob([chatTab ? chatTab.log(logFormat, dateFormat) : ChatTabList.instance.log(logFormat, dateFormat)], {type: `${mimeType};charset=utf-8`}), 'fly_' + this.appendTimestamp(fileName) + ext);
+    const trueFileName = 'fly_' + this.appendTimestamp(fileName) + ext;
+    this.chatMessageService.sendOperationLog(`チャットログ ${trueFileName} を保存`);
+    saveAs(new Blob([chatTab ? chatTab.log(logFormat, dateFormat, isWriteOerationLog) : ChatTabList.instance.log(logFormat, dateFormat, isWriteOerationLog)], {type: `${mimeType};charset=utf-8`}), trueFileName);
   }
 }

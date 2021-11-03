@@ -1,16 +1,18 @@
-<div>
-  <b>試聽音量<sup class="self-only">*</sup>：</b>
-  <i class="material-icons" style="font-size: 22px">{{ auditionVolume == 0 ? 'volume_off' : auditionVolume <= 0.5 ? 'volume_down' : 'volume_up' }}</i> 
-  <input [(ngModel)]="auditionVolume" type="range" title="{{percentAuditionVolume + '%'}}" min="0" max="1" step="0.01" style="width:53%" /> 
-  <span style="white-space: nowrap;"><input type="number" min="0" max="100" step="1" style="width: 3em" [(ngModel)]="percentAuditionVolume"><b style="font-size: smaller; padding-left: 3px;">%</b></span>
+<div class="header" style="position: sticky; top: 0px">
+  <div>
+    <b>試聽音量<sup class="self-only">*</sup>：</b>
+    <i class="material-icons" style="font-size: 22px">{{ auditionVolume == 0 ? 'volume_off' : auditionVolume <= 0.5 ? 'volume_down' : 'volume_up' }}</i> 
+    <input [(ngModel)]="auditionVolume" type="range" title="{{percentAuditionVolume + '%'}}" min="0" max="1" step="0.01" style="width:53%" /> 
+    <span style="white-space: nowrap;"><input type="number" min="0" max="100" step="1" style="width: 3em" [(ngModel)]="percentAuditionVolume"><b style="font-size: smaller; padding-left: 3px;">%</b></span>
+  </div>
+  <div>
+    <b>播放音量<sup class="self-only">*</sup>：</b>
+    <i class="material-icons" style="font-size: 22px">{{ volume == 0 ? 'volume_off' : volume <= 0.5 ? 'volume_down' : 'volume_up' }}</i> 
+    <input [(ngModel)]="volume" type="range" min="0" title="{{percentVolume + '%'}}" max="1" step="0.01" style="width:53%" /> 
+    <span style="white-space: nowrap;"><input type="number" min="0" max="100" step="1" style="width: 3em" [(ngModel)]="percentVolume"><b style="font-size: smaller; padding-left: 3px;">%</b></span>
+  </div>
 </div>
-<div>
-  <b>播放音量<sup class="self-only">*</sup>：</b>
-  <i class="material-icons" style="font-size: 22px">{{ volume == 0 ? 'volume_off' : volume <= 0.5 ? 'volume_down' : 'volume_up' }}</i> 
-  <input [(ngModel)]="volume" type="range" min="0" title="{{percentVolume + '%'}}" max="1" step="0.01" style="width:53%" /> 
-  <span style="white-space: nowrap;"><input type="number" min="0" max="100" step="1" style="width: 3em" [(ngModel)]="percentVolume"><b style="font-size: smaller; padding-left: 3px;">%</b></span>
-</div>
-<hr/>
+
 <div style="margin-bottom: 3px">
   <div *ngFor="let audio of audios; last as last" class="box" style="white-space: nowrap; text-overflow: ellipsis; overflow: hidden" [ngClass]="{last: last}">
     <button *ngIf="audio !== auditionPlayer?.audio || auditionPlayer?.paused" (click)="play(audio)" [disabled]="!audio.isReady"><i class="material-icons">play_arrow</i>試聽<sup style="font-size: larger" class="self-only">*</sup></button>
@@ -22,9 +24,9 @@
       <span *ngIf="audio != auditionPlayer?.audio || (audio == auditionPlayer?.audio && auditionPlayer?.paused)" style="padding-left: 2px"><b>【ＢＧＭ】</b></span>
       <span *ngIf="audio === auditionPlayer?.audio && !auditionPlayer?.paused" style="padding-left: 2px"><b>【試聽/BGM】</b></span>
     </ng-container>
-    <span style="font-size: smaller" style="padding-left: 2px">{{audio.name}}</span>
+    <span style="font-size: smaller" style="padding-left: 2px" [style.font-weight]="audio === jukebox?.audio ? 'bolder': 'normal'">{{audio.name}}</span>
   </div>
-  <div *ngIf="audios.length < 1">上傳的音樂文件將顯示在此處。</div>
+  <div *ngIf="audios.length < 1" style="padding: 1em 0px; text-align: center"><small><b>上傳的音樂文件將顯示在此處。</b></small></div>
 </div>
 
 <label>
@@ -33,7 +35,7 @@
       <i class="material-icons large-font">playlist_add</i>
     </div>
 
-    <div>ここに音楽をドロップ</div>
+    <div>把你的音樂放到這裡</div>
     <div class="small-font">或點擊這裡選擇</div>
     <input type="file" style="display: none;" (change)="handleFileSelect($event)" multiple accept="audio/*" />
     <div class="small-font">
