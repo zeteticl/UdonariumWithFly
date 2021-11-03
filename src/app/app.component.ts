@@ -131,7 +131,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     fileContext = ImageFile.createEmpty('stand_no_image').toContext();
     fileContext.url = './assets/images/nc96424.png';
     let standNoIconImage = ImageStorage.instance.add(fileContext);
-    ImageTag.create(standNoIconImage.identifier).tag = '*default Stand';
+    ImageTag.create(standNoIconImage.identifier).tag = '*default 立繪';
 
     AudioPlayer.resumeAudioContext();
     PresetSound.dicePick = AudioStorage.instance.add('./assets/sounds/soundeffect-lab/shoulder-touch1.mp3').identifier;

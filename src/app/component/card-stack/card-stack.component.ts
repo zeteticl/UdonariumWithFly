@@ -394,7 +394,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       { name: '查看卡牌清單', action: () => {
         this.showStackList(this.cardStack);
-        this.chatMessageService.sendOperationLog(`${this.cardStack.name} 查看咭牌清單`);
+        this.chatMessageService.sendOperationLog(`${this.cardStack.name} 查看卡牌清單`);
       }, disabled: this.cards.length == 0 },
       ContextMenuSeparator,
       (this.isShowTotal

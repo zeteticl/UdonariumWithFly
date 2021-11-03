@@ -194,13 +194,13 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
           }
         }),
       {
-        name: '画像と色',
+        name: '圖片和顏色',
         subActions: [
-          { name: `${this.blendType == 0 ? '◉' : '○'} 画像のみ`, action: () => { this.blendType = 0; SoundEffect.play(PresetSound.cardDraw) } },
-          { name: `${this.blendType == 1 ? '◉' : '○'} 背景色と重ねる`, action: () => { this.blendType = 1; SoundEffect.play(PresetSound.cardDraw) } },
-          { name: `${this.blendType == 2 ? '◉' : '○'} 背景色と混ぜる`, action: () => { this.blendType = 2; SoundEffect.play(PresetSound.cardDraw) } },
+          { name: `${this.blendType == 0 ? '◉' : '○'} 僅限圖片`, action: () => { this.blendType = 0; SoundEffect.play(PresetSound.cardDraw) } },
+          { name: `${this.blendType == 1 ? '◉' : '○'} 與背景顏色進行疊加`, action: () => { this.blendType = 1; SoundEffect.play(PresetSound.cardDraw) } },
+          { name: `${this.blendType == 2 ? '◉' : '○'} 與背景顏色進行混合`, action: () => { this.blendType = 2; SoundEffect.play(PresetSound.cardDraw) } },
           ContextMenuSeparator,
-          { name: '色の初期化', action: () => { this.color = '#555555'; this.bgcolor = '#0a0a0a'; SoundEffect.play(PresetSound.cardDraw) } }
+          { name: '重置顏色', action: () => { this.color = '#555555'; this.bgcolor = '#0a0a0a'; SoundEffect.play(PresetSound.cardDraw) } }
         ]
       },
       ContextMenuSeparator,
@@ -215,7 +215,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
           }
         }),
       {
-        name: '高度を0にする', action: () => {
+        name: '將高度設定為0', action: () => {
           if (this.altitude != 0) {
             this.altitude = 0;
             SoundEffect.play(PresetSound.sweep);
@@ -224,7 +224,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
         altitudeHande: this.gameTableMask
       },
       ContextMenuSeparator,
-      { name: 'マップマスクを編集', action: () => { this.showDetail(this.gameTableMask); } },
+      { name: '編輯地圖Mask', action: () => { this.showDetail(this.gameTableMask); } },
       (this.gameTableMask.getUrls().length <= 0 ? null : {
         name: '打開參考網址', action: null,
         subActions: this.gameTableMask.getUrls().map((urlElement) => {
@@ -248,7 +248,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
       {
         name: '製作副本', action: () => {
           let cloneObject = this.gameTableMask.clone();
-          console.log('コピー', cloneObject);
+          //console.log('Copy', cloneObject);
           cloneObject.location.x += this.gridSize;
           cloneObject.location.y += this.gridSize;
           cloneObject.isLock = false;
@@ -283,7 +283,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
   public showDetail(gameObject: GameTableMask) {
     if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
-    let title = '地圖遮罩設置';
+    let title = '地圖Mask設置';
     if (gameObject.name.length) title += ' - ' + gameObject.name;
     let option: PanelOption = { title: title, left: coordinate.x - 200, top: coordinate.y - 150, width: 400, height: 560 };
     let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);

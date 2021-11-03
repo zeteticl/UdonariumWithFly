@@ -228,6 +228,7 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
           }
         }),
       ContextMenuSeparator,
+      /*
       (this.isSlope
         ? {
           name: '☑ 傾斜', action: () => {
@@ -238,6 +239,7 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
             this.isSlope = true;
           }
         }),
+      */
       { name: '傾斜', action: null, subActions: [
         {
           name: `${ this.slopeDirection == SlopeDirection.NONE ? '◉' : '○' } 無`, action: () => {
@@ -266,9 +268,9 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
           }
         }
       ]},
-      { name: '顯示牆壁', action: null, subActions: [
+      { name: '壁の表示', action: null, subActions: [
         {
-          name: `${ this.hasWall && this.isSurfaceShading ? '◉' : '○' } 普通`, action: () => {
+          name: `${ this.hasWall && this.isSurfaceShading ? '◉' : '○' } 通常`, action: () => {
             this.mode = TerrainViewState.ALL;
             this.isSurfaceShading = true;
           }
@@ -287,6 +289,7 @@ export class TerrainComponent implements OnInit, OnDestroy, AfterViewInit {
               this.terrain.depth = this.depth <= 0 ? 1 : this.depth;
             }
           }
+        }]
       },
       ContextMenuSeparator,
       /*

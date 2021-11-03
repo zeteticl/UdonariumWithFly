@@ -124,14 +124,14 @@ export class TabletopActionService {
     frontImage = ImageStorage.instance.get(frontUrl);
     if (!frontImage) {
       frontImage = ImageStorage.instance.add(frontUrl);
-      ImageTag.create(frontImage.identifier).tag = '*default カード';
+      ImageTag.create(frontImage.identifier).tag = '*default 卡牌';
     }
     backImage = ImageStorage.instance.get(backUrl);
     if (!backImage) {
       backImage = ImageStorage.instance.add(backUrl);
-      ImageTag.create(backImage.identifier).tag = '*default カード';
+      ImageTag.create(backImage.identifier).tag = '*default 卡牌';
     }
-    let card = Card.create('カード', frontImage.identifier, backImage.identifier);
+    let card = Card.create('卡牌', frontImage.identifier, backImage.identifier);
     card.location.x = position.x - 25;
     card.location.y = position.y - 25;
     card.posZ = position.z;
@@ -202,7 +202,7 @@ export class TabletopActionService {
         ImageTag.create(image.identifier).tag = '*default 卡牌';
       }
       let card = Card.create(this.cardName(trump), url, back);
-      //let card = Card.create('カード', url, back);
+      //let card = Card.create('卡牌', url, back);
       cardStack.putOnBottom(card);
     }
     return cardStack;
@@ -344,8 +344,9 @@ export class TabletopActionService {
   }
 
   private getCreateBlankCardMenu(position: PointerCoordinate): ContextMenuAction {
+    if (this.GuestMode()) return;
     return {
-      name: 'ブランクカードを作成', action: () => {
+      name: '新增一張空白卡牌', action: () => {
         this.createBlankCard(position);
         SoundEffect.play(PresetSound.cardPut);
       }
