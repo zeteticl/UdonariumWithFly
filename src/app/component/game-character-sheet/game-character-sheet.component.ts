@@ -19,7 +19,9 @@ import { GameCharacter } from '@udonarium/game-character';
 import { ChatPaletteComponent } from 'component/chat-palette/chat-palette.component';
 import { StandSettingComponent } from 'component/stand-setting/stand-setting.component';
 import { PointerDeviceService } from 'service/pointer-device.service';
-import { templateJitUrl } from '@angular/compiler';
+import { StringUtil } from '@udonarium/core/system/util/string-util';
+import { PeerCursor } from '@udonarium/peer-cursor';
+import { ImageFile } from '@udonarium/core/file-storage/image-file';
 
 @Component({
   selector: 'game-character-sheet',
@@ -80,7 +82,7 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
   isEdit: boolean = false;
 
   networkService = Network;
-  MAX_IMAGE_ICON_COUNT = 5;
+  MAX_IMAGE_ICON_COUNT = 8;
 
   isSaveing: boolean = false;
   progresPercent: number = 0;
@@ -192,6 +194,13 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
   get tableTopObjectName(): string {
     let element = this.tabletopObject.commonDataElement.getFirstElementByName('name') || this.tabletopObject.commonDataElement.getFirstElementByName('title');
     return element ? <string>element.value : '';
+  }
+
+  get imageFile(): ImageFile {
+    const tabletopObject = this.tabletopObject;
+    if (!tabletopObject) return ImageFile.Empty;
+    if (tabletopObject instanceof Card && this.isVisible) return tabletopObject.frontImage;
+    return tabletopObject.imageFile;
   }
 
   async saveToXML() {
@@ -313,6 +322,20 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
     });
   }
 
+  openModalChangeAllCardImages() {
+    this.modalService.open<string>(FileSelecterComponent, { isAllowedEmpty: false }).then(value => {
+      if (!this.tabletopObject || !this.tabletopObject || !(this.tabletopObject instanceof CardStack) || !value) return;
+      this.tabletopObject.cards.forEach(card => {
+        let element = card.imageDataElement.getFirstElementByName('back');
+        if (element) {
+          element.value = value;
+        } else {
+          return;
+        }
+      });
+    });
+  }
+
   //ToDO インデックスも抽象化して汎用にする
   selectImage(index: number, name='imageIdentifier') {
     if (this.tabletopObject.currntImageIndex == index) return;
@@ -336,6 +359,7 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
       if (this.tabletopObject.currntImageIndex >= elements.length - 1) this.tabletopObject.currntImageIndex =  elements.length - 2;
       if (this.tabletopObject.currntImageIndex < 0) this.tabletopObject.currntImageIndex = 0;
     }
+    EventSystem.trigger('UPDATE_GAME_OBJECT', this.tabletopObject);
   }
 
   deleteIcon(index: number=0, imageIdentifier='') {
@@ -455,11 +479,12 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
     } else if (this.tabletopObject instanceof Card) {
       card = this.tabletopObject;
     }
-    return card ? card.text : '';
+    return card ? StringUtil.rubyToHtml(StringUtil.escapeHtml(card.text)) : '';
   }
 
   get isVisible(): boolean {
     if (!this.tabletopObject) return false;
+    if (PeerCursor.myCursor && PeerCursor.myCursor.isGMMode) return true;
     if (this.tabletopObject instanceof Card) return this.tabletopObject.isFront || this.tabletopObject.isHand;
     if (this.tabletopObject instanceof DiceSymbol) return this.tabletopObject['isVisible'];
     return true;
@@ -475,5 +500,17 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
     if (this.tabletopObject instanceof Card) return !this.tabletopObject.isFront;
     if (this.tabletopObject instanceof DiceSymbol) return this.tabletopObject.hasOwner;
     return false;
+  }
+
+  showCaseOffset(index: number): number {
+    let len = this.tabletopObject.imageFiles.length;
+    if (len <= 5) return 0; 
+    return (50 - (160 / (len - 2))) * (this.tabletopObject.currntImageIndex <= index ? index-1 : index);
+  }
+
+  showIconOffset(index): number {
+    let len = this.tabletopObject.faceIcons.length;
+    if (len <= 5) return 0;
+    return (50 - (200 / (len - 1))) * index + 2;
   }
 }

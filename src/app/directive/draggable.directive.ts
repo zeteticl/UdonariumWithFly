@@ -80,6 +80,7 @@ export class DraggableDirective implements AfterViewInit, OnDestroy {
       this.cancel();
       return;
     }
+    this.elementRef.nativeElement.style.cursor = 'grabbing';
     e.stopPropagation();
   }
 
@@ -107,6 +108,7 @@ export class DraggableDirective implements AfterViewInit, OnDestroy {
 
     this.elementRef.nativeElement.style.left = trans.x + this.startPosition.x + 'px';
     this.elementRef.nativeElement.style.top = trans.y + this.startPosition.y + 'px';
+    this.elementRef.nativeElement.style.cursor = 'grabbing';
 
     this.prevTrans = trans;
     if (e.cancelable) e.preventDefault();
@@ -115,6 +117,7 @@ export class DraggableDirective implements AfterViewInit, OnDestroy {
 
   private onInputEnd(e: MouseEvent | TouchEvent) {
     this.elementRef.nativeElement.style.opacity = null;
+    this.elementRef.nativeElement.style.cursor = null;
     if (this.input.isDragging && e.cancelable) {
       this.preventClickIfNeeded(e);
       e.preventDefault();
@@ -142,7 +145,7 @@ export class DraggableDirective implements AfterViewInit, OnDestroy {
     };
 
     this.elementRef.nativeElement.addEventListener('click', callback, true);
-    setTimeout(() => this.elementRef.nativeElement.removeEventListener('click', callback, true));
+    queueMicrotask(() => this.elementRef.nativeElement.removeEventListener('click', callback, true));
   }
 
   private adjustPosition() {

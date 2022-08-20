@@ -5,6 +5,9 @@ import { TabletopObject } from './tabletop-object';
 import { UUID } from '@udonarium/core/system/util/uuid';
 import { PeerCursor } from './peer-cursor';
 import { StandList } from './stand-list';
+import { Network } from './core/system';
+import { PeerCursor } from './peer-cursor';
+import { ObjectStore } from './core/synchronize-object/object-store';
 
 @SyncObject('character')
 export class GameCharacter extends TabletopObject {
@@ -17,14 +20,24 @@ export class GameCharacter extends TabletopObject {
   @SyncVar() roll: number = 0;
   @SyncVar() isDropShadow: boolean = true;
   @SyncVar() isShowChatBubble: boolean = true;
-
+  @SyncVar() owner: string = '';
+  
   text = '';
   isEmote = false;
+  isLoaded = false;
 
   get name(): string { return this.getCommonValue('name', ''); }
   set name(name) { this.setCommonValue('name', name); }
-
   get size(): number { return this.getCommonValue('size', 1); }
+  get height(): number {
+    let element = this.getElement('height', this.commonDataElement);
+    if (!element && this.commonDataElement) {
+      this.commonDataElement.insertBefore(DataElement.create('height', 0, { 'currentValue': '' }, 'height_' + this.identifier), this.getElement('altitude', this.commonDataElement));
+    }
+    let num = element ? +element.value : 0;
+    if (element && element.currentValue) num = (Number.isNaN(num) ? 0 : num) * this.size;
+    return Number.isNaN(num) ? 0 : num;
+  }
   get hasGM(): boolean {
     if (this.GM) return true
     else return false
@@ -41,6 +54,16 @@ export class GameCharacter extends TabletopObject {
     return null;
   }
 
+  get ownerName(): string {
+    let object = PeerCursor.findByUserId(this.owner);
+    return object ? object.name : null;
+  }
+
+  get ownerColor(): string {
+    let object = PeerCursor.findByUserId(this.owner);
+    return object ? object.color : '#444444';
+  }
+  
   get standList(): StandList {
     for (let child of this.children) {
       if (child instanceof StandList) return child;
@@ -60,11 +83,22 @@ export class GameCharacter extends TabletopObject {
     return gameCharacter;
   }
 
+  get isHideIn(): boolean { return !!this.owner; }
+  get isVisible(): boolean { return !this.owner || Network.peerContext.userId === this.owner; }
+
+  static get isStealthMode(): boolean {
+    for (const character of ObjectStore.instance.getObjects(GameCharacter)) {
+      if (character.isHideIn && character.isVisible && character.location.name === 'table') return true;
+    }
+    return false;
+  }
+
   createTestGameDataElement(name: string, size: number, imageIdentifier: string) {
     this.createDataElements();
 
     let nameElement: DataElement = DataElement.create('name', name, {}, 'name_' + this.identifier);
     let sizeElement: DataElement = DataElement.create('size', size, {}, 'size_' + this.identifier);
+    let heightElement: DataElement = DataElement.create('height', 0, { 'currentValue': '' }, 'height_' + this.identifier);
     let altitudeElement: DataElement = DataElement.create('altitude', 0, {}, 'altitude_' + this.identifier);
 
     if (this.imageDataElement.getFirstElementByName('imageIdentifier')) {
@@ -78,6 +112,7 @@ export class GameCharacter extends TabletopObject {
 
     this.commonDataElement.appendChild(nameElement);
     this.commonDataElement.appendChild(sizeElement);
+    this.commonDataElement.appendChild(heightElement);
     this.commonDataElement.appendChild(altitudeElement);
 
     this.detailDataElement.appendChild(resourceElement);

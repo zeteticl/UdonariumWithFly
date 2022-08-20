@@ -4,7 +4,7 @@
       <button style="margin-bottom: 2px; font-size: smaller" (click)="createGameTable()">製作新桌面</button>
     </div>
     <select style="width: 100%; max-width: 155px" size="10" (change)="selectGameTable($event.target.value)" [ngModel]="selectedTable?.identifier">
-      <option *ngFor="let gameTable of getGameTables()" value="{{gameTable.identifier}}">{{gameTable.name}}</option>
+      <option *ngFor="let gameTable of getGameTables()" value="{{gameTable.identifier}}" title="{{gameTable.name}}" [style.color]="gameTable.name == '' ? 'gray' : ''">{{gameTable.name == '' ? '(無名のテーブル)' : gameTable.name}}</option>
     </select>
   </div>
   <div class="flex-item">
@@ -17,8 +17,8 @@
     <ng-container *ngIf="!isEmpty || selectedTable">
       <div class="images-select">
         <div>
-          圖片
-          <div (click)="openBgImageModal()" style="position: relative; overflow: hidden">
+          <b>画像</b>
+          <div (click)="openBgImageModal()" style="position: relative; overflow: hidden; cursor: pointer">
             <div *ngIf="getHidden(tableBackgroundImage)" style="position: absolute; text-align: right; top: 0px; right: 0px; pointer-events: none; z-index: 5">
               <i class="material-icons" [class]="isShowHideImages ? 'red-eye': 'grow'" style="margin-right: 2px; font-size: 16px; display: block">{{ isShowHideImages ? 'visibility' : 'visibility_off' }}</i>
             </div>
@@ -26,11 +26,11 @@
           </div>
         </div>
         <div>
-          背景
+          <b>背景</b>
           <div *ngIf="!tableDistanceviewImage.url">
             <button (click)="openDistanceViewImageModal()" style="height: 120px;" [attr.disabled]="!isEditable ? '' : null">添加背景圖片</button>
           </div>
-          <div *ngIf="tableDistanceviewImage.url" style="position: relative; overflow: hidden" (click)="openDistanceViewImageModal()">
+          <div *ngIf="tableDistanceviewImage.url" style="position: relative; overflow: hidden; cursor: pointer" (click)="openDistanceViewImageModal()">
             <div *ngIf="getHidden(tableDistanceviewImage)" style="position: absolute; text-align: right; top: 0px; right: 0px; pointer-events: none; z-index: 5">
               <i class="material-icons" [class]="isShowHideImages ? 'red-eye': 'grow'" style="margin-right: 2px; font-size: 16px; display: block">{{ isShowHideImages ? 'visibility' : 'visibility_off' }}</i>
             </div>
@@ -38,42 +38,47 @@
           </div>
         </div>
       </div>
-      <div>Name :
-        <input [(ngModel)]="tableName" placeholder="Name" [attr.disabled]="!isEditable ? '' : null" />
+      <div>
+        <label class="self-setting">Name：<input [(ngModel)]="tableName" placeholder="Name" [disabled]="!isEditable" /></label>
       </div>
       <div>
-        <input [(ngModel)]="tableWidth" type="range" title="{{tableWidth}}" min="{{minSize}}" max="{{maxSize}}"
-          name="tableWidth" [attr.disabled]="!isEditable ? '' : null" /> Width :
-        <input [(ngModel)]="tableWidth" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;"
-          [attr.disabled]="!isEditable ? '' : null">
+        <label class="self-setting">Width：<input [(ngModel)]="tableWidth" type="range" title="{{tableWidth}}" min="{{minSize}}" max="{{maxSize}}" name="tableWidth" [disabled]="!isEditable" /></label>
+        <input [(ngModel)]="tableWidth" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;" [disabled]="!isEditable">
       </div>
       <div>
-        <input [(ngModel)]="tableHeight" title="{{tableHeight}}" type="range" min="{{minSize}}" max="{{maxSize}}"
-          name="tableHeight" [attr.disabled]="!isEditable ? '' : null" /> Height :
-        <input [(ngModel)]="tableHeight" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;"
-          [attr.disabled]="!isEditable ? '' : null">
+        <label class="self-setting">Height：<input [(ngModel)]="tableHeight" title="{{tableHeight}}" type="range" min="{{minSize}}" max="{{maxSize}}" name="tableHeight" [disabled]="!isEditable"/></label>
+        <input [(ngModel)]="tableHeight" type="number" min="{{minSize}}" max="{{maxSize}}" style="width: 5em;" [disabled]="!isEditable">
       </div>
       <div>
-        網格:
-        <select [(ngModel)]="tableGridType" name="tableGridType" [attr.disabled]="!isEditable ? '' : null">
-          <option value="-1">沒有</option>
-          <option value="0">正方形</option>
-          <option value="1">十六進制（垂直對齊）</option>
-          <option value="2">十六進制（水平對齊）</option>
-        </select>
-        顏色:
-        <select [(ngModel)]="tableGridColor" name="tableGridColor" [attr.disabled]="!isEditable ? '' : null">
-          <option value="#000000e6">黒</option>
-          <option value="#dddddde6">白</option>
-        </select>
+        <label class="self-setting">グリッド：
+          <select [(ngModel)]="tableGridType" name="tableGridType" [disabled]="!isEditable">
+            <option value="-1">なし</option>
+            <option value="0">スクエア</option>
+            <option value="1">ヘクス（縦揃え）</option>
+            <option value="2">ヘクス（横揃え）</option>
+          </select>
+        </label>
+        <label class="self-setting" style="margin-left: 3px">色：
+          <select [(ngModel)]="tableGridColor" name="tableGridColor" [disabled]="!isEditable || tableGridType == -1">
+            <option value="#000000e6">黒</option>
+            <option value="#dddddde6">白</option>
+          </select>
+        </label>
       </div>
       <div>
-        背景濾鏡
-        <select [(ngModel)]="tableDistanceviewFilter" name="tableDistanceviewFilter" [attr.disabled]="!isEditable ? '' : null">
-          <option value="">沒有</option>
-          <option value="white">白色</option>
-          <option value="black">黑色</option>
-        </select>
+        <label class="self-setting">
+          <input type="checkbox" [(ngModel)]="tableGridNumberShow" name="tableGridNumberShow" [disabled]="!isEditable || tableGridType == -1" />
+          <span [ngClass]="{disabled: !isEditable || tableGridType == -1}">グリッドの座標番号を表示</span>
+        </label>
+      </div>
+      <div>
+        <label class="self-setting">背景フィルタ：
+          <select [(ngModel)]="tableDistanceviewFilter" name="tableDistanceviewFilter" [disabled]="!isEditable">
+            <option value="">なし</option>
+            <option value="white">ホワイト</option>
+            <option value="black">ブラック</option>
+          </select>
+        </label>
       </div>
       <hr />
       <div>
@@ -92,7 +97,7 @@
               <div *ngIf="isSaveing" class="progress">{{progresPercent}}%</div>
             </div>
           </button>
-          <button class="danger" (click)="delete()" [attr.disabled]="getGameTables().length <= 1 ? '' : null">刪除</button>
+          <button class="danger" (click)="delete()" [disabled]="getGameTables().length <= 1">削除</button>
         </ng-container>
         <ng-container *ngIf="isDeleted">
           <button (click)="restore()">Undo</button>

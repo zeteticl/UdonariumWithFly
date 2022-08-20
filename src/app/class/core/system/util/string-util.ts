@@ -15,7 +15,7 @@ export namespace StringUtil {
   export function isEmote(str: string): boolean {
     if (!str) return false;
     str = this.cr(str).replace(/[\s\r\n]/g, '');
-    return Array.from(str).length <= 3 && !/[「」]/.test(str) && (EMOJI_REGEXP.test(str) || /[$＄\\￥！？❕❢‽‼/!/?♥♪♬♩♫☺🤮]/.test(str)); 
+    return Array.from(str).length <= 3 && !/[「」]/.test(str) && (EMOJI_REGEXP.test(str) || /[$＄\\￥！？❕❢‽‼/!/?♥♪♬♩♫☺🤮❤️☠️]/.test(str)); 
   }
 
   export function cr(str: string): string {
@@ -67,7 +67,7 @@ export namespace StringUtil {
 
   export function escapeHtml(str) {
     if(typeof str !== 'string') {
-      return str.toString();
+      str = str.toString();
     }
     return str.replace(/[&'`"<>]/g, function(match){
       return {
@@ -79,6 +79,20 @@ export namespace StringUtil {
         '>': '&gt;',
       }[match]
     });
+  }
+
+  export function rubyToHtml(str) {
+    if(typeof str !== 'string') {
+      str = str.toString();
+    }
+    return str.replace(/[\|｜]([^\|｜\s]+?)《(.+?)》/g, '<ruby>$1<rp>(</rp><rt>$2</rt><rp>)</rp></ruby>');
+  }
+  
+  export function rubyToText(str) {
+    if(typeof str !== 'string') {
+      str = str.toString();
+    }
+    return str.replace(/[\|｜]([^\|｜\s]+?)《(.+?)》/g, '$1($2)');
   }
 
   export function aliasNameToClassName(aliasName: string) {

@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { PeerContext } from '@udonarium/core/system/network/peer-context';
@@ -11,6 +11,9 @@ import { AppConfigService } from 'service/app-config.service';
 import { ModalService } from 'service/modal.service';
 import { PanelService } from 'service/panel.service';
 import { animate, style, transition, trigger } from '@angular/animations';
+import { ChatMessageService } from 'service/chat-message.service';
+import { ConfirmationComponent, ConfirmationType } from 'component/confirmation/confirmation.component';
+import { GameCharacter } from '@udonarium/game-character';
 
 @Component({
   selector: 'peer-menu',
@@ -25,17 +28,19 @@ import { animate, style, transition, trigger } from '@angular/animations';
     ])
   ]
 })
-export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
-  @ViewChild('idInput') idInput: ElementRef;
-  @ViewChild('idSpacer') idSpacer: ElementRef;
-
+export class PeerMenuComponent implements OnInit, OnDestroy {
   targetUserId: string = '';
   networkService = Network
   gameRoomService = ObjectStore.instance;
-  help: string = '';
+
   isCopied = false;
+  isRoomNameCopied = false;
+  isPasswordCopied = false;
+  isPasswordOpen = false;
 
   private _timeOutId;
+  private _timeOutId2;
+  private _timeOutId3;
 
   get myPeer(): PeerCursor { return PeerCursor.myCursor; }
 
@@ -63,10 +68,18 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  get isGMMode(): boolean{ return PeerCursor.myCursor ? PeerCursor.myCursor.isGMMode : false; }
+  set isGMMode(isGMMode: boolean) { if (PeerCursor.myCursor) PeerCursor.myCursor.isGMMode = isGMMode; }
+
+  get isGMHold(): boolean { return PeerCursor.isGMHold; }
+  get isDisableConnect(): boolean { return this.isGMHold || this.isGMMode; }
+
+  get maskedPassword(): string { return '*'.repeat(this.networkService.peerContext.password.length) }
+
   constructor(
-    private ngZone: NgZone,
     private modalService: ModalService,
     private panelService: PanelService,
+    private chatMessageService: ChatMessageService,
     public appConfigService: AppConfigService
   ) { }
 
@@ -74,17 +87,10 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
     Promise.resolve().then(() => { this.panelService.title = '連接情報'; this.panelService.isAbleFullScreenButton = false });
   }
 
-  ngAfterViewInit() {
-    EventSystem.register(this)
-      .on('OPEN_NETWORK', event => {
-        this.ngZone.run(() => { });
-        if (this.idInput && this.idInput.nativeElement) this.idInput.nativeElement.style.width = this.idSpacer.nativeElement.getBoundingClientRect().width + 'px'
-      });
-    if (this.idInput && this.idInput.nativeElement) this.idInput.nativeElement.style.width = this.idSpacer.nativeElement.getBoundingClientRect().width + 'px'
-  }
-
   ngOnDestroy() {
     clearTimeout(this._timeOutId);
+    clearTimeout(this._timeOutId2);
+    clearTimeout(this._timeOutId3);
     EventSystem.unregister(this);
   }
 
@@ -96,77 +102,37 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
       this.myPeer.imageIdentifier = value;
     });
   }
-
-  private resetPeerIfNeeded() {
-    if (Network.peerContexts.length < 1) {
-      Network.open();
-      PeerCursor.myCursor.peerId = Network.peerId;
-    }
-  }
-
-  connectPeer() {
-    this.help = '';
-    let context = PeerContext.create(this.targetUserId);
-    if (context.isRoom) return;
-    ObjectStore.instance.clearDeleteHistory();
-    Network.connect(context.peerId);
-  }
   GuestMode() {
     return Network.GuestMode();
   }
-  async connectPeerHistory() {
-    this.help = '';
-    let conectPeers: PeerContext[] = [];
-    let roomId: string = '';
+  connectPeer() {
+    let targetUserId = this.targetUserId;
+    this.targetUserId = '';
+    if (targetUserId.length < 1) return;
 
-    for (let peerId of this.appConfigService.peerHistory) {
-      let context = PeerContext.parse(peerId);
-      if (context.isRoom) {
-        if (roomId !== context.roomId) conectPeers = [];
-        roomId = context.roomId;
-        conectPeers.push(context);
-      } else {
-        if (roomId !== context.roomId) conectPeers = [];
-        conectPeers.push(context);
+    let context = PeerContext.create(targetUserId);
+    if (context.isRoom) return;
+    ObjectStore.instance.clearDeleteHistory();
+    Network.connect(context.peerId);
+    if (PeerCursor.isGMHold || this.isGMMode) {
+      PeerCursor.isGMHold = false;
+      this.isGMMode = false;
+      if (this.isGMMode) {
+        this.chatMessageService.sendOperationLog('GMモードを解除');
+        EventSystem.trigger('CHANGE_GM_MODE', null);
       }
     }
-
-    if (roomId.length) {
-      console.warn('connectPeerRoom <' + roomId + '>');
-      let conectPeers: PeerContext[] = [];
-      let peerIds = await Network.listAllPeers();
-      for (let peerId of peerIds) {
-        console.log(peerId);
-        let context = PeerContext.parse(peerId);
-        if (context.roomId === roomId) {
-          conectPeers.push(context);
-        }
-      }
-      if (conectPeers.length < 1) {
-        this.help = '找不到您上次連接的房間。 它可能已經解散了。';
-        console.warn('Room is already closed...');
-        return;
-      }
-      Network.open(PeerContext.generateId(), conectPeers[0].roomId, conectPeers[0].roomName, conectPeers[0].password);
-    } else {
-      console.warn('connectPeers ' + conectPeers.length);
-      Network.open();
-    }
-
-    PeerCursor.myCursor.peerId = Network.peerId;
-
-    let listener = EventSystem.register(this);
-    listener.on('OPEN_NETWORK', event => {
-      console.log('OPEN_NETWORK', event.data.peerId);
-      EventSystem.unregisterListener(listener);
-      ObjectStore.instance.clearDeleteHistory();
-      for (let context of conectPeers) {
-        Network.connect(context.peerId);
-      }
-    });
   }
 
   showLobby() {
+    if (PeerCursor.isGMHold || this.isGMMode) {
+      PeerCursor.isGMHold = false;
+      this.isGMMode = false;
+      if (this.isGMMode) {
+        this.chatMessageService.sendOperationLog('GMモードを解除');
+        EventSystem.trigger('CHANGE_GM_MODE', null);
+      }
+    }
     this.modalService.open(LobbyComponent, { width: 700, height: 400, left: 0, top: 400 });
   }
 
@@ -185,6 +151,16 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
     return peerCursor ? peerCursor.color : '';
   }
 
+  findPeerImageUrl(peerId: string) {
+    const peerCursor = PeerCursor.findByPeerId(peerId);
+    return peerCursor ? peerCursor.image.url : '';
+  }
+
+  findPeerIsGMMode(peerId: string): boolean {
+    const peerCursor = PeerCursor.findByPeerId(peerId);
+    return peerCursor ? peerCursor.isGMMode : false;
+  }
+
   copyPeerId() {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(this.networkService.peerContext.userId);
@@ -196,7 +172,119 @@ export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  copyRoomName() {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(this.networkService.peerContext.roomName + '/' + this.networkService.peerContext.roomId);
+      this.isRoomNameCopied = true;
+      clearTimeout(this._timeOutId2);
+      this._timeOutId2 = setTimeout(() => {
+        this.isRoomNameCopied = false;
+      }, 1000);
+    }
+  }
+
+  copyPassword() {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(this.networkService.peerContext.password);
+      this.isPasswordCopied = true;
+      clearTimeout(this._timeOutId3);
+      this._timeOutId2 = setTimeout(() => {
+        this.isPasswordCopied = false;
+      }, 1000);
+      this.isPasswordOpen = false;
+    }
+  }
+
   isAbleClipboardCopy(): boolean {
     return navigator.clipboard ? true : false;
+  }
+
+  onPasswordOpen($event: Event) {
+    if (this.isPasswordOpen) {
+      this.isPasswordOpen = false;
+    } else {
+      $event.preventDefault();
+      this.modalService.open(ConfirmationComponent, {
+        title: 'パスワードの表示', 
+        text: 'パスワードを表示しますか？',
+        type: ConfirmationType.OK_CANCEL,
+        materialIcon: 'visibility',
+        action: () => {
+          this.isPasswordOpen = true;
+          (<HTMLInputElement>$event.target).checked = true;
+          //this.changeDetector.markForCheck();
+        }
+      });
+    }
+  }
+
+  onGMMode($event: Event) {
+    if (PeerCursor.isGMHold || this.isGMMode) {
+      if (this.isGMMode) {
+        $event.preventDefault();
+        this.modalService.open(ConfirmationComponent, {
+          title: 'GMモード解除', 
+          text: 'GMモードを解除しますか？',
+          type: ConfirmationType.OK_CANCEL,
+          materialIcon: 'person_remove',
+          action: () => {
+            PeerCursor.isGMHold = false;
+            this.isGMMode = false;
+            (<HTMLInputElement>$event.target).checked = false;
+            this.chatMessageService.sendOperationLog('GMモードを解除');
+            EventSystem.trigger('CHANGE_GM_MODE', null);
+            //this.changeDetector.markForCheck();
+            if (GameCharacter.isStealthMode) {
+              this.modalService.open(ConfirmationComponent, {
+                title: 'ステルスモード', 
+                text: 'ステルスモードになります。',
+                help: '位置を自分だけ見ているキャラクターが1つ以上テーブル上にある間、あなたのカーソル位置は他の参加者に伝わりません。',
+                type: ConfirmationType.OK,
+                materialIcon: 'disabled_visible'
+              });
+            }
+          }
+        });
+      } else {
+        PeerCursor.isGMHold = false;
+        this.isGMMode = false;
+      }
+    } else {
+      $event.preventDefault();
+      this.modalService.open(ConfirmationComponent, {
+        title: 'GMモードになる', 
+        text: 'GMモードになりますか？\nGMモード中（保留中含む）はあなたからプライベート接続、ルームへの接続は行えません。',
+        helpHtml: 'GMモードでは、<b>秘話</b>、裏向きの<b>カード</b>、公開されていない<b>ダイスシンボル</b>、<b>キャラクター</b>位置、<b>カーソル</b>位置をすべて見ることができ、あなたのカーソル位置は他の参加者に伝わらなくなります。\n\n<b><big>—With great power comes great responsibility.</big></b>',
+        type: ConfirmationType.OK_CANCEL,
+        materialIcon: 'person_add',
+        action: () => {
+          PeerCursor.isGMHold = true;
+          this.isGMMode = false;
+          (<HTMLInputElement>$event.target).checked = true;
+          //this.changeDetector.markForCheck();
+          this.modalService.open(ConfirmationComponent, {
+            title: 'GMモードになる', 
+            text: 'まだGMモードではありません。',
+            helpHtml: 'GMモードになるには、チャットから <b>GMになる</b> または <b>GMになります</b> を含む文を送信します。',
+            type: ConfirmationType.OK,
+            materialIcon: 'person_add'
+          });
+        }
+      });
+    }
+  }
+
+  healthIcon(helth) {
+    if (helth >= 0.99) return 'sentiment_very_satisfied';
+    if (helth > 0.97) return 'sentiment_dissatisfied';
+    if (helth > 0.95) return 'mood_bad';
+    return 'sentiment_very_dissatisfied';
+  }
+
+  healthClass(helth) {
+    if (helth >= 0.99) return 'health-blue';
+    if (helth > 0.97) return 'health-green';
+    if (helth > 0.95) return 'health-yellow';
+    return 'health-red';
   }
 }

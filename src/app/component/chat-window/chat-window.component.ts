@@ -30,7 +30,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
     this.chatTabComponemt.onScroll();
   }
 
-  get gameType(): string { return this.chatMessageService.gameType; }
+  get gameType(): string { return !this.chatMessageService.gameType ? 'DiceBot' : this.chatMessageService.gameType; }
   set gameType(gameType: string) { this.chatMessageService.gameType = gameType; }
 
   private _chatTabidentifier: string = '';
@@ -139,7 +139,7 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewInit {
     ], '改變視点');
   }
   updatePanelTitle() {
-    if (this.chatTab) {
+    if (this.chatTab && this.chatTab.name !== '') {
       this.panelService.title = '聊天視窗 - ' + this.chatTab.name;
     } else {
       this.panelService.title = '聊天視窗';

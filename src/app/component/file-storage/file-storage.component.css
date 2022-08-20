@@ -22,12 +22,14 @@
   font-size: 0;
   display: inline-block;
   border: 2px solid transparent;
+  margin-right: -2px;
+  cursor: pointer;
 }
 
 .image:hover {
   border: 2px dotted red;
   transform: scale(1.08);
-  z-index: 200;
+  z-index: 150;
   transition-duration: 60ms;
 }
 
@@ -68,18 +70,14 @@
   bottom: 0;
   background-color: rgba(240, 218, 189, 0.9);
   border-top: 1px dotted #666;
-  z-index: 100;
+  z-index: 200;
 }
 
 .word-tag {
-  font-size: smaller;
   margin-right: 3px;
   display: inline-block;
   color: black;
   font-weight: bolder;
-}
-.word-tag::before {
-  content: '🏷️';
 }
 .word-tag:hover {
   color: red;

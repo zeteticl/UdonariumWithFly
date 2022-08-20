@@ -18,8 +18,7 @@ export class ChatMessageService {
   private performanceOffset: number = performance.now();
 
   private ntpApiUrls: string[] = [
-    'https://ntp-a1.nict.go.jp/cgi-bin/json',
-    'https://ntp-b1.nict.go.jp/cgi-bin/json',
+    'https://worldtimeapi.org/api/ip',
   ];
 
   gameType: string = '';
@@ -47,7 +46,7 @@ export class ChatMessageService {
         let endTime = performance.now();
         let latency = (endTime - sendTime) / 2;
         let timeobj = jsonObj;
-        let st: number = timeobj.st * 1000;
+        let st: number = new Date(timeobj.utc_datetime).getTime();
         let fixedTime = st + latency;
         this.timeOffset = fixedTime;
         this.performanceOffset = endTime;
@@ -83,12 +82,16 @@ export class ChatMessageService {
       from: Network.peerContext.userId,
       to: ChatMessageService.findId(sendTo),
       //to: this.findId(sendTo),
-      name: this.makeMessageName(sendFrom, sendTo),
+      //name: this.makeMessageName(sendFrom, sendTo),
+      name: this.findObjectName(sendFrom),
+      toName: sendTo ? this.findObjectName(sendTo) : '',
       imageIdentifier: this.findImageIdentifier(sendFrom, isUseFaceIcon),
+      toImageIdentifier: sendTo ? this.findImageIdentifier(sendTo) : '',
       timestamp: this.calcTimeStamp(chatTab),
       tag: effective ? `${gameType} noface` : gameType,
       text: StringUtil.cr(text),
       color: color,
+      toColor: sendTo ? this.findObjectColor(sendTo) : '',
       isInverseIcon: effective && isInverseIcon ? 1 : 0,
       isHollowIcon: effective && isHollowIcon ? 1 : 0,
       isBlackPaint: effective && isBlackPaint ? 1 : 0,
@@ -134,11 +137,21 @@ export class ChatMessageService {
   private findObjectName(identifier: string): string {
     let object = ObjectStore.instance.get(identifier);
     if (object instanceof GameCharacter) {
-      return object.name;
+      return object.name && object.name.length ? object.name : '（無名のキャラクター）';
     } else if (object instanceof PeerCursor) {
-      return object.name;
+      return object.name && object.name.length ? object.name : '（無名のプレイヤー）';
     }
     return identifier;
+  }
+
+  private findObjectColor(identifier: string): string {
+    let object = ObjectStore.instance.get(identifier);
+    if (object instanceof GameCharacter) {
+      return object.chatPalette.color;
+    } else if (object instanceof PeerCursor) {
+      return object.color;
+    }
+    return null;
   }
 
   private makeMessageName(sendFrom: string, sendTo?: string): string {

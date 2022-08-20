@@ -76,6 +76,16 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
   get gameTableMaskAltitude(): number {
     return +this.altitude.toFixed(1);
   }
+  
+  get rubiedText(): string {
+    return StringUtil.rubyToHtml(StringUtil.escapeHtml(this.text));
+  }
+
+  get isInverse(): boolean {
+    return 90 < Math.abs(this.viewRotateZ) % 360 && Math.abs(this.viewRotateZ) % 360 < 270
+  }
+
+  get isGMMode(): boolean { return this.gameTableMask.isGMMode; }
 
   gridSize: number = 50;
   math = Math;
@@ -108,6 +118,9 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
         if (this.gameTableMask === object || (object instanceof ObjectNode && this.gameTableMask.contains(object) || (object instanceof PeerCursor && object.peerId === this.gameTableMask.GM))) {
           this.changeDetector.markForCheck();
         }
+      })
+      .on('CHANGE_GM_MODE', event => {
+        this.changeDetector.markForCheck();
       })
       .on('SYNCHRONIZE_FILE_LIST', event => {
         this.changeDetector.markForCheck();
@@ -164,6 +177,21 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
     let menuPosition = this.pointerDeviceService.pointers[0];
     let objectPosition = this.coordinateService.calcTabletopLocalCoordinate();
     this.contextMenuService.open(menuPosition, [
+      (this.isGMMode ?
+        this.gameTableMask.isTransparentOnGMMode ? {
+          name: '☑ GMモード時透過', action: () => {
+            this.gameTableMask.isTransparentOnGMMode = false;
+            SoundEffect.play(PresetSound.lock);
+          }
+        }
+        : {
+          name: '☐ GMモード時透過', action: () => {
+            this.gameTableMask.isTransparentOnGMMode = true;
+            SoundEffect.play(PresetSound.unlock);
+          }
+        }
+      : null),
+      (this.isGMMode ? ContextMenuSeparator : null),
       (this.isLock
         ? {
           name: '☑ 固定', action: () => {
@@ -285,7 +313,7 @@ export class GameTableMaskComponent implements OnInit, OnDestroy, AfterViewInit 
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '地圖Mask設置';
     if (gameObject.name.length) title += ' - ' + gameObject.name;
-    let option: PanelOption = { title: title, left: coordinate.x - 200, top: coordinate.y - 150, width: 400, height: 560 };
+    let option: PanelOption = { title: title, left: coordinate.x - 200, top: coordinate.y - 150, width: 400, height: 530 };
     let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
     component.tabletopObject = gameObject;
   }

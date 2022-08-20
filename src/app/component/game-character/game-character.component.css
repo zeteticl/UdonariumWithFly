@@ -1,13 +1,14 @@
 @supports (-moz-user-select: -moz-none) {
 
   /* 汚いけどとりあえず */
-  .chat-bubble p:after {
+/*  .chat-bubble p:after {
     bottom: -28px !important;
   }
-
-  /*
+  いらなくなった？
+*/
+   /*
   .chat-bubble p.is-whisper:after {
-    bottom: -11px !important; 
+    bottom: -11px !important;
   }
   */
 }
@@ -172,6 +173,9 @@
   object-position: 50% 100%;
   margin-bottom: 0px;
   margin-top: auto;
+
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
 .inverse {
@@ -236,6 +240,15 @@
   top: -26px;
 }
 
+.owner-tag {
+  box-sizing: border-box;
+  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: 6px;
+  position: absolute;
+  top: -55px;
+}
+
 .rotate-frame {
   bottom: 0;
   left: 0;
@@ -263,6 +276,11 @@
 .is-black-background {
   color: #CCC;
   background-color: rgba(30, 30, 30, 0.8);
+}
+
+.is-black-background.is-hide-in-tag {
+  color: rgb(30, 30, 30);
+  background-color: rgba(233, 233, 233, 0.8);
 }
 
 .fornt-tag {
@@ -381,7 +399,7 @@
   display: inline-block;
   max-width: 100%;
   min-width: 130px;
-  font-size: 11px;
+  font-size: 13px;
   background: linear-gradient(-30deg, rgba(240, 218, 189, 0.9), rgba(255, 244, 232, 0.9));
   border: 1px solid;
   border-radius: 24px;
@@ -391,6 +409,10 @@
   word-break: break-word;
   overflow-wrap: anywhere;
   text-align: center;
+}
+
+.chat-bubble p.rubied {
+  padding-top: 12px;
 }
 
 .chat-bubble p.emote {
@@ -407,7 +429,7 @@
 
 .chat-bubble p.is-whisper {
   border-radius: 24px 12px;
-  font-size: 11px;
+  font-size: 13px;
   background: rgba(85, 85, 85, 0.8);
   box-shadow: 0px 0px 2px 0px #ccc;
 }
@@ -503,7 +525,7 @@
 }
 
 .face-icon-box {
-  display: inline-block;
+  display: block;
   position: relative;
   border: 0px none;
   width: 36px;
@@ -515,7 +537,13 @@
   top: -18px;
   margin-right: -16px;
   margin-bottom: -22px;
+  float: left;
+  backface-visibility: hidden;
   /* background: linear-gradient(-30deg, rgb(240, 218, 189), rgb(255, 244, 232)); */
+}
+
+p.rubied .face-icon-box {
+  top: -21px;
 }
 
 .face-icon-box img {
@@ -535,4 +563,16 @@ p.is-wisper .face-icon {
 .selected {
   filter: drop-shadow(0px 0px 8px yellow) drop-shadow(0px 0px 4px yellow);
   transition: all .2s ease-in;
+}
+
+.is-hide-in-pedestal {
+  filter: grayscale(70%);
+}
+
+.is-hide-in-pedestal.selected {
+  filter: grayscale(70%) drop-shadow(0px 0px 8px yellow) drop-shadow(0px 0px 4px yellow);
+}
+
+.is-hide-in {
+  filter: invert(85%) opacity(85%);
 }

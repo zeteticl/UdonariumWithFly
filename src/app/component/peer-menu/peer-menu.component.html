@@ -1,60 +1,89 @@
 <div *ngIf="myPeer">
   <div style="display: flex; align-items: flex-end; margin-bottom: 4px">
     <div *ngIf="myPeer.image" class="image cover" [style.background-image]="'url(' + myPeer.image.url + ')' | safe: 'style' "
-      (click)="changeIcon()">
-      <!--<img *ngIf="myPeer.image" [src]="myPeer.image.url | safe: 'resourceUrl'" />-->
+      (click)="changeIcon()" style="cursor: pointer">
     </div>
     <div>
-      <button (click)="changeIcon()">變更圖示</button>
+      <label style="display: inline-block; margin-bottom: 2px" [ngClass]="{'i-am-gm': isGMMode || isGMHold}"><b style="font-size: smaller"><input type="checkbox" name="i-am-gamemaster" value="I'm Gamemaster" checked="{{ isGMMode || isGMHold ? 'checked' : '' }}" (click)="onGMMode($event)">{{ isGMMode ? '現在GMモードです' : (isGMHold ? 'GMモード保留中' : 'GMモードになる') }}</b></label><br />
+      <button (click)="changeIcon()">プレイヤーアイコン変更</button>
     </div>
   </div>
-  <span>您的顏色和暱稱：<input type="color" style="width:1em; margin-right: 0.5em" [(ngModel)]="myPeerColor">　<input [(ngModel)]="myPeerName" [style.color]="myPeerColor" style="font-weight: bolder;" placeholder="暱稱" />
-  <br>※在瀏覽器中保存上次使用的顏色和暱稱、<br>　選擇白色（255,255,255）將顏色恢復為初始值。</span>
+  <div>
+    您的顏色和暱稱：<input type="color" style="width:1em; margin-right: 0.5em" [(ngModel)]="myPeerColor">　<input [(ngModel)]="myPeerName" [style.color]="myPeerColor" style="font-weight: bolder;" placeholder="暱稱" /><br>
+    ※在瀏覽器中保存上次使用的顏色和暱稱。<br>
+    <span style="font-size: smaller; margin-left: 1em">選擇白色（255,255,255）將顏色恢復為初始值。</span>
+  </div>
 </div>
 <div>
-  <span>你的ID：<span>
-    <ng-container *ngIf="networkService.isOpen">
-      <span style="display: inline-block;">
-        <span #idSpacer class="id-spacer">{{ networkService.peerContext.userId }}</span>
-        <input #idInput class="id-input" type="text" value="{{ networkService.peerContext.userId }}" readonly>
-      </span>
-      <button *ngIf="isAbleClipboardCopy" (click)="copyPeerId()" [disabled]="isCopied"><b class="material-icons" style="font-size: 1em; vertical-align: bottom">content_copy</b></button>
-      <span [@fadeInOut]="isCopied" class="copied" [style.color]="myPeerColor"> {{ isCopied ? '將其複製到剪貼板。' : '' }}</span>
-    </ng-container>
-  </span>
-  <span *ngIf="!networkService.isOpen" style="font-weight: bold;">???</span>
-  </span>
-  <span *ngIf="GuestMode()"><strong>※訪客身份登入中</strong></span>
+  <div>あなたのID：
+    <span>
+      <ng-container *ngIf="networkService.isOpen">
+        <span class="id-input-container">
+          <span class="id-spacer">{{ networkService.peerContext.userId }}</span>
+          <input class="id-input" type="text" value="{{ networkService.peerContext.userId }}" readonly>
+        </span>
+        <button *ngIf="isAbleClipboardCopy" (click)="copyPeerId()" [disabled]="isCopied"><b class="material-icons" style="font-size: 1em; vertical-align: bottom">content_copy</b></button>
+        <span [@fadeInOut]="isCopied" class="copied" [style.color]="myPeerColor"> {{ isCopied ? 'クリップボードにコピーしました。' : '' }}</span>
+      </ng-container>
+    </span>
+    <span *ngIf="!networkService.isOpen" style="font-weight: bold;">???</span>
+  </div>
 </div>
-<!--<div>host ID:{{networkService.hostPeerID}}</div>-->
 <ng-container *ngIf="networkService.peerContext.isRoom">
   <hr/>
-  <div>
-    <span>房間名稱：<span *ngIf="networkService.isOpen" style="font-weight: bold;">{{networkService.peerContext.roomName}}/{{networkService.peerContext.roomId}}</span></span>
+  <div>ルーム名：
+    <span>
+      <ng-container *ngIf="networkService.isOpen">
+        <span class="id-input-container">
+          <span class="id-spacer room-data">{{ networkService.peerContext.roomName + '/' + networkService.peerContext.roomId }}</span>
+          <input class="id-input room-data" type="text" value="{{ networkService.peerContext.roomName + '/' + networkService.peerContext.roomId }}" readonly>
+        </span>
+        <button *ngIf="isAbleClipboardCopy" (click)="copyRoomName()" [disabled]="isRoomNameCopied"><b class="material-icons" style="font-size: 1em; vertical-align: bottom">content_copy</b></button>
+        <span [@fadeInOut]="isRoomNameCopied" class="copied" [style.color]="myPeerColor"> {{ isRoomNameCopied ? 'クリップボードにコピーしました。' : '' }}</span>
+      </ng-container>
+    </span>
   </div>
-  <div>
-    <span>密碼：<span *ngIf="networkService.isOpen" style="font-weight: bold;">{{networkService.peerContext.password}}</span></span>
-  </div>
+  <ng-container *ngIf="networkService.peerContext.password">
+    <div>
+      パスワード
+      <label sytle="white-space: nowrap">
+        <input name="show-hide-password" type="checkbox" value="Show Hides" checked="{{ isPasswordOpen ? 'checked' : '' }}" (click)="onPasswordOpen($event)">
+        <b class="material-icons" [ngClass]="{'red-eye': isPasswordOpen}" style="font-size: smaller">{{ isPasswordOpen ? 'visibility' : 'visibility_off' }}</b>：
+      </label>
+      <div style="display: inline">
+        <span *ngIf="isPasswordOpen" class="id-input-container">
+          <span class="id-spacer room-data">{{ networkService.peerContext.password }}</span>
+          <input class="id-input room-data" type="text" value="{{ networkService.peerContext.password }}" readonly>
+        </span>
+        <div style="display: inline" *ngIf="!isPasswordOpen" class="masked-password" draggable="false">{{ maskedPassword }}</div>
+        <button *ngIf="isAbleClipboardCopy && isPasswordOpen" (click)="copyPassword()" [disabled]="isPasswordCopied"><b class="material-icons" style="font-size: 1em; vertical-align: bottom">content_copy</b></button>
+        <span [@fadeInOut]="isPasswordCopied" class="copied" [style.color]="myPeerColor"> {{ isPasswordCopied ? 'クリップボードにコピーしました。' : '' }}</span>
+      </div>
+    </div>
+  </ng-container>
 </ng-container>
 <hr/>
-<div *ngFor="let context of networkService.peerContexts">
+<div *ngFor="let context of networkService.peerContexts; index as i">
+  <div *ngIf="i == 0" style="font-weight: bold">他の参加者と接続状態<span class="health">（良好 </span><i class="material-icons health health-blue">sentiment_very_satisfied</i><span class="health"> ＞ </span><i class="material-icons health health-green">sentiment_dissatisfied</i><span class="health"> ＞ </span><i class="material-icons health health-yellow">mood_bad</i><span class="health"> ＞ </span><i class="material-icons health health-red">sentiment_very_dissatisfied</i><span class="health"> 不良）</span>：</div>
   <div>
-    <span *ngIf="!context.isOpen">[連接中]</span>
-    <span>其他参加者：{{findUserId(context.peerId)}} [<b [style.color]="findPeerColor(context.peerId)">{{findPeerName(context.peerId)}}</b>]</span><span *ngIf="context.isGuest"> (訪客)</span>
+    <div *ngIf="!context.isOpen">[接続中]</div>
+    <div [ngClass]="{'is-gm-mode': findPeerIsGMMode(context.peerId)}"><i class="{{'material-icons health ' + healthClass(context.session.health)}}" style="margin-right: 2px">{{ healthIcon(context.session.health) }}</i><span style="margin-right: 3px">{{ findUserId(context.peerId) }}</span>[<div *ngIf="findPeerImageUrl(context.peerId)" class="cover mini-icon" [style.background-image]="'url(' + findPeerImageUrl(context.peerId) + ')' | safe: 'style' "></div><span><b [style.color]="findPeerColor(context.peerId)">{{ findPeerName(context.peerId) }}</b></span>]</div>
   </div>
 </div>
-<div>
+<div *ngIf="!isGMMode && !isGMHold">
   <ng-container *ngIf="!networkService.peerContext.isRoom">
-    <input [(ngModel)]="targetUserId" placeholder="您想進行連接的人的ID" name="targetUserId" />
-    <button (click)="connectPeer()" [disabled]="!networkService.isOpen || targetUserId == null || targetUserId == ''">私人連接</button><br>
+    <input [(ngModel)]="targetUserId" placeholder="接続したい相手のID" name="targetUserId" [disabled]="isDisableConnect" />
+    <button (click)="connectPeer()" [disabled]="!networkService.isOpen || targetUserId == null || targetUserId == '' || isDisableConnect">プライベート接続</button><br>
   </ng-container>
-  <button *ngIf="networkService.peerIds.length <= 1" (click)="showLobby()" [disabled]="!networkService.isOpen">大廳（房間列表）</button>
+  <button *ngIf="networkService.peerIds.length <= 1" (click)="showLobby()" [disabled]="!networkService.isOpen || isDisableConnect">大廳（房間列表）</button>
 </div>
-<div><span style="font-size: 12px;">{{help}}</span></div>
-<ng-container *ngIf="!networkService.peerContext.isRoom">
-  <div style="font-size: 12px;" *ngIf="networkService.peerContexts.length < 1">※如果您使用私人連接，請在Udonarium之外共享彼此的ID。</div>
-  <div style="font-size: 12px;" *ngIf="networkService.peerContexts.length < 1">※如果要自己檢查的操作，則應打開兩個瀏覽器。</div>
+<ng-container *ngIf="!isGMMode && !isGMHold">
+  <ng-container *ngIf="!networkService.peerContext.isRoom">
+    <div style="font-size: 12px" *ngIf="networkService.peerContexts.length < 1">※プライベート接続を使用する場合は、お互いのIDをユドナリウム外で共有してください。</div>
+    <div style="font-size: 12px" *ngIf="networkService.peerContexts.length < 1">※一人で動作確認を行いたい場合はブラウザを2つ開くと良いと思います。</div>
+  </ng-container>
+  <ng-container *ngIf="networkService.peerContext.isRoom">
+    <div style="font-size: 12px">※ルーム機能を利用している時はプライベート接続を利用できません。</div>
+  </ng-container>
 </ng-container>
-<ng-container *ngIf="networkService.peerContext.isRoom">
-  <div style="font-size: 12px;">※使用房間功能時，私人連接不可用。</div>
-</ng-container>
+<ng-container *ngIf="isGMMode || isGMHold"><div style="font-size: 12px">※GMモード中（保留中含む）は自分から接続を行えません。</div></ng-container>

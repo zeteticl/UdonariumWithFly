@@ -1,12 +1,12 @@
 import { trigger, transition, animate, keyframes, style } from '@angular/animations';
-import { ArrayType, ThrowStmt } from '@angular/compiler';
 import { ElementRef, NgZone, OnDestroy, ViewChild } from '@angular/core';
 import { Component, Input, OnInit } from '@angular/core';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
+import { EventSystem } from '@udonarium/core/system';
+import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { DataElement } from '@udonarium/data-element';
 import { GameCharacter } from '@udonarium/game-character';
-import { StandImageService } from 'service/stand-image.service';
 
 @Component({
   selector: 'stand-image',
@@ -56,6 +56,7 @@ export class StandImageComponent implements OnInit, OnDestroy {
   @Input() color: string;
 
   @ViewChild('standImageElement', { static: false }) standImageElement: ElementRef;
+  @ViewChild('dialogElement', { static: false }) dialogElement: ElementRef;
 
   static isShowStand = true;
   static isShowNameTag = true;
@@ -64,6 +65,7 @@ export class StandImageComponent implements OnInit, OnDestroy {
   private _imageFile: ImageFile = ImageFile.Empty;
   private _timeoutId;
   private _dialogTimeoutId;
+  private _chatIntervalId;
 
   isFarewell = false;
   isGhostly = false;
@@ -115,6 +117,86 @@ export class StandImageComponent implements OnInit, OnDestroy {
     return StandImageComponent.isCanBeGone;
   }
 
+  //ToDO 共通化、とりあえず2回まではコピペOKのルール
+  set dialog(dialog) {
+    if (!this.gameCharacter || (this.gameCharacter.location.name === 'table' && !this.gameCharacter.isHideIn) || this.gameCharacter.location.name === 'graveyard') return;
+    clearTimeout(this._dialogTimeoutId);
+    let text = StringUtil.cr(dialog.text);
+    const isEmote = StringUtil.isEmote(text);
+    const rubys = [];
+    const re = /[\|｜]([^\|｜\s]+?)《(.+?)》/g;
+    let ary;
+    let count = 0;
+    let rubyLength = 0;
+
+    if (!isEmote) {
+      text = text.replace(/[。、]{3}/g, '…').replace(/[。、]{2}/g, '‥').replace(/(。|[\r\n]{2,})/g, "$1                            ").trimEnd(); //改行や。のあと時間を置くためのダーティハック
+      while ((ary = re.exec(text)) !== null) {
+        let offset = ary.index - (count * 3);
+        rubys.push({base: ary[1], ruby: ary[2], start: offset - rubyLength, end: offset + ary[1].length - rubyLength - 1});
+        count++;
+        rubyLength += ary[2].length;
+      }
+    }
+    //if (rubys.length > 0) this.isRubied = true; 
+
+    let speechDelay = 1000 / Array.from(text).length > 36 ? 1000 / Array.from(text).length : 36;
+    if (speechDelay > 200) speechDelay = 200;
+    this._dialogTimeoutId = setTimeout(() => {
+      //this.dialog = null;
+      this.gameCharacter.text = '';
+      this.gameCharacter.isEmote = false; 
+      //this.isRubied = false; 
+      //this.changeDetector.markForCheck();
+    }, Array.from(text).length * speechDelay + 6000);
+
+    //this.dialog = dialog;
+    this.gameCharacter.isEmote = isEmote;
+    count = 0;
+    let countLength = 0;
+    let rubyCount = 0;
+    let tmpText = '';
+    let carrentRuby = rubys.shift();
+    let rubyText = '';
+    let isOpenRuby = false;
+    if (isEmote) {
+      this.gameCharacter.text = text;
+      //this.changeDetector.markForCheck();
+    }  else {
+      const charAry = Array.from(text.replace(/[\|｜]([^\|｜\s]+?)《.+?》/g, '$1'));
+      this._chatIntervalId = setInterval(() => {
+        let c = charAry[count];
+        let isMulti = c.length > 1;
+        if (c) {
+            if (!isOpenRuby && carrentRuby && countLength >= carrentRuby.start) {
+                tmpText += '<ruby>';
+                isOpenRuby = true;
+                rubyCount = 0;
+            }
+            tmpText += StringUtil.escapeHtml(c);
+            if (isOpenRuby) {
+                rubyCount += 1;
+                let rt = carrentRuby.ruby;
+                rubyText = '<rt>' + StringUtil.escapeHtml(Array.from(rt).slice(0, Math.ceil(Array.from(rt).length * (rubyCount / Array.from(carrentRuby.base).length))).join('')) + '</rt>'
+            }
+            if (isOpenRuby && carrentRuby && countLength >= carrentRuby.end - (isMulti ? 1 : 0)) {
+                tmpText += (rubyText + '</ruby>');
+                isOpenRuby = false;
+                carrentRuby = rubys.shift(); 
+            }
+            countLength += c.length;
+        }
+        count += 1;
+        this.gameCharacter.text = tmpText + (isOpenRuby ? (rubyText + '</ruby>') : '');
+        //this.changeDetector.markForCheck();
+        if (count >= charAry.length) {
+          clearInterval(this._chatIntervalId);
+        }
+        //countLength += c.length;
+      }, speechDelay);
+    }
+  }
+
   get dialogText(): string {
     if (!this.gameCharacter || !this.gameCharacter.text) return '';
     return this.gameCharacter.text.replace(/[\r\n]{2,}/g, "\n\n").replace(/                            /g, '').trim();
@@ -147,6 +229,27 @@ export class StandImageComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    EventSystem.register(this)
+    .on('POPUP_CHAT_BALLOON', -1000, event => {
+      if (this.gameCharacter && this.gameCharacter.identifier == event.data.characterIdentifier) {
+        this.ngZone.run(() => {
+          this.dialog = event.data;
+          //this.changeDetector.markForCheck();
+        });
+      }
+    })
+    .on('FAREWELL_CHAT_BALLOON', -1000, event => {
+      if (this.gameCharacter && this.gameCharacter.identifier == event.data.characterIdentifier) {
+        this.ngZone.run(() => {
+          this.dialog = null;
+          this.gameCharacter.text = '';
+          this.gameCharacter.isEmote = false;
+          //this.changeDetector.markForCheck();
+        });
+        clearTimeout(this._dialogTimeoutId);
+        clearInterval(this._chatIntervalId);
+      }
+    })
   }
 
   ngOnDestroy(): void {
@@ -222,13 +325,16 @@ export class StandImageComponent implements OnInit, OnDestroy {
   }
 
   get dialogBoxCssBottom(): number {
-    let ret = this.imageHeight * 0.66;
+    let ret = this.imageHeight * 0.66 + this.adjustY;
     if (ret < 48) ret = 48;
+    if (this.dialogElement) {
+      if (ret > document.documentElement.offsetHeight - this.dialogElement.nativeElement.clientHeight) ret = document.documentElement.offsetHeight - this.dialogElement.nativeElement.clientHeight;
+    }
     return ret;
   }
 
   get emoteCssBottom(): number {
-    let ret = this.imageHeight;
+    let ret = this.imageHeight * 0.66 + (this.imageWidth / 4.5 > 16 ? this.imageWidth / 4.5 : 16);
     if (ret < 0) ret = 0;
     return ret;
   }
@@ -277,10 +383,13 @@ export class StandImageComponent implements OnInit, OnDestroy {
   }
 
   calcStandImageTransformOrigin(): string {
+    return 'center 66%';
+    /*
     if (!this.standImageElement) return 'center';
     let ratio = 1 - this.naturalWidth / (this.naturalHeight * 2);
     if (ratio > 0.66) ratio = 0.66;
     return 'center ' + (ratio * 100) + '%';
+    */
   } 
 
   toGhostly() {

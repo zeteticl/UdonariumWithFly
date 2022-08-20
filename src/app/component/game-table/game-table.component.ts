@@ -78,6 +78,9 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
   get diceSymbols(): DiceSymbol[] { return this.tabletopService.diceSymbols; }
   get peerCursors(): PeerCursor[] { return this.tabletopService.peerCursors; }
 
+  get isStealthMode(): boolean { return GameCharacter.isStealthMode; }
+  get isGMMode(): boolean { return PeerCursor.myCursor && PeerCursor.myCursor.isGMMode; }
+
   constructor(
     private ngZone: NgZone,
     private contextMenuService: ContextMenuService,
@@ -98,7 +101,7 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
         if (event.data.identifier !== this.currentTable.identifier && event.data.identifier !== this.tableSelecter.identifier) return;
         console.log('UPDATE_GAME_OBJECT GameTableComponent ' + this.currentTable.identifier);
 
-        this.setGameTableGrid(this.currentTable.width, this.currentTable.height, this.currentTable.gridSize, this.currentTable.gridType, this.currentTable.gridColor);
+        this.setGameTableGrid(this.currentTable.width, this.currentTable.height, this.currentTable.gridSize, this.currentTable.gridType, this.currentTable.gridColor, this.currentTable.isShowNumber);
       })
       .on('DRAG_LOCKED_OBJECT', event => {
         this.gameTable.nativeElement.style.transition = null;
@@ -328,15 +331,15 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
       });
     }
 
-    this.gameTable.nativeElement.style.transform = 'translateZ(' + this.viewPotisonZ + 'px) translateY(' + this.viewPotisonY + 'px) translateX(' + this.viewPotisonX + 'px) rotateY(' + this.viewRotateY + 'deg) rotateX(' + this.viewRotateX + 'deg) rotateZ(' + this.viewRotateZ + 'deg) ';
+    this.gameTable.nativeElement.style.transform = `translateZ(${this.viewPotisonZ.toFixed(4)}px) translateY(${this.viewPotisonY.toFixed(4)}px) translateX(${this.viewPotisonX.toFixed(4)}px) rotateY(${this.viewRotateY.toFixed(4)}deg) rotateX(${this.viewRotateX.toFixed(4) + 'deg) rotateZ(' + this.viewRotateZ.toFixed(4)}deg)`;
   }
 
-  private setGameTableGrid(width: number, height: number, gridSize: number = 50, gridType: GridType = GridType.SQUARE, gridColor: string = '#000000e6') {
+  private setGameTableGrid(width: number, height: number, gridSize: number = 50, gridType: GridType = GridType.SQUARE, gridColor: string = '#000000e6', isShowNumber = true) {
     this.gameTable.nativeElement.style.width = width * gridSize + 'px';
     this.gameTable.nativeElement.style.height = height * gridSize + 'px';
 
     let render = new GridLineRender(this.gridCanvas.nativeElement);
-    render.render(width, height, gridSize, gridType, gridColor);
+    render.render(width, height, gridSize, gridType, gridColor, isShowNumber);
 
     let opacity: number = this.tableSelecter.gridShow ? 1.0 : 0.0;
     this.gridCanvas.nativeElement.style.opacity = opacity + '';
@@ -357,5 +360,13 @@ export class GameTableComponent implements OnInit, OnDestroy, AfterViewInit {
 
   trackByGameObject(index: number, gameObject: GameObject) {
     return gameObject.identifier;
+  }
+
+  isCursorHidIn(cursor: PeerCursor): boolean {
+    if (cursor.isGMMode) return true;
+    for (let character of this.characters) {
+      if (character.isHideIn && character.location.name === 'table' && character.owner === cursor.userId) return true;
+    }
+    return false;
   }
 }

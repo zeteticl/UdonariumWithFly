@@ -22,30 +22,29 @@
         <input *ngIf="character" type="checkbox" [(ngModel)]="isUseFaceIcon" checked="{{isUseFaceIcon ? 'checked' : ''}}" (change)="isUseFaceIcon = (isUseFaceIcon ? true : false)" />
         <b *ngIf="character" style="font-size: smaller;">大頭照icon</b>
       </label>
-      <select [style.max-width]="character ? '10em' : '13.5em'" [(ngModel)]="sendFrom" (change)="standName = ''" [ngStyle]="{'color': color, 'font-weight': (sendFrom != myPeer?.identifier ? 'normal' : 'bolder')}">
-        <option *ngIf="!onlyCharacters" value="{{myPeer?.identifier}}" [style.color]="myColor" style="font-weight: bolder;">{{myPeer?.name}}（你）</option>
+      <select [style.max-width]="character ? '9.5em' : '13em'" [(ngModel)]="sendFrom" (change)="standName = ''" [ngStyle]="{'color': color, 'font-weight': (sendFrom != myPeer?.identifier ? 'normal' : 'bolder')}">
+        <option *ngIf="!onlyCharacters" value="{{myPeer?.identifier}}" [style.color]="myColor" style="font-weight: bolder;">{{myPeer?.name}}（あなた）</option>
         <option *ngFor="let gameCharacter of gameCharacters" style="font-weight: normal;" [style.color]="gameCharacter.chatPalette && gameCharacter.chatPalette.color && gameCharacter.chatPalette.color != '#ffffff' ? gameCharacter.chatPalette.color : '#444'" value="{{gameCharacter.identifier}}">{{gameCharacter.name}}</option>
       </select>
       <span style="white-space: nowrap"> ➡
-        <select style="max-width: 10em" [(ngModel)]="sendTo" [ngClass]="{'not-specified': sendTo == ''}" [ngStyle]="{'color': (sendTo == '' ? null : sendToColor), 'font-weight': (sendTo == '' ? 'normal' : 'bolder')}">
-          <option value="" class="not-specified">全部人</option>
+        <select style="max-width: 9.5em" [(ngModel)]="sendTo" [ngClass]="{'not-specified': sendTo == ''}" [ngStyle]="{'color': (sendTo == '' ? null : sendToColor), 'font-weight': (sendTo == '' ? 'normal' : 'bolder')}">
+          <option value="" class="not-specified">全員</option>
           <option *ngFor="let peer of otherPeers" value="{{peer.identifier}}" [style.color]="peer.color" style="font-weight: bolder;">{{peer.name}}
             <ng-container *ngIf="peer === myPeer">（你）</ng-container>
           </option>
         </select>
       </span>
-      <span style="white-space: nowrap"*ngIf="!ClarifyMode()">
-        <select *ngIf="diceBotInfosIndexed.length < 1" style="width: 12em;" (change)="loadDiceBot($event.target.value)" [(ngModel)]="gameType" [ngModelOptions]="{standalone: true}"
-          [ngClass]="{'not-specified': gameType == ''}">
-          <option value="" class="not-specified">未指定骰子機械人</option>
-          <option *ngFor="let diceBotInfo of diceBotInfos" value="{{diceBotInfo.script}}">{{diceBotInfo.game}}</option>
-        </select>
+      <span style="white-space: nowrap">
         <select *ngIf="diceBotInfosIndexed.length > 0" style="width: 12em;" (change)="loadDiceBot($event.target.value)" [(ngModel)]="gameType" [ngModelOptions]="{standalone: true}"
-          [ngClass]="{'not-specified': gameType == ''}">
-          <option value="" class="not-specified">未指定骰子機械人</option>
+          [ngClass]="{'not-specified': gameType == 'DiceBot' || gameType == ''}">
+          <option value="DiceBot" class="not-specified">ダイスボット指定なし</option>
           <optgroup *ngFor="let group of diceBotInfosIndexed" class="dice-bot-group" label="{{group.index}}">
             <option *ngFor="let diceBotInfo of group.infos" value="{{diceBotInfo.script}}">{{diceBotInfo.game}}</option>
           </optgroup>
+        </select>
+        <select *ngIf="diceBotInfosIndexed.length < 1" style="width: 12em;" (change)="loadDiceBot($event.target.value)" [(ngModel)]="gameType" [ngModelOptions]="{standalone: true}" disabled
+          [ngClass]="{'not-specified': gameType == 'DiceBot' || gameType == ''}">
+          <option value="DiceBot" class="not-specified">ダイスボット読込中…</option>
         </select>
         <button (click)="showDicebotHelp()">?</button>
       </span>
@@ -77,17 +76,20 @@
     <div>
       <form>
         <input *ngIf="onlyCharacters" type="color" style="width:1em; margin-left: 3px" [(ngModel)]="paletteColor" [ngModelOptions]="{standalone: true}">
-        <textarea class="chat-input" [placeholder]="!onlyCharacters ? 'Enter輸出　Shift+Enter換行　聊天板的顏色優先' : 'Enter輸出　Shift+Enter換行　白(255,255,255)的情況使用你的顏色'" [(ngModel)]="text"
+        <textarea class="chat-input" [placeholder]="!onlyCharacters ? 'Ctrl+⇅:履歴 &#x23CE;:送信 Shift+&#x23CE;:改行　チャットパレットの色を優先' : 'Ctrl+⇅:履歴 &#x23CE;:送信 Shift+&#x23CE;:改行　白(255,255,255):あなたの色'" [(ngModel)]="text"
           [ngModelOptions]="{standalone: true}" (input)="onInput()" (keydown.enter)="sendChat($event)"
+          (keydown.control.arrowup)="moveHistory($event, 1)" (keydown.control.arrowdown)="moveHistory($event, -1)"
           #textArea></textarea>
         <button type="submit" (click)="sendChat(null)"><b>SEND</b></button>
       </form>
     </div>
     <div class="writing-info">
       <ng-container *ngIf="0 < writingPeerNameAndColors.length">
-        <span *ngFor="let peerNameAndColor of writingPeerNameAndColors; index as i" style="font-weight: bold;" [style.color]="peerNameAndColor.color">{{peerNameAndColor.name}}<span
-            *ngIf="writingPeerNameAndColors.length !== (i + 1)">, </span></span>
-        <span> 輸入中...</span>
+        <div *ngFor="let peerNameAndColor of writingPeerNameAndColors; index as i" style="display: inline; white-space: pre">
+          <div *ngIf="peerNameAndColor.imageUrl" class="cover mini-icon" [style.background-image]="'url(' + peerNameAndColor.imageUrl + ')' | safe: 'style' "></div>
+          <div style="font-weight: bold; display: inline" [style.color]="peerNameAndColor.color | safe: 'style'"><span class="peer-name">{{peerNameAndColor.name}}</span><span style="user-select: none" *ngIf="writingPeerNameAndColors.length !== (i + 1)">, </span></div>
+        </div>
+         輸入中...
       </ng-container>
     </div>
   </div>

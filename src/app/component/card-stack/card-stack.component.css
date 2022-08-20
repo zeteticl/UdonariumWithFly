@@ -182,3 +182,11 @@
   #fff 0px 0px 2px,
   #fff 0px 0px 2px;
 }
+
+.component:not(.is-empty):hover .number-of-cards {
+  visibility: hidden;
+}
+
+.is-inverse {
+  transform: rotateZ(180deg);
+}

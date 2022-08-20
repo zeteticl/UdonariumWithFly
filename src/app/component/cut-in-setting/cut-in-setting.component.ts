@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, EventEmitter, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, EventEmitter, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CutInList } from '@udonarium/cut-in-list';
 import { CutIn } from '@udonarium/cut-in';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
@@ -20,6 +20,7 @@ import { AudioStorage } from '@udonarium/core/file-storage/audio-storage';
 import { UUID } from '@udonarium/core/system/util/uuid';
 import { OpenUrlComponent } from 'component/open-url/open-url.component';
 import { CutInComponent } from 'component/cut-in/cut-in.component';
+import { ConfirmationComponent, ConfirmationType } from 'component/confirmation/confirmation.component';
 
 
 @Component({
@@ -129,12 +130,7 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.selectedCutIn) return false;
     return CutInService.nowShowingIdentifiers().includes(this.selectedCutIn.identifier);
   }
-
-  isPlayingNow(cutIn: CutIn): boolean {
-    if (!cutIn) return false;
-    return CutInService.nowShowingIdentifiers().includes(cutIn.identifier);
-  }
-
+  
   get isValidAudio(): boolean {
     if (!this.selectedCutIn) return true;
     return this.selectedCutIn.isValidAudio;
@@ -167,6 +163,7 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
   progresPercent: number = 0;
 
   constructor(
+    private changeDetector: ChangeDetectorRef,
     private pointerDeviceService: PointerDeviceService,
     private modalService: ModalService,
     private panelService: PanelService,
@@ -184,7 +181,7 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngAfterViewInit() {
     if (this.cutIns.length > 0) {
-      setTimeout(() => {
+      queueMicrotask(() => {
         this.onChangeCutIn(this.cutIns[0].identifier);
         this.cutInSelecter.nativeElement.selectedIndex = 0;
       });
@@ -207,7 +204,7 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
   add() {
     const cutIn = this.create();
     cutIn.imageIdentifier = 'stand_no_image';
-    setTimeout(() => {
+    queueMicrotask(() => {
       this.onChangeCutIn(cutIn.identifier);
       this.cutInSelecter.nativeElement.value = cutIn.identifier;
     })
@@ -246,7 +243,7 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
       let restoreCutIn = <CutIn>ObjectSerializer.instance.parseXml(this.selectedCutInXml);
       CutInList.instance.addCutIn(restoreCutIn);
       this.selectedCutInXml = '';
-      setTimeout(() => {
+      queueMicrotask(() => {
         const cutIns = this.cutIns;
         this.onChangeCutIn(cutIns[cutIns.length - 1].identifier);
         this.cutInSelecter.nativeElement.selectedIndex = cutIns.length - 1;
@@ -293,12 +290,19 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.isShowHideImages) {
       this.isShowHideImages = false;
     } else {
-      if (window.confirm("非表示設定の画像を表示します（ネタバレなどにご注意ください）。\nよろしいですか？")) {
-        this.isShowHideImages = true;
-      } else {
-        this.isShowHideImages = false;
-        $event.preventDefault();
-      }
+      $event.preventDefault();
+      this.modalService.open(ConfirmationComponent, {
+        title: '非表示設定の画像を表示', 
+        text: '非表示設定の画像を表示しますか？',
+        help: 'ネタバレなどにご注意ください。',
+        type: ConfirmationType.OK_CANCEL,
+        materialIcon: 'visibility',
+        action: () => {
+          this.isShowHideImages = true;
+          (<HTMLInputElement>$event.target).checked = true;
+          this.changeDetector.markForCheck();
+        }
+      });
     }
   }
 
@@ -340,7 +344,7 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
 
   testCutIn() {
     if (!this.selectedCutIn) return;
-    setTimeout(() => {
+    queueMicrotask(() => {
       EventSystem.trigger('PLAY_CUT_IN', { 
         identifier: this.selectedCutIn.identifier, 
         test: true

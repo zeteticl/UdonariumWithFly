@@ -134,6 +134,8 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.imageService.getEmptyOr(this.diceSymbol.backFaceImageFile);
   }
 
+  get isGMMode(): boolean { return this.diceSymbol.isGMMode; }
+
   get isMine(): boolean { return this.diceSymbol.isMine; }
   get hasOwner(): boolean { return this.diceSymbol.hasOwner; }
   get ownerName(): string { return this.diceSymbol.ownerName; }
@@ -198,7 +200,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
           this.ngZone.run(() => {
             this.animeState = 'inactive';
             this.changeDetector.markForCheck();
-            setTimeout(() => { this.animeState = 'active'; this.changeDetector.markForCheck(); });
+            queueMicrotask(() => { this.animeState = 'active'; this.changeDetector.markForCheck(); });
           });
         }
       })
@@ -215,7 +217,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.owner && !this.isLock) {
           this.owner = '';
           SoundEffect.play(PresetSound.unlock);
-          this.chatMessageService.sendOperationLog(`${this.diceSymbol.name} の${this.isCoin ? '表／裏' : '目'}を公開 → ${this.face}`);
+          this.chatMessageService.sendOperationLog(`${this.diceSymbol.name == '' ? '(無名の' + (this.isCoin ? 'コイン' : 'ダイス') + ')' : this.diceSymbol.name} の${this.isCoin ? '表／裏' : '目'}を公開 → ${this.face}`);
         }
       })
       .on<object>('TABLE_VIEW_ROTATE', -1000, event => {
@@ -229,6 +231,9 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
         this.changeDetector.markForCheck();
       })
       .on('UPDATE_FILE_RESOURE', -1000, event => {
+        this.changeDetector.markForCheck();
+      })
+      .on('CHANGE_GM_MODE', event => {
         this.changeDetector.markForCheck();
       })
       .on('DISCONNECT_PEER', event => {
@@ -329,7 +334,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
         name: `${this.isCoin ? 'Coin' : '骰子'}公開`, action: () => {
           this.owner = '';
           SoundEffect.play(PresetSound.unlock);
-          this.chatMessageService.sendOperationLog(`${this.diceSymbol.name} の${this.isCoin ? '表／裏' : '目'}を公開 → ${this.face}`);
+          this.chatMessageService.sendOperationLog(`${this.diceSymbol.name == '' ? '(無名の' + (this.isCoin ? 'コイン' : 'ダイス') + ')' : this.diceSymbol.name} の${this.isCoin ? '表／裏' : '目'}を公開 → ${this.face}`);
         }
       });
     }
@@ -337,7 +342,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
       actions.push({
         name: '只有自己看見', action: () => {
           this.owner = Network.peerContext.userId;
-          this.chatMessageService.sendOperationLog(`${this.diceSymbol.name} を自分だけ見た`);
+          this.chatMessageService.sendOperationLog(`${this.diceSymbol.name == '' ? '(無名の' + (this.isCoin ? 'コイン' : 'ダイス') + ')' : this.diceSymbol.name} を自分だけ見た`);
           SoundEffect.play(PresetSound.lock);
         }
       });
@@ -347,12 +352,14 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
         name: '☑ 不要一次性公開', action: () => {
           this.isLock = false;
           SoundEffect.play(PresetSound.unlock);
-        }
+        },
+        disabled: this.hasOwner && !this.isVisible
       } : {
         name: '☐ 不要一次性公開', action: () => {
           this.isLock = true;
           SoundEffect.play(PresetSound.lock);
-        }
+        },
+        disabled: this.hasOwner && !this.isVisible
       }));
     if (this.isVisible) {
       let subActions: ContextMenuAction[] = [];
@@ -372,7 +379,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
         subActions.push({
           name: `${this.face == face ? '◉' : '○'} ${face}　`, action: () => {
             if (this.owner === '') SoundEffect.play(PresetSound.dicePut);
-            if (this.owner === '' && this.face != face) this.chatMessageService.sendOperationLog(`${this.diceSymbol.name} の${this.isCoin ? '表／裏' : '目'}を変更 → ${face}`);
+            if (this.owner === '' && this.face != face) this.chatMessageService.sendOperationLog(`${this.diceSymbol.name == '' ? '(無名の' + (this.isCoin ? 'コイン' : 'ダイス') + ')' : this.diceSymbol.name} の${this.isCoin ? '表／裏' : '目'}を変更 → ${face}`);
             this.face = face;
           }
         });
@@ -446,15 +453,17 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
   diceRoll(): string {
     if (this.GuestMode()) return;
     EventSystem.call('ROLL_DICE_SYNBOL', { identifier: this.diceSymbol.identifier });
-    if (this.owner === '') {
+    //if (this.owner === '') {
       if (this.isCoin) {
         SoundEffect.play(PresetSound.coinToss);
       } else {
         SoundEffect.play(PresetSound.diceRoll1);
       }
-    }
+    //}
     let face = this.diceSymbol.diceRoll();
-    if (this.owner === '') this.chatMessageService.sendOperationLog(`${this.diceSymbol.name} を${this.isCoin ? 'トスした' : '振った'} → ${face}`);
+    let message = `${this.diceSymbol.name == '' ? '(無名の' + (this.isCoin ? 'コイン' : 'ダイス') + ')' : this.diceSymbol.name} を${this.isCoin ? 'トスした' : '振った'}`;
+    if (this.owner === '') message += ` → ${face}`;
+    this.chatMessageService.sendOperationLog(message);
     return face;
   }
 
@@ -464,7 +473,7 @@ export class DiceSymbolComponent implements OnInit, AfterViewInit, OnDestroy {
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '骰子設定';
     if (gameObject.name.length) title += ' - ' + gameObject.name;
-    let option: PanelOption = { title: title, left: coordinate.x - 300, top: coordinate.y - 300, width: 600, height: 600 };
+    let option: PanelOption = { title: title, left: coordinate.x - 300, top: coordinate.y - 300, width: 600, height: 490 };
     let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
     component.tabletopObject = gameObject;
   }

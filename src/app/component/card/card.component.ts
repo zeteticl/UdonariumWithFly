@@ -103,12 +103,19 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
   get ownerName(): string { return this.card.ownerName; }
   get ownerColor(): string { return this.card.ownerColor; }
 
+  get isGMMode(): boolean { return this.card.isGMMode; }
+
   get imageFile(): ImageFile { return this.imageService.getSkeletonOr(this.card.imageFile); }
   get frontImage(): ImageFile { return this.imageService.getSkeletonOr(this.card.frontImage); }
   get backImage(): ImageFile { return this.imageService.getSkeletonOr(this.card.backImage); }
 
   private iconHiddenTimer: NodeJS.Timer = null;
   get isIconHidden(): boolean { return this.iconHiddenTimer != null };
+
+  get rubiedText(): string { return StringUtil.rubyToHtml(StringUtil.escapeHtml(this.text)) }
+
+  get isLocked(): boolean { return this.card ? this.card.isLocked : false; }
+  set isLocked(isLocked: boolean) { if (this.card) this.card.isLocked = isLocked; }
 
   gridSize: number = 50;
 
@@ -152,6 +159,9 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
       .on('UPDATE_FILE_RESOURE', -1000, event => {
         this.changeDetector.markForCheck();
       })
+      .on('CHANGE_GM_MODE', event => {
+        this.changeDetector.markForCheck();
+      })
       .on('DISCONNECT_PEER', event => {
         let cursor = PeerCursor.findByPeerId(event.data.peerId);
         if (!cursor || this.card.owner === cursor.userId) this.changeDetector.markForCheck();
@@ -188,6 +198,7 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
     e.preventDefault();
 
     if (e.detail instanceof CardStack) {
+      if (this.isLocked) return;
       let cardStack: CardStack = e.detail;
       let distance: number = (cardStack.location.x - this.card.location.x) ** 2 + (cardStack.location.y - this.card.location.y) ** 2 + (cardStack.posZ - this.card.posZ) ** 2;
       if (distance < 25 ** 2) {
@@ -195,6 +206,7 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
         cardStack.location.y = this.card.location.y;
         cardStack.posZ = this.card.posZ;
         cardStack.putOnBottom(this.card);
+        this.isLocked = false;
       }
     }
   }
@@ -221,6 +233,7 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onDoubleClick() {
+    if (this.isLocked) return;
     if (this.GuestMode()) return;
     this.stopDoubleClickTimer();
     let distance = (this.doubleClickPoint.x - this.input.pointer.x) ** 2 + (this.doubleClickPoint.y - this.input.pointer.y) ** 2;
@@ -229,7 +242,7 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.hasOwner && !this.isHand) return;
       this.state = this.isVisible && !this.isHand ? CardState.BACK : CardState.FRONT;
       this.owner = '';
-      if (this.state === CardState.FRONT) this.chatMessageService.sendOperationLog(this.card.name + ' を公開');
+      if (this.state === CardState.FRONT) this.chatMessageService.sendOperationLog((this.card.name == '' ? '(無名のカード)' : this.card.name)  + ' を公開');
       SoundEffect.play(PresetSound.cardDraw);
     }
   }
@@ -244,6 +257,11 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.startDoubleClickTimer(e);
     this.card.toTopmost();
     this.startIconHiddenTimer();
+
+    // TODO:もっと良い方法考える
+    if (this.isLocked) {
+      EventSystem.trigger('DRAG_LOCKED_OBJECT', {});
+    }
   }
 
   @HostListener('contextmenu', ['$event'])
@@ -254,19 +272,32 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
     let position = this.pointerDeviceService.pointers[0];
     this.contextMenuService.open(position, [
+      (this.isLocked
+        ? {
+          name: '☑ 固定', action: () => {
+            this.isLocked = false;
+            SoundEffect.play(PresetSound.unlock);
+          }
+        } : {
+          name: '☐ 固定', action: () => {
+            this.isLocked = true;
+            SoundEffect.play(PresetSound.lock);
+          }
+        }),
+      ContextMenuSeparator,
       (!this.isVisible || this.isHand
         ? {
           name: this.isHand ? '面朝上（公開）' : this.hasOwner ? '面朝上（公開）' : '面朝上', action: () => {
             this.card.faceUp();
-            this.chatMessageService.sendOperationLog(this.card.name + ' を公開');
+            this.chatMessageService.sendOperationLog((this.card.name == '' ? '(無名のカード)' : this.card.name) + ' を公開');
             SoundEffect.play(PresetSound.cardDraw);
-          }, default: !this.hasOwner || this.isHand
+          }, default: !this.isLocked && (!this.hasOwner || this.isHand)
         }
         : {
           name: '把它翻過來', action: () => {
             this.card.faceDown();
             SoundEffect.play(PresetSound.cardDraw);
-          }, default: !this.hasOwner || this.isHand
+          }, default: !this.card.isLocked && (!this.hasOwner || this.isHand)
         }
       ),
       (this.isHand
@@ -279,7 +310,7 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
         : {
           name: '只有自己看見（放在你手中）', action: () => {
             SoundEffect.play(PresetSound.cardDraw);
-            this.chatMessageService.sendOperationLog(`${this.card.isFront ? this.card.name : '伏せたカード'} を自分だけ見た`);
+            this.chatMessageService.sendOperationLog(`${this.card.isFront ? (this.card.name == '' ? '(無名のカード)' : this.card.name)  : '(伏せたカード)'} を自分だけ見た`);
             this.card.faceDown();
             this.owner = Network.peerContext.userId;
           }
@@ -289,7 +320,8 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
         name: '用重疊的卡片製作卡組', action: () => {
           this.createStack();
           SoundEffect.play(PresetSound.cardPut);
-        }
+        },
+        disabled: this.isLocked
       },
       ContextMenuSeparator,
       { name: '編輯卡牌', action: () => { this.showDetail(this.card); } },
@@ -319,6 +351,7 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
           cloneObject.location.x += this.gridSize;
           cloneObject.location.y += this.gridSize;
           cloneObject.toTopmost();
+          cloneObject.isLocked = false;
           SoundEffect.play(PresetSound.cardPut);
         }
       },
@@ -343,6 +376,13 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private createStack() {
     if (this.GuestMode()) return;
+    let cards: Card[] = this.tabletopService.cards.filter(card => {
+      let distance: number = (card.location.x - this.card.location.x) ** 2 + (card.location.y - this.card.location.y) ** 2 + (card.posZ - this.card.posZ) ** 2;
+      return distance < 100 ** 2 && !card.isLocked;
+    });
+
+    if (cards.length == 0) return;
+
     let cardStack = CardStack.create('牌堆');
     cardStack.location.x = this.card.location.x;
     cardStack.location.y = this.card.location.y;
@@ -350,11 +390,6 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
     cardStack.location.name = this.card.location.name;
     cardStack.rotate = this.rotate;
     cardStack.zindex = this.card.zindex;
-
-    let cards: Card[] = this.tabletopService.cards.filter(card => {
-      let distance: number = (card.location.x - this.card.location.x) ** 2 + (card.location.y - this.card.location.y) ** 2 + (card.posZ - this.card.posZ) ** 2;
-      return distance < 100 ** 2;
-    });
 
     cards.sort((a, b) => {
       if (a.zindex < b.zindex) return 1;
@@ -397,7 +432,7 @@ export class CardComponent implements OnInit, OnDestroy, AfterViewInit {
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '卡牌設置';
     if (gameObject.name.length) title += ' - ' + (this.isVisible ? gameObject.name : '卡牌（裏面）');
-    let option: PanelOption = { title: title, left: coordinate.x - 300, top: coordinate.y - 300, width: 600, height: 600 };
+    let option: PanelOption = { title: title, left: coordinate.x - 300, top: coordinate.y - 300, width: 600, height: 490 };
     let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
     component.tabletopObject = gameObject;
   }

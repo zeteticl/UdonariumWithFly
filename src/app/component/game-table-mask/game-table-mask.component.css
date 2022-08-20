@@ -41,6 +41,7 @@
 
 .image {
   display: block;
+  box-sizing: border-box;
 }
 
 .lock-icon {
@@ -99,7 +100,8 @@
 }
 
 .fall {
-  transition: transform 64ms ease-in;
+  -webkit-transition: transform 132ms ease-in-out;
+  transition: transform 132ms ease-in-out;
 }
 
 .text {
@@ -128,4 +130,8 @@
   #fff 0px 0px 2px,
   #fff 0px 0px 2px,
   #fff 0px 0px 2px;
+}
+
+.is-inverse {
+  transform: rotateZ(180deg);
 }

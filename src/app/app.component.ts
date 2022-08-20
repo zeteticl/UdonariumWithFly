@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, NgZone, OnDestroy, ViewChild, ViewContainerRef } from '@angular/core';
+import { AfterViewInit, Component, NgZone, OnDestroy, OnInit, ViewChild, ViewContainerRef } from '@angular/core';
 
 import { ChatTabList } from '@udonarium/chat-tab-list';
 import { AudioPlayer } from '@udonarium/core/file-storage/audio-player';
@@ -18,6 +18,7 @@ import { DiceBot } from '@udonarium/dice-bot';
 import { Jukebox } from '@udonarium/Jukebox';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
+import { TableSelecter } from '@udonarium/table-selecter';
 import { NoteInventoryComponent } from 'component/note-inventory/note-inventory.component';
 import { ChatWindowComponent } from 'component/chat-window/chat-window.component';
 import { ContextMenuComponent } from 'component/context-menu/context-menu.component';
@@ -51,13 +52,15 @@ import { ImageTag } from '@udonarium/image-tag';
 import { CutInService } from 'service/cut-in.service';
 import { CutIn } from '@udonarium/cut-in';
 import { CutInList } from '@udonarium/cut-in-list';
+import { ConfirmationComponent, ConfirmationType } from 'component/confirmation/confirmation.component';
+import { SwUpdate } from '@angular/service-worker';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent implements AfterViewInit, OnDestroy {
+export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @ViewChild('modalLayer', { read: ViewContainerRef, static: true }) modalLayerViewContainerRef: ViewContainerRef;
   private immediateUpdateTimer: NodeJS.Timer = null;
@@ -67,8 +70,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   progresPercent: number = 0;
 
   isHorizontal = false;
+  isLoggedin = false;
+  isUpdateCanceled = false;
+  
+  get otherPeers(): PeerCursor[] { return ObjectStore.instance.getObjects(PeerCursor); }
 
   constructor(
+    private swUpdate: SwUpdate,
     private modalService: ModalService,
     private panelService: PanelService,
     private pointerDeviceService: PointerDeviceService,
@@ -97,11 +105,13 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     this.appConfigService.initialize();
     this.pointerDeviceService.initialize();
 
+    TableSelecter.instance.initialize();
     ChatTabList.instance.initialize();
     DataSummarySetting.instance.initialize();
 
     let diceBot: DiceBot = new DiceBot('DiceBot');
     diceBot.initialize();
+    DiceBot.getHelpMessage('').then(() => this.lazyNgZoneUpdate(true));
 
     let jukebox: Jukebox = new Jukebox('Jukebox');
     jukebox.initialize();
@@ -195,7 +205,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
             .then(response => { return response.json() })
             .then(infos => {
               let apiUrl = event.data.dice.url;
-              DiceBot.apiUrl = (apiUrl.substr(apiUrl.length - 1) === '/') ? apiUrl.substr(0, apiUrl.length - 1) : apiUrl;
+              DiceBot.apiUrl = apiUrl.endsWith('/') ? apiUrl.substring(0, apiUrl.length - 1) : apiUrl;
               DiceBot.apiVersion = API_VERSION;
               DiceBot.diceBotInfos = [];
               //DiceBot.diceBotInfos.push(
@@ -235,13 +245,14 @@ export class AppComponent implements AfterViewInit, OnDestroy {
                 });
               DiceBot.diceBotInfos.push(...tempInfos.map(info => { return { script: (API_VERSION == 1 ? info.system : info.id), game: info.name } }));
               if (tempInfos.length > 0) {
-                let sentinel = tempInfos[0].normalize.substr(0, 1);
-                let group = { index: tempInfos[0].normalize.substr(0, 1), infos: [] };
+                let sentinel = tempInfos[0].normalize.substring(0, 1);
+                let group = { index: tempInfos[0].normalize.substring(0, 1), infos: [] };
                 for (let info of tempInfos) {
                   let index = info.lang == 'Other' ? '其他' 
                     : info.lang == 'ChineseTraditional' ? '正體中文'
                     : info.lang == 'English' ? 'English'
-                    : info.normalize.substr(0, 1);
+                    : info.lang == 'SimplifiedChinese' ? '简体中文'
+                    : info.normalize.substring(0, 1);
                   if (index !== sentinel) {
                     sentinel = index;
                     DiceBot.diceBotInfosIndexed.push(group);
@@ -297,7 +308,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
               DiceBot.diceBotInfosIndexed.push(group);
               group = { index: sentinel, infos: [] };
             }
-            group.infos.push({ script: info.script, game: info.game });
+            group.infos.push({ script: info.id, game: info.game });
           }
           DiceBot.diceBotInfosIndexed.push(group);
         }
@@ -312,24 +323,40 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         console.log('OPEN_NETWORK', event.data.peerId);
         PeerCursor.myCursor.peerId = Network.peerContext.peerId;
         PeerCursor.myCursor.userId = Network.peerContext.userId;
+        this.isLoggedin = false;
       })
-      .on('CLOSE_NETWORK', event => {
-        console.log('CLOSE_NETWORK', event.data.peerId);
+      .on('NETWORK_ERROR', event => {
+        console.log('NETWORK_ERROR', event.data.peerId);
+        let errorType: string = event.data.errorType;
+        let errorMessage: string = event.data.errorMessage;
+
         this.ngZone.run(async () => {
-          if (1 < Network.peerIds.length) {
-            await this.modalService.open(TextViewComponent, { title: '網絡錯誤', text: '網絡連接出了點問題。 \n如果在此顯示後連接不穩定，請嘗試重新加載頁面並重新連接。' });
-          } else {
-            await this.modalService.open(TextViewComponent, { title: '網絡錯誤', text: '連接信息已被丟棄。 \n如果您關閉此窗口，它將嘗試重新連接。' });
-            Network.open();
-          }
+          //SKyWayエラーハンドリング
+          let quietErrorTypes = ['peer-unavailable'];
+          let reconnectErrorTypes = ['disconnected', 'socket-error', 'unavailable-id', 'authentication', 'server-error'];
+
+          if (quietErrorTypes.includes(errorType)) return;
+          await this.modalService.open(TextViewComponent, { title: 'ネットワークエラー', text: errorMessage });
+
+          if (!reconnectErrorTypes.includes(errorType)) return;
+          await this.modalService.open(TextViewComponent, { title: 'ネットワークエラー', text: 'このウィンドウを閉じると再接続を試みます。' });
+          Network.open();
+          this.isLoggedin = false;
         });
       })
       .on('CONNECT_PEER', event => {
-        if (event.isSendFromSelf) this.chatMessageService.calibrateTimeOffset();
+        if (event.isSendFromSelf) { 
+          this.chatMessageService.calibrateTimeOffset();
+          if (!this.isLoggedin) {
+            this.isLoggedin = true;
+            chatMessageService.sendOperationLog((Network.peerContext.isRoom ? Network.peerContext.roomName + ' に': '他者と') + '接続した');
+          }
+        }
         this.lazyNgZoneUpdate(event.isSendFromSelf);
       })
       .on('DISCONNECT_PEER', event => {
         this.lazyNgZoneUpdate(event.isSendFromSelf);
+        if (event.isSendFromSelf) this.isLoggedin = false;
       })
       .on('PLAY_CUT_IN', -1000, event => {
         let cutIn = ObjectStore.instance.get<CutIn>(event.data.identifier);
@@ -353,13 +380,57 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         this.standImageService.destroyAll();
       });
   }
+  
+  private static readonly beforeUnloadProc = (evt) => {
+    // Cancel the event as stated by the standard.
+    evt.preventDefault();
+    // Chrome requires returnValue to be set.
+    evt.returnValue = '';
+  };
+
+  ngOnInit() {
+    window.addEventListener('beforeunload', AppComponent.beforeUnloadProc);
+  }
 
   ngAfterViewInit() {
     PanelService.defaultParentViewContainerRef = ModalService.defaultParentViewContainerRef = ContextMenuService.defaultParentViewContainerRef = StandImageService.defaultParentViewContainerRef = CutInService.defaultParentViewContainerRef = this.modalLayerViewContainerRef;
-    setTimeout(() => {
+    queueMicrotask(() => {
       this.panelService.open(PeerMenuComponent, { width: 520, height: 450, left: 100 });
       this.panelService.open(ChatWindowComponent, { width: 700, height: 400, left: 100, top: 450 });
-    }, 0);
+    });
+
+    this.swUpdate.versionUpdates.subscribe(evt => {
+      switch (evt.type) {
+        case 'VERSION_DETECTED':
+          console.log(`Downloading new app version: ${evt.version.hash}`);
+          break;
+        case 'VERSION_READY':
+          console.log(`Current app version: ${evt.currentVersion.hash}`);
+          console.log(`New app version ready for use: ${evt.latestVersion.hash}`);
+          if (!this.isUpdateCanceled) {
+            this.modalService.open(ConfirmationComponent, {
+              title: 'Udonarium with Fly の更新', 
+              text: 'Udonarium with Fly の新しいバージョンが公開されています。更新を行いますか？',
+              help: '更新の際にページを再読み込みします。手動で再読み込みを行うことでも更新可能です。',
+              type: ConfirmationType.OK_CANCEL,
+              materialIcon: 'browser_updated',
+              action: () => {
+                this.swUpdate.activateUpdate().then(() => {
+                  window.removeEventListener('beforeunload', AppComponent.beforeUnloadProc);
+                  document.location.reload();
+                });
+              },
+              cancelAction: () => {
+                this.isUpdateCanceled = true;
+              }
+            });
+          }
+          break;
+        case 'VERSION_INSTALLATION_FAILED':
+          console.log(`Failed to install app version '${evt.version.hash}': ${evt.error}`);
+          break;
+      }
+    });
   }
 
   ngOnDestroy() {
@@ -471,12 +542,55 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   }
 
   toolBox() {
-    this.contextMenuService.open(this.pointerDeviceService.pointers[0], [
-      { name: 'CutIn', materialIcon: 'movie_creation', action: () => this.open('CutInSettingComponent') },
-      { name: '筆記倉庫', materialIcon: 'folder_shared', action: () => this.open('NoteInventoryComponent') },
-      { name: '簡易骰子表', materialIcon: 'table_rows', action: () => this.open('DiceRollTableSettingComponent') },
-      { name: '公開骰子', materialIcon: 'all_out', action: () => this.diceAllOpne() }
-    ], '工具箱');
+    const menu = [];
+    const cunIns = CutInList.instance.cutIns;
+    menu.push({ name: 'カットイン再生', materialIcon: 'play_arrow', 
+      action: null, subActions: cunIns.length === 0 ? [
+        {
+          name: '(カットインなし)',
+          disabled: true,
+          center: true
+        }
+      ] : cunIns.map(cutIn => {
+        return { 
+          name: `${cutIn.isValidAudio ? '' : '⚠️'}${cutIn.name == '' ? '(無名のカットイン)' : cutIn.name}`, 
+          subActions: [{
+              name: '全員',
+              action: () => {
+                EventSystem.call('PLAY_CUT_IN', {
+                  identifier: cutIn.identifier,
+                  secret: false,
+                  sender: PeerCursor.myCursor.peerId
+                })
+              }
+            }, ContextMenuSeparator, ...this.otherPeers.map(peer => {
+            return {
+              name: peer.name + (peer === PeerCursor.myCursor ? ' (あなた)' : ''),
+              color: peer.color,
+              default: true,
+              action: () => {
+                if (peer !== PeerCursor.myCursor) {
+                  EventSystem.call('PLAY_CUT_IN', {
+                    identifier: cutIn.identifier,
+                    secret: true,
+                    sender: PeerCursor.myCursor.peerId
+                  }, peer.peerId);
+                }
+                EventSystem.call('PLAY_CUT_IN', {
+                  identifier: cutIn.identifier,
+                  secret: true,
+                  sender: PeerCursor.myCursor.peerId
+                }, PeerCursor.myCursor.peerId);
+              }
+            }
+          })]
+        };
+      })
+    });
+    menu.push(ContextMenuSeparator);
+    menu.push({ name: 'カットイン設定', materialIcon: 'movie_creation', action: () => this.open('CutInSettingComponent') });
+    menu.push({ name: 'ダイスボット表設定', materialIcon: 'table_rows', action: () => this.open('DiceRollTableSettingComponent') })
+    this.contextMenuService.open(this.pointerDeviceService.pointers[0], menu, 'ツールボックス');
   }
 
   resetPointOfView() {
@@ -491,7 +605,19 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     const isShowNameTag = StandImageComponent.isShowNameTag;
     const isCanBeGone = StandImageComponent.isCanBeGone;
     this.contextMenuService.open(this.pointerDeviceService.pointers[0], [
-      { name: `${ isShowStand ? '☑' : '☐' }展示立繪`, 
+      { name: `${ TableSelecter.instance.gridShow ? '☑' : '☐' }テーブルグリッドを常に表示`, 
+      action: () => {
+        TableSelecter.instance.gridShow = !TableSelecter.instance.gridShow;
+        EventSystem.trigger('UPDATE_GAME_OBJECT', TableSelecter.instance.toContext()); 
+      }
+      },
+      { name: `${ TableSelecter.instance.gridSnap ? '☑' : '☐' }オブジェクト移動時にスナップ`, 
+      action: () => {
+        TableSelecter.instance.gridSnap = !TableSelecter.instance.gridSnap;
+      }
+      },
+      ContextMenuSeparator,
+      { name: `${ isShowStand ? '☑' : '☐' }スタンド表示`, 
         action: () => {
           StandImageComponent.isShowStand = !isShowStand;
         }
@@ -513,8 +639,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
         disabled: !StandImageComponent.isShowStand
       },
       ContextMenuSeparator,
-      { name: '消除所有立繪', action: () => EventSystem.trigger('DESTORY_STAND_IMAGE_ALL', null) }
-    ], '立繪設定');
+      { name: '表示スタンド全消去', action: () => EventSystem.trigger('DESTORY_STAND_IMAGE_ALL', null) }
+    ], '個人設定');
   }
   /*
     farewellStandAll() {
@@ -522,9 +648,19 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     }
   */
   diceAllOpne() {
-    if (confirm('公開所有未設置為「不要一次性公開」的骰子。\n您確定嗎？')) {
-      EventSystem.trigger('DICE_ALL_OPEN', null);
-    }
+    this.modalService.open(ConfirmationComponent, {
+      title: 'ダイス一斉公開', 
+      text: 'テーブル上のダイス、コインを公開しますか？',
+      help: '「一斉公開しない」設定のものは公開されません。',
+      type: ConfirmationType.OK_CANCEL,
+      materialIcon: 'all_out',
+      action: () => {
+        EventSystem.trigger('DICE_ALL_OPEN', null);
+      }
+    });
+  }
+  deleteGameObject(gameObject: any) {
+    throw new Error('Method not implemented.');
   }
 
   rotateChange(isHorizontal) {

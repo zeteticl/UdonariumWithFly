@@ -48,6 +48,7 @@
   height: 50px;
   flex-shrink: 0;
   vertical-align: top;
+  pointer-events: none;
 }
 .message .image img {
   width: 100%;
@@ -104,24 +105,24 @@
 }
 
 .dicebot-message .msg-text {
-  color:#11F;
+  color: #11F;
 }
 
 .direct-message.dicebot-message .msg-text {
-  color:#CCF;
+  color: #CCF;
 }
 
 .dicebot-message .msg-text.is-success {
-  color:#17f;
+  color: #17f;
 }
 .dicebot-message .msg-text.is-failure {
-  color:#F05;
+  color: #F05;
 }
 .direct-message.dicebot-message .msg-text.is-success {
-  color:#adF;
+  color: #adF;
 }
 .direct-message.dicebot-message .msg-text.is-failure {
-  color:#F66;
+  color: #F66;
 }
 
 .dicebot-message {
@@ -267,4 +268,26 @@ textarea {
 
 .container.compact textarea {
   margin: -3px -3px -3px -3px;
+}
+
+.grow {
+  text-shadow    : 
+        1px  0px 1px #ffffff,
+        0px  1px 1px #ffffff,
+      -1px  0px 1px #ffffff,
+        0px -1px 1px #ffffff; 
+}
+
+.mini-icon {
+  display: inline-block;
+  padding: 0px;
+  width: 1.0rem;
+  height: 1.0rem;
+  vertical-align: middle;
+  border-radius: 0.2rem;
+  object-fit: cover;
+  margin-right: 2px;
+
+  filter: drop-shadow(1px 1px 1px #ffffff)
+          drop-shadow(-1px -1px 1px #ffffff);
 }

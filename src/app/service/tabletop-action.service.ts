@@ -3,7 +3,6 @@ import { Card } from '@udonarium/card';
 import { CardStack } from '@udonarium/card-stack';
 import { ImageContext, ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
-import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { DiceSymbol, DiceType } from '@udonarium/dice-symbol';
 import { GameCharacter } from '@udonarium/game-character';
@@ -141,7 +140,7 @@ export class TabletopActionService {
   private cardName(code: string) {
     let ret = '';
     const suit = code.slice(0, 1);
-    const number = parseInt(code.substr(1, 2));
+    const number = parseInt(code.substring(1, 3));
     const jqk = ['ジャック', 'クイーン', 'キング']
     switch(suit) {
       case 'c':
@@ -209,9 +208,6 @@ export class TabletopActionService {
   }
 
   makeDefaultTable() {
-    let tableSelecter = new TableSelecter('tableSelecter');
-    tableSelecter.initialize();
-
     let gameTable = new GameTable('gameTable');
     let testBgFile: ImageFile = null;
     let bgFileContext = ImageFile.createEmpty('testTableBackgroundImage_image').toContext();
@@ -224,7 +220,7 @@ export class TabletopActionService {
     gameTable.height = 15;
     gameTable.initialize();
 
-    tableSelecter.viewTableIdentifier = gameTable.identifier;
+    TableSelecter.instance.viewTableIdentifier = gameTable.identifier;
   }
 
   makeDefaultTabletopObjects() {
@@ -286,6 +282,7 @@ export class TabletopActionService {
     testCharacter.initialize();
     testCharacter.location.x = 5 * 50;
     testCharacter.location.y = 13 * 50;
+    testCharacter.initialize();
     testCharacter.createTestGameDataElement('角色C', 1, testFile.identifier);
   }
 
@@ -391,7 +388,6 @@ export class TabletopActionService {
 
   private getViewTable(): GameTable {
     if (this.GuestMode()) return;
-    let tableSelecter = ObjectStore.instance.get<TableSelecter>('tableSelecter');
-    return tableSelecter ? tableSelecter.viewTable : null;
+    return TableSelecter.instance.viewTable;
   }
 }

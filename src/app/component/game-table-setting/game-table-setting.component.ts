@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ObjectSerializer } from '@udonarium/core/synchronize-object/object-serializer';
@@ -7,6 +7,7 @@ import { EventSystem, Network } from '@udonarium/core/system';
 import { FilterType, GameTable, GridType } from '@udonarium/game-table';
 import { ImageTag } from '@udonarium/image-tag';
 import { TableSelecter } from '@udonarium/table-selecter';
+import { ConfirmationComponent, ConfirmationType } from 'component/confirmation/confirmation.component';
 
 import { FileSelecterComponent } from 'component/file-selecter/file-selecter.component';
 import { ImageService } from 'service/image.service';
@@ -59,10 +60,16 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
   get tableGridType(): GridType { return this.selectedTable.gridType; }
   set tableGridType(gridType: GridType) { if (this.isEditable) this.selectedTable.gridType = Number(gridType); }
 
+  get tableGridNumberShow(): boolean { return this.selectedTable.isShowNumber; }
+  set tableGridNumberShow(isShowNumber: boolean) {
+    this.selectedTable.isShowNumber = isShowNumber;
+    EventSystem.trigger('UPDATE_GAME_OBJECT', this.tableSelecter.toContext()); // 自分にだけイベントを発行してグリッド更新を誘発
+  }
+
   get tableDistanceviewFilter(): FilterType { return this.selectedTable.backgroundFilterType; }
   set tableDistanceviewFilter(filterType: FilterType) { if (this.isEditable) this.selectedTable.backgroundFilterType = filterType; }
 
-  get tableSelecter(): TableSelecter { return ObjectStore.instance.get<TableSelecter>('tableSelecter'); }
+  get tableSelecter(): TableSelecter { return TableSelecter.instance; }
 
   selectedTable: GameTable = null;
   selectedTableXml: string = '';
@@ -80,6 +87,7 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
   progresPercent: number = 0;
 
   constructor(
+    private changeDetector: ChangeDetectorRef,
     private modalService: ModalService,
     private saveDataService: SaveDataService,
     private imageService: ImageService,
@@ -192,12 +200,19 @@ export class GameTableSettingComponent implements OnInit, OnDestroy, AfterViewIn
     if (this.isShowHideImages) {
       this.isShowHideImages = false;
     } else {
-      if (window.confirm("非表示設定の画像を表示します（ネタバレなどにご注意ください）。\nよろしいですか？")) {
-        this.isShowHideImages = true;
-      } else {
-        this.isShowHideImages = false;
-        $event.preventDefault();
-      }
+      $event.preventDefault();
+      this.modalService.open(ConfirmationComponent, {
+        title: '非表示設定の画像を表示', 
+        text: '非表示設定の画像を表示しますか？',
+        help: 'ネタバレなどにご注意ください。',
+        type: ConfirmationType.OK_CANCEL,
+        materialIcon: 'visibility',
+        action: () => {
+          this.isShowHideImages = true;
+          (<HTMLInputElement>$event.target).checked = true;
+          this.changeDetector.markForCheck();
+        } 
+      });
     }
   }
 }

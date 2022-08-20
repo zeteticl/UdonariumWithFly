@@ -21,11 +21,15 @@
   background-size: cover;
 }
 
+.id-input-container {
+  display: inline-block;
+  position: relative;
+}
+
 .id-spacer  {
-  position: absolute;
   visibility: hidden;
+  display: inline-block;
   pointer-events: none;
-  height: 0;
   padding: 0 3px;
   box-sizing: border-box;
   border-color: transparent;
@@ -38,7 +42,10 @@
 }
 
 .id-input {
+  top: 0;
+  left: -4px;
   width: 100%;
+  position: absolute;
   background: none;
   border: none;
   border-radius: 2px;
@@ -55,6 +62,18 @@
   font-weight: bolder;
 }
 
+.room-data {
+  font-size: medium;
+}
+
+.masked-password {
+  font-weight: bolder;
+  color: #444;
+  font-family: Cambria, Georgia;
+  user-select: none;
+  display: inline-block;
+}
+
 .id-input:active, .id-input:hover {
   border-color: #444;
 }
@@ -62,4 +81,65 @@
 .copied {
   font-size: smaller;
   opacity: 0;
+  white-space: nowrap;
+}
+
+.health {
+  font-size: 14px;
+  font-weight: normal;
+}
+.health-blue {
+  color: blue;
+  filter: drop-shadow(0px 0px 2px skyblue);
+}
+
+.health-green {
+  color: green;
+  filter: drop-shadow(0px 0px 1px greenyellow);
+}
+
+.health-yellow {
+  color: rgb(117, 117, 50);
+  filter: drop-shadow(0px 0px 1px yellow);
+}
+
+.health-red {
+  color: darkred;
+  filter: drop-shadow(0px 0px 2px red);
+}
+
+.red-eye {
+  color: darkred;
+  text-shadow: 0px 0px 2px crimson,
+  0px 0px 4px white;
+  font-weight: bolder;
+}
+
+.mini-icon {
+  display: inline-block;
+  padding: 0px;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  border-radius: 0.2rem;
+  margin-right: 2px;
+}
+
+.is-gm-mode::after {
+  content: '【GM】';
+  color: red;
+}
+
+.i-am-gm {
+  color: red;
+  text-shadow    : 
+  1px  1px 0px #eee,
+-1px  1px 0px #eee,
+  1px -1px 0px #eee,
+-1px -1px 0px #eee,
+  1px  0px 0px #eee,
+  0px  1px 0px #eee,
+-1px  0px 0px #eee,
+  0px -1px 0px #eee,
+  0px 0px 2px crimson; 
 }

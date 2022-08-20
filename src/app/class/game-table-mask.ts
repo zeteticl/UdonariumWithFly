@@ -7,6 +7,7 @@ export class GameTableMask extends TabletopObject {
   @SyncVar() isLock: boolean = false;
   @SyncVar() GM: string = '';
   @SyncVar() blendType: number = 0;
+  @SyncVar() isTransparentOnGMMode: boolean = false;
 
   get name(): string { return this.getCommonValue('name', ''); }
   get width(): number { return this.getCommonValue('width', 1); }

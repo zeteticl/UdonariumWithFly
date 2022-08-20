@@ -2,8 +2,9 @@
   <ng-container *ngTemplateOutlet="inventoryTab"></ng-container>
   <ng-container *ngTemplateOutlet="inventoryViewSetting"></ng-container>
   <div *ngIf="getGameObjects(selectTab).length < 1">{{getTabTitle(selectTab)}}儲存庫為空</div>
-  <div (contextmenu)="onContextMenu($event, gameObject)" *ngFor="let gameObject of getGameObjects(selectTab); trackBy: trackByGameObject"
-    (click)="selectGameObject(gameObject)" (dblclick)="focusGameObject(gameObject, $event)" [ngClass]="{'box': true, 'selected': (selectedIdentifier === gameObject.identifier)}">
+  <div (contextmenu)="onContextMenu($event, gameObject)" *ngFor="let gameObject of getGameObjects(selectTab); trackBy: trackByGameObject" class="object-container"
+    (click)="selectGameObject(gameObject)" (dblclick)="focusGameObject(gameObject, $event)" [ngClass]="{'box': true, 'selected': (selectedIdentifier === gameObject.identifier), 'is-hide-in': gameObject.isHideIn, 'is-inventory-no-indicate': !gameObject.isInventoryIndicate}">
+    <div *ngIf="gameObject.isHideIn && gameObject.ownerName != null" class="owner-tag" [style.background-color]="gameObject.ownerColor">{{gameObject.ownerName ? gameObject.ownerName : '（無名のプレイヤー）'}}</div>
     <ng-container *ngTemplateOutlet="gameObjectTags; context:{ gameObject: gameObject}"></ng-container>
   </div>
   <div *ngIf="selectTab === 'graveyard'" style="padding-top: 6px;">
@@ -43,7 +44,7 @@
       <tr>
         <th style=" vertical-align:middle;" nowrap>排序:</th>
         <td style=" vertical-align:middle;" nowrap>
-          <ng-container *ngIf="0 < sortTag.length">{{sortTag}} ({{sortOrderName}})</ng-container>
+          <ng-container *ngIf="0 < sortTag.length"><span>{{sortTag}} ({{sortOrderName}})</span></ng-container>
           <ng-container *ngIf="sortTag.length < 1">-</ng-container>
         </td>
         <td width="100%" nowrap>
@@ -67,8 +68,8 @@
           <i class="material-icons" style="font-size: 1em;">emoji_emotions</i>
         </ng-template>
       </button>
-      {{gameObject.name}}
-      <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier" style="font-size: 0.8em; padding: 2px 5px;" title="💭的顯示" [ngClass]="{'is-active': gameObject.isShowChatBubble}" (click)="gameObject.isShowChatBubble = !gameObject.isShowChatBubble">
+      <span class="game-object-name" style="margin-left: 3px; margin-right: 3px">{{gameObject.name}}</span>
+      <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier" style="font-size: 0.8em; padding: 2px 5px;" title="💭の表示" [ngClass]="{'is-active': gameObject.isShowChatBubble}" (click)="gameObject.isShowChatBubble = !gameObject.isShowChatBubble">
         <i class="material-icons" style="font-size: 1em;">{{ gameObject.isShowChatBubble ? 'textsms' : 'speaker_notes_off'}}</i>
       </button>
       <button class="indicate" [disabled]="selectedIdentifier !== gameObject.identifier" style="font-size: 0.8em; padding: 1px; width: 24px; height: 16px; margin-bottom: 1px" title="影的顯示" [ngClass]="{'is-active': gameObject.isDropShadow}" (click)="gameObject.isDropShadow = !gameObject.isDropShadow">
@@ -102,12 +103,10 @@
         <i class="material-icons" style="font-size: 1em;">settings</i>
       </button>
     </div>
-    <div class="object-tags-box">
-      <div class="table-cell image-box">
-        <span class="aura"
-          [ngClass]="{black: gameObject.aura == 0, blue: gameObject.aura == 1, green: gameObject.aura == 2, cyan: gameObject.aura == 3, red: gameObject.aura == 4, magenta: gameObject.aura == 5, yellow: gameObject.aura == 6, white: gameObject.aura == 7}">
-          <img *ngIf="gameObject.imageFile.url" class="inverser" [src]="gameObject.imageFile.url | safe: 'resourceUrl'"
-            [ngClass]="{inverse: gameObject.isInverse, hollow: gameObject.isHollow, 'black-paint': gameObject.isBlackPaint}" />
+    <div class="object-tags-box" [ngClass]="{'is-hide-in': gameObject.isHideIn}">
+      <div class="table-cell image-box" [ngClass]="{'is-hide-in': gameObject.isHideIn}">
+        <span class="aura" [ngClass]="{black: gameObject.aura == 0, blue: gameObject.aura == 1, green: gameObject.aura == 2, cyan: gameObject.aura == 3, red: gameObject.aura == 4, magenta: gameObject.aura == 5, yellow: gameObject.aura == 6, white: gameObject.aura == 7}">
+          <img *ngIf="gameObject.imageFile.url" class="inverser" [src]="gameObject.imageFile.url | safe: 'resourceUrl'" [ngClass]="{inverse: gameObject.isInverse, hollow: gameObject.isHollow, 'is-hide-in': gameObject.isHideIn, 'black-paint': gameObject.isBlackPaint}" draggable="false" />
         </span>
       </div>
       <div class="table-cell">
@@ -125,7 +124,7 @@
   <div *ngIf="dataElm && dataElm.name !== newLineString" class="object-tag">
     <ng-container [ngSwitch]="dataElm.attributes['type']">
       <ng-container *ngSwitchCase="'simpleNumber'">
-        <div class="tag-name">{{dataElm.name}}</div>
+        <div class="tag-name"><span>{{dataElm.name}}</span></div>
         <div style="text-align: center;">
           <div style="display: inline-block;">
             <div class="tag-value-box">
@@ -137,7 +136,7 @@
       </ng-container>
       <ng-container *ngSwitchCase="'numberResource'">
         <div class="resource-tag">
-          <div style="font-size: 0.8em; display: inline-block; margin-right: 0.5em;">{{dataElm.name}}</div>
+          <div style="font-size: 0.8em; display: inline-block; margin-right: 0.5em;"><span>{{dataElm.name}}</span></div>
           <input appLogging [logging.name]="name" [logging.dataElement]="dataElm" class="input resource-value" type="number" size="1" [(ngModel)]="dataElm.currentValue" placeholder="Value" attr.data-init-value="{{ dataElm.currentValue }}" />
         </div>
         <div class="resource-tag">
@@ -146,7 +145,7 @@
         </div>
       </ng-container>
       <ng-container *ngSwitchCase="'checkProperty'">
-        <div class="tag-name" [style.textDecoration]="dataElm.value ? 'none' : 'line-through'">{{dataElm.name}}</div>
+        <div class="tag-name" [style.textDecoration]="dataElm.value ? 'none' : 'line-through'"><span>{{dataElm.name}}</span></div>
         <div style="text-align: center;">
           <div style="display: inline-block;">
             <div class="tag-value-box">
@@ -156,7 +155,7 @@
         </div>
       </ng-container>
       <ng-container *ngSwitchCase="'abilityScore'">
-        <div class="tag-name">{{dataElm.name}}</div>
+        <div class="tag-name"><span>{{dataElm.name}}</span></div>
         <div style="text-align: center;">
           <div style="display: inline-block;">
             <div class="tag-value-box">
@@ -169,14 +168,14 @@
       </ng-container>
       <ng-container *ngSwitchCase="'url'">
         <div class="tag-name"><a [attr.title]="dataElm.value" [ngClass]="{'outer-link': !stringUtil.sameOrigin(dataElm.value)}" target="_blank" [attr.href]="(stringUtil.validUrl(dataElm.value) ? dataElm.value : '') | safe: 'url'" [attr.disabled]="!stringUtil.validUrl(dataElm.value) ? '' : null"
-          (click)="stringUtil.validUrl(dataElm.value) ? openUrl(dataElm.value, name, dataElm.name) : false">{{dataElm.name}}</a></div>
+          (click)="stringUtil.validUrl(dataElm.value) ? openUrl(dataElm.value, name, dataElm.name) : false"><span class="url-link">{{dataElm.name}}</span></a></div>
       </ng-container>
       <ng-container *ngSwitchCase="'colors'"></ng-container>
       <ng-container *ngSwitchCase="'color'"></ng-container>
       <ng-container *ngSwitchCase="'note'"></ng-container>
       <ng-container *ngSwitchDefault>
         <ng-container *ngIf="0 == dataElm.children.length">
-          <div class="tag-name">{{dataElm.name}}</div>
+          <div class="tag-name"><span>{{dataElm.name}}</span></div>
           <div style="text-align: center;">
             <div style="display: inline-block;">
               <div class="tag-value-box">

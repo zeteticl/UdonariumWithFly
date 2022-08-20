@@ -16,6 +16,9 @@ export class PeerCursor extends GameObject {
   @SyncVar() name: string = '';
   @SyncVar() imageIdentifier: string = '';
   @SyncVar() color: string = PeerCursor.CHAT_DEFAULT_COLOR;
+  @SyncVar() isGMMode: boolean = false;
+
+  static isGMHold: boolean = false;
   @SyncVar() isGuest: boolean = false;
 
   static readonly CHAT_MY_NAME_LOCAL_STORAGE_KEY = 'udonanaumu-chat-my-name-local-storage';
@@ -38,9 +41,12 @@ export class PeerCursor extends GameObject {
       EventSystem.register(this)
         .on('DISCONNECT_PEER', -1000, event => {
           if (event.data.peerId !== this.peerId) return;
-          PeerCursor.userIdMap.delete(this.userId);
-          PeerCursor.peerIdMap.delete(this.peerId);
-          ObjectStore.instance.remove(this);
+          setTimeout(() => {
+            if (Network.peerIds.includes(this.peerId)) return;
+            PeerCursor.userIdMap.delete(this.userId);
+            PeerCursor.peerIdMap.delete(this.peerId);
+            ObjectStore.instance.remove(this);
+          }, 30000);
         });
     }
   }

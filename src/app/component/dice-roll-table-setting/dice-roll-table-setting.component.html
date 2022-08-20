@@ -4,8 +4,7 @@
       <button style="font-size: smaller; margin-bottom: 3px" (click)="add()">添加骰子機械人表</button>
     </div>
     <select #diceRollTableSelecter style="width: 14em;" size="15" (change)="onChangeDiceRollTable($event.target.value)">
-      <option *ngFor="let diceRollTable of diceRollTables" value="{{ diceRollTable.identifier }}">
-        {{ diceRollTable.name }}</option>
+      <option *ngFor="let diceRollTable of diceRollTables" value="{{ diceRollTable.identifier }}" title="{{diceRollTable.name}}" [style.color]="diceRollTable.name == '' ? 'gray' : ''">{{ diceRollTable.name == '' ? '(無名のダイスボット表)' : diceRollTable.name }}</option>
     </select>
   </div>
   <div class="flex-item">
@@ -39,6 +38,14 @@
           <button (click)="upTabIndex()">↑</button>
           <button (click)="downTabIndex()">↓</button>
           <div style="float: right">
+            <!--
+            <button [disabled]="isSaveing || !diceRollTables.length" (click)="saveAll()">
+              <div style="position: relative;">
+                <div [ngClass]="{'is-hidden': isSaveing}">すべて保存</div>
+                <div *ngIf="isSaveing" class="progress">{{progresPercent}}%</div>
+              </div>
+            </button>
+            -->
             <button [disabled]="isSaveing" (click)="save()">
               <div style="position: relative;">
                 <div [ngClass]="{'is-hidden': isSaveing}">保存</div>

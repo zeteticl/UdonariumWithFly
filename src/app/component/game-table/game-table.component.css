@@ -85,6 +85,8 @@
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
+
+  transition: filter 0.2s ease-in-out;
 }
 
 .background-image.is-filter {
@@ -114,4 +116,25 @@
 .background-image.is-filter.black::after {
   background-color: hsl(0, 0%, 10%);
   filter: opacity(0.3);
+}
+
+.background-image.is-filter.is-hide-in.white::after {
+  background-color: hsl(0, 0%, 10%);
+  filter: opacity(0.3);
+}
+
+.background-image.is-filter.is-hide-in.black::after {
+  background-color: hsl(0, 0%, 97%);
+  filter: opacity(0.2);
+}
+
+.background-image.is-filter.is-hide-in {
+  filter: invert(85%) blur(5px);
+  backdrop-filter: invert(85%);
+}
+
+.background-image.is-hide-in {
+  filter: invert(85%);
+  backdrop-filter: invert(85%);
+  background-color: #FFCC80;
 }

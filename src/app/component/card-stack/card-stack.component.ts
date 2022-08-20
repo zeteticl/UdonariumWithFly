@@ -104,11 +104,23 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
   private iconHiddenTimer: NodeJS.Timer = null;
   get isIconHidden(): boolean { return this.iconHiddenTimer != null };
 
+  get rubiedText(): string { return StringUtil.rubyToHtml(StringUtil.escapeHtml(this.topCard.text)) }
+
+  get isLocked(): boolean { return this.cardStack ? this.cardStack.isLocked : false; }
+  set isLocked(isLocked: boolean) { if (this.cardStack) this.cardStack.isLocked = isLocked; }
+
   gridSize: number = 50;
 
   movableOption: MovableOption = {};
   rotableOption: RotableOption = {};
 
+  viewRotateZ = 10;
+
+  get isInverse(): boolean {
+    const rotate = Math.abs(this.viewRotateZ + this.rotate) % 360;
+    return 90 < rotate && rotate < 270
+  }
+  
   private doubleClickTimer: NodeJS.Timer = null;
   private doubleClickPoint = { x: 0, y: 0 };
 
@@ -150,6 +162,12 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
           || (object instanceof PeerCursor && object.userId === this.cardStack.owner)) {
           this.changeDetector.markForCheck();
         }
+      })
+      .on<object>('TABLE_VIEW_ROTATE', -1000, event => {
+        this.ngZone.run(() => {
+          this.viewRotateZ = event.data['z'];
+          this.changeDetector.markForCheck();
+        });
       })
       .on('CARD_STACK_DECREASED', event => {
         if (event.data.cardStackIdentifier === this.cardStack.identifier && this.cardStack) this.changeDetector.markForCheck();
@@ -208,14 +226,14 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
       let card: Card = e.detail;
       let distance: number = (card.location.x - this.cardStack.location.x) ** 2 + (card.location.y - this.cardStack.location.y) ** 2 + (card.posZ - this.cardStack.posZ) ** 2;
       if (distance < 50 ** 2) {
-        this.chatMessageService.sendOperationLog(`${card.isFront ? card.name : '伏せたカード'} を ${this.cardStack.name} に乗せた`);
+        this.chatMessageService.sendOperationLog(`${card.isFront ? (card.name == '' ? '(無名のカード)' : card.name) : '伏せたカード'} を ${this.cardStack.name == '' ? '(無名の山札)' : this.cardStack.name} に乗せた`);
         this.cardStack.putOnTop(card);
       }
     } else if (e.detail instanceof CardStack) {
       let cardStack: CardStack = e.detail;
       let distance: number = (cardStack.location.x - this.cardStack.location.x) ** 2 + (cardStack.location.y - this.cardStack.location.y) ** 2 + (cardStack.posZ - this.cardStack.posZ) ** 2;
       if (distance < 25 ** 2) {
-        this.chatMessageService.sendOperationLog(`${cardStack.name} を全て ${this.cardStack.name} に乗せた`);
+        this.chatMessageService.sendOperationLog(`${cardStack.name == '' ? '(無名の山札)' : cardStack.name} を全て ${this.cardStack.name == '' ? '(無名の山札)' : this.cardStack.name} に乗せた`);
         this.concatStack(cardStack);
       }
     }
@@ -254,9 +272,9 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
         SoundEffect.play(PresetSound.cardDraw);
         let text: string;
         if (card.isFront) {
-          text = `${this.cardStack.name} から ${card.name} を引いた`
+          text = `${this.cardStack.name == '' ? '(無名の山札)' : this.cardStack.name} から ${card.name == '' ? '(無名のカード)' : card.name} を引いた`
         } else {
-          text = `${this.cardStack.name} から 1枚引いて伏せた`
+          text = `${this.cardStack.name == '' ? '(無名の山札)' : this.cardStack.name} から 1枚引いて伏せた`
         }
         this.chatMessageService.sendOperationLog(text);
       }
@@ -275,6 +293,11 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
     this.cardStack.toTopmost();
     this.startIconHiddenTimer();
 
+    // TODO:もっと良い方法考える
+    if (this.isLocked) {
+      EventSystem.trigger('DRAG_LOCKED_OBJECT', {});
+    }
+
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: this.cardStack.identifier, className: 'GameCharacter' });
   }
 
@@ -287,6 +310,19 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
     let position = this.pointerDeviceService.pointers[0];
     this.contextMenuService.open(position, [
+      (this.isLocked
+        ? {
+          name: '☑ 固定', action: () => {
+            this.isLocked = false;
+            SoundEffect.play(PresetSound.unlock);
+          }
+        } : {
+          name: '☐ 固定', action: () => {
+            this.isLocked = true;
+            SoundEffect.play(PresetSound.lock);
+          }
+        }),
+      ContextMenuSeparator,
       {
         name: '抽一張卡', action: () => {
           const card = this.drawCard();
@@ -294,7 +330,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
             SoundEffect.play(PresetSound.cardDraw);
             let text: string;
             if (card.isFront) {
-              text = `從 ${this.cardStack.name} 中抽取了 ${card.name} `
+              text = `${this.cardStack.name} から ${card.name == '' ? '(無名のカード)' : card.name} を引いた`
             } else {
               text = `從 ${this.cardStack.name} 中抽了一張牌`
             }
@@ -321,15 +357,15 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
               if (cards.length > 0) {
                 const frontCards = cards.filter(card => card.isFront);
                 if (frontCards.length == 0) {
-                  this.chatMessageService.sendOperationLog(`${this.cardStack.name} 中 ${cards.length}抽了一張並蓋起`);
+                  this.chatMessageService.sendOperationLog(`${this.cardStack.name == '' ? '(無名の山札)' : this.cardStack.name} 中 ${cards.length}抽了一張並蓋起`);
                 } else {
                   const counter = new Map();
                   for (const card of frontCards) {
                     let count = counter.get(card.name) || 0;
                     count += 1;
-                    counter.set(card.name, count);
+                    counter.set(card.name == '' ? '(無名のカード)' : card.name, count);
                   }
-                  let text = `${this.cardStack.name} 從 ${[...counter.keys()].map(key => `${key} 中 ${counter.get(key)}張`).join('、')}`;
+                  let text = `${this.cardStack.name == '' ? '(無名の山札)' : this.cardStack.name} 從 ${[...counter.keys()].map(key => `${key} 中 ${counter.get(key)}張`).join('、')}`;
                   if (frontCards.length === cards.length) {
                     text += '被抽走'
                   } else {
@@ -347,7 +383,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
       (this.cards.length == 0 || !this.cardStack.topCard.isFront ? {
         name: '打開牌面', action: () => {
           if (!this.cardStack.topCard) return;
-          if (!this.cardStack.topCard.isFront) this.chatMessageService.sendOperationLog(`${this.cardStack.name} 牌面 ${this.cardStack.topCard.name} 公開`);
+          if (!this.cardStack.topCard.isFront) this.chatMessageService.sendOperationLog(`${this.cardStack.name == '' ? '(無名の山札)' : this.cardStack.name} 牌面 ${this.cardStack.topCard.name == '' ? '(無名のカード)' : this.cardStack.topCard.name} 公開`);
           this.cardStack.faceUp();
           SoundEffect.play(PresetSound.cardDraw);
         }, 
@@ -394,7 +430,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       { name: '查看卡牌清單', action: () => {
         this.showStackList(this.cardStack);
-        this.chatMessageService.sendOperationLog(`${this.cardStack.name} 查看卡牌清單`);
+        this.chatMessageService.sendOperationLog(`${this.cardStack.name == '' ? '(無名の山札)' : this.cardStack.name} 查看卡牌清單`);
       }, disabled: this.cards.length == 0 },
       ContextMenuSeparator,
       (this.isShowTotal
@@ -454,6 +490,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
           cloneObject.location.x += this.gridSize;
           cloneObject.location.y += this.gridSize;
           cloneObject.owner = '';
+          cloneObject.isLocked = false;
           cloneObject.toTopmost();
           SoundEffect.play(PresetSound.cardPut);
         }
@@ -567,7 +604,7 @@ export class CardStackComponent implements OnInit, AfterViewInit, OnDestroy {
     let coordinate = this.pointerDeviceService.pointers[0];
     let title = '設定牌堆';
     if (gameObject.name.length) title += ' - ' + gameObject.name;
-    let option: PanelOption = { title: title, left: coordinate.x - 300, top: coordinate.y - 300, width: 600, height: 600 };
+    let option: PanelOption = { title: title, left: coordinate.x - 300, top: coordinate.y - 300, width: 600, height: 490 };
     let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
     component.tabletopObject = gameObject;
   }

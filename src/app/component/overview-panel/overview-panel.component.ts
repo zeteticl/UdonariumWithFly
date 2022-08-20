@@ -54,6 +54,7 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
   @ViewChild('draggablePanel', { static: true }) draggablePanel: ElementRef<HTMLElement>;
   @ViewChild('cardImage', { static: false }) cardImageElement: ElementRef;
   @ViewChild('fullCardImage', { static: false }) fullCardImageElement: ElementRef<HTMLElement>;
+  @ViewChild('textArea', { static: false }) textAreaElementRef: ElementRef;
 
   @Input() tabletopObject: TabletopObject = null;
 
@@ -87,6 +88,9 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
         console.log(e);
       }
       return this._imageFile.url;
+    }
+    if (this.tabletopObject instanceof Card && this.tabletopObject.isGMMode) {
+      return this.tabletopObject.frontImage ? this.tabletopObject.frontImage.url : '';
     }
     return this.tabletopObject.imageFile ? this.tabletopObject.imageFile.url : '';
   }
@@ -368,12 +372,25 @@ export class OverviewPanelComponent implements AfterViewInit, OnDestroy {
     } else if (this.tabletopObject instanceof Card) {
       card = this.tabletopObject;
     }
-    return card ? card.text : '';
+    return card ? StringUtil.rubyToHtml(StringUtil.escapeHtml(card.text)) : '';
   }
 
   get isNoLogging(): boolean {
     if (this.tabletopObject instanceof Card) return !this.tabletopObject.isFront;
     if (this.tabletopObject instanceof DiceSymbol) return this.tabletopObject.hasOwner;
     return false;
+  }
+
+  get isSelected(): boolean { return this.textAreaElementRef && document.activeElement === this.textAreaElementRef.nativeElement; }
+
+  adjustedRubiedNote(text, isRubied=true) {
+    if (!text) return '';
+    let ret = StringUtil.escapeHtml(text);
+    if (isRubied) ret = StringUtil.rubyToHtml(ret);
+    return (ret.lastIndexOf("\n") == ret.length - 1) ? ret + "\n" : ret;
+  }
+
+  textAreaActivate() {
+    if (this.textAreaElementRef && this.textAreaElementRef.nativeElement) this.textAreaElementRef.nativeElement.focus();
   }
 }

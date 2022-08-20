@@ -33,7 +33,5 @@
     <hr>
   </div>
 </div>
-<button (click)="add()">新增立繪設定</button>
-<ng-container *ngIf="standSettingXML">
-  <button (click)="restore()">還原先前刪除的立繪</button>
-</ng-container>
+<button (click)="add()">スタンド設定の追加</button>
+<button *ngIf="standSettingXML" (click)="restore()">直前に削除したスタンド設定を戻す</button>

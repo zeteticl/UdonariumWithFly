@@ -1,5 +1,5 @@
 import { animate, keyframes, style, transition, trigger } from '@angular/animations';
-import { ChangeDetectionStrategy, Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
 
 import { ChatMessage } from '@udonarium/chat-message';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
@@ -53,19 +53,21 @@ import Autolinker from 'autolinker';
   ]
 })
 
-export class ChatMessageComponent implements OnInit {
+export class ChatMessageComponent implements OnInit, AfterViewInit {
   @Input() chatMessage: ChatMessage;
   @Input() compact: boolean = false;
   @ViewChild('edit', { static: false }) editElm: ElementRef<HTMLTextAreaElement>;
 
   imageFile: ImageFile = ImageFile.Empty;
+  toImageFile: ImageFile;
   animeState: string = 'inactive';
   isEditing = false;
   editingText = '';
 
   constructor(
     private chatMessageService: ChatMessageService,
-    private modalService: ModalService
+    private modalService: ModalService,
+    private changeDetector: ChangeDetectorRef,
   ) { }
 
   stringUtil = StringUtil;
@@ -76,12 +78,22 @@ export class ChatMessageComponent implements OnInit {
       if (event.isSendFromSelf && (!event.data || event.data.messageIdentifier !== this.chatMessage.identifier)) {
         this.editCancel();
       }
+    })
+    .on('CHANGE_GM_MODE', event => {
+      this.changeDetector.markForCheck();
     });
 
     let file: ImageFile = this.chatMessage.image;
     if (file) this.imageFile = file;
+    file = this.chatMessage.toImage;
+    if (file) this.toImageFile = file;
     let time = this.chatMessageService.getTime();
     if (time - 10 * 1000 < this.chatMessage.timestamp) this.animeState = 'active';
+  }
+
+  ngAfterViewInit() {
+    this.chatMessage.isAnimated = true;
+
   }
 
   get isMine(): boolean {
@@ -102,11 +114,15 @@ export class ChatMessageComponent implements OnInit {
   } 
 
   get htmlEscapedText():string  {
-    return this._htmlEscapeLinking(this.chatMessage.text);
+    let text = this._htmlEscapeLinking(this.chatMessage.text, false, !this.chatMessage.isOperationLog);
+    if (this.chatMessage.isDicebot) text = ChatMessage.decorationDiceResult(text);
+    return text;
   }
 
-  private _htmlEscapeLinking(str, shorten=false): string {
-    return Autolinker.link(StringUtil.escapeHtml(this.lastNewLineAdjust(str)), {
+  private _htmlEscapeLinking(str, shorten=false, ruby=false): string {
+    str = StringUtil.escapeHtml(str);
+    if (ruby) str = StringUtil.rubyToHtml(str);
+    return Autolinker.link(this.lastNewLineAdjust(str), {
       urls: {schemeMatches: true, wwwMatches: true, tldMatches: false}, 
       truncate: {length: 48, location: 'end'}, 
       decodePercentEncoding: shorten, 

@@ -21,6 +21,7 @@ import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem } from '@udonarium/core/system';
 import { ResettableTimeout } from '@udonarium/core/system/util/resettable-timeout';
 import { setZeroTimeout } from '@udonarium/core/system/util/zero-timeout';
+import { PeerCursor } from '@udonarium/peer-cursor';
 
 import { PanelService } from 'service/panel.service';
 
@@ -97,8 +98,8 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
 
   private topElm: HTMLElement = null;
   private bottomElm: HTMLElement = null;
-  private topElmBox: ClientRect = null;
-  private bottomElmBox: ClientRect = null;
+  private topElmBox: DOMRect = null;
+  private bottomElmBox: DOMRect = null;
 
   private topIndex = 0;
   private bottomIndex = 0;
@@ -142,6 +143,8 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
       ? (this.chatTab.chatMessages.length - this.bottomIndex - 1) * this.minMessageHeight
       : 0;
   }
+
+  get isEmpty(): boolean { return this.chatTab.chatMessages.every(chatMessage => !chatMessage.isDisplayable); }
 
   private scrollEventShortTimer: ResettableTimeout = null;
   private scrollEventLongTimer: ResettableTimeout = null;
@@ -305,8 +308,8 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
     if (!hasTopElm && !hasBotomElm) return { hasTopBlank, hasBotomBlank };
 
     let elm: HTMLElement = null;
-    let prevBox: ClientRect = null;
-    let currentBox: ClientRect = null;
+    let prevBox: DOMRect = null;
+    let currentBox: DOMRect = null;
     let diff: number = 0;
     if (hasBotomElm) {
       elm = this.bottomElm;
@@ -321,8 +324,8 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
       this.panelService.scrollablePanel.scrollTop -= diff;
     }
 
-    let logBox: ClientRect = this.logContainerRef.nativeElement.getBoundingClientRect();
-    let messageBox: ClientRect = this.messageContainerRef.nativeElement.getBoundingClientRect();
+    let logBox: DOMRect = this.logContainerRef.nativeElement.getBoundingClientRect();
+    let messageBox: DOMRect = this.messageContainerRef.nativeElement.getBoundingClientRect();
 
     let messageBoxTop = messageBox.top - logBox.top;
     let messageBoxBottom = messageBoxTop + messageBox.height;

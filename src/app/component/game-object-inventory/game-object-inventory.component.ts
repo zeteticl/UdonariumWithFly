@@ -7,10 +7,12 @@ import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { DataElement } from '@udonarium/data-element';
 import { SortOrder } from '@udonarium/data-summary-setting';
 import { GameCharacter } from '@udonarium/game-character';
+import { PeerCursor } from '@udonarium/peer-cursor';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { TabletopObject } from '@udonarium/tabletop-object';
 
 import { ChatPaletteComponent } from 'component/chat-palette/chat-palette.component';
+import { ConfirmationComponent, ConfirmationType } from 'component/confirmation/confirmation.component';
 import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
 import { OpenUrlComponent } from 'component/open-url/open-url.component';
 import { StandSettingComponent } from 'component/stand-setting/stand-setting.component';
@@ -27,7 +29,7 @@ import { DiceBot } from '@udonarium/dice-bot';
   styleUrls: ['./game-object-inventory.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDestroy {
+export class GameObjectInventoryComponent implements OnInit, OnDestroy {
   inventoryTypes: string[] = ['table', 'common', 'graveyard'];
 
   selectTab: string = 'table';
@@ -58,6 +60,8 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
 
   get newLineString(): string { return this.inventoryService.newLineString; }
 
+  get isGMMode(): boolean{ return PeerCursor.myCursor ? PeerCursor.myCursor.isGMMode : false; }
+
   constructor(
     private changeDetector: ChangeDetectorRef,
     private panelService: PanelService,
@@ -82,7 +86,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
         if (event.isSendFromSelf) this.changeDetector.markForCheck();
       })
       .on('UPDATE_INVENTORY', event => {
-        if (event.isSendFromSelf) this.changeDetector.markForCheck();
+        if (event.isSendFromSelf || event.data) this.changeDetector.markForCheck();
       })
       .on('OPEN_NETWORK', event => {
         this.inventoryTypes = ['table', 'common', Network.peerId, 'graveyard'];
@@ -91,9 +95,6 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
         }
       });
     this.inventoryTypes = ['table', 'common', Network.peerId, 'graveyard'];
-  }
-
-  ngAfterViewInit() {
   }
 
   ngOnDestroy() {
@@ -149,9 +150,9 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
     let position = this.pointerDeviceService.pointers[0];
 
     let actions: ContextMenuAction[] = [];
-    if (gameObject.location.name === 'table') {
+    if (gameObject.location.name === 'table' && (this.isGMMode || gameObject.isVisible)) {
       actions.push({
-        name: 'テーブルから探す',
+        name: 'テーブル上から探す',
         action: () => {
           if (gameObject.location.name === 'table') EventSystem.trigger('FOCUS_TABLETOP_OBJECT', { x: gameObject.location.x, y: gameObject.location.y, z: gameObject.posZ + (gameObject.altitude > 0 ? gameObject.altitude * 50 : 0) });
         },
@@ -159,8 +160,37 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
         disabled: gameObject.location.name !== 'table',
         selfOnly: true
       });
-      actions.push(ContextMenuSeparator);
     }
+    if (gameObject.isHideIn) {
+      actions.push({ 
+        name: '位置を公開する',
+        action: () => {
+          gameObject.owner = '';
+          SoundEffect.play(PresetSound.piecePut);
+          EventSystem.trigger('UPDATE_INVENTORY', null);
+        }
+      });
+    }
+    if (!gameObject.isHideIn || !gameObject.isVisible) {
+      actions.push({ 
+        name: '位置を自分だけ見る（ステルス）',
+        action: () => {
+          if (gameObject.location.name === 'table' && !GameCharacter.isStealthMode && !PeerCursor.myCursor.isGMMode) {
+            this.modalService.open(ConfirmationComponent, {
+              title: 'ステルスモード', 
+              text: 'ステルスモードになります。',
+              help: '位置を自分だけ見ているキャラクターが1つ以上テーブル上にある間、あなたのカーソル位置は他の参加者に伝わりません。',
+              type: ConfirmationType.OK,
+              materialIcon: 'disabled_visible'
+            });
+          }
+          gameObject.owner = Network.peerContext.userId;
+          SoundEffect.play(PresetSound.sweep);
+          EventSystem.call('UPDATE_INVENTORY', true);
+        }
+      });
+    }
+    actions.push(ContextMenuSeparator);
     if (gameObject.imageFiles.length > 1) {
       actions.push({
         name: '圖片切換',
@@ -218,8 +248,8 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
         }
       })
     );
-    actions.push({ name: '圖片效果', action: null,  
-    subActions: [
+    actions.push({ name: '画像効果', action: null,  
+      subActions: [
       (gameObject.isInverse
         ? {
           name: '☑ 反轉', action: () => {
@@ -362,18 +392,30 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
         .filter((location, i) => { return !(gameObject.location.name == location.name || (i == 1 && !locations.map(loc => loc.name).includes(gameObject.location.name))) })
         .map((location) => {
           return {
-            name: `${location.alias}`,
+            name: `${location.alias}`, 
             action: () => {
+              let isStealthMode = GameCharacter.isStealthMode;
               EventSystem.call('FAREWELL_STAND_IMAGE', { characterIdentifier: gameObject.identifier });
               gameObject.setLocation(location.name);
+              if (location.name === 'table' && gameObject.isHideIn && gameObject.isVisible && !isStealthMode && !PeerCursor.myCursor.isGMMode) {
+                this.modalService.open(ConfirmationComponent, {
+                  title: 'ステルスモード', 
+                  text: 'ステルスモードになります。',
+                  help: '位置を自分だけ見ているキャラクターが1つ以上テーブル上にある間、あなたのカーソル位置は他の参加者に伝わりません。',
+                  type: ConfirmationType.OK,
+                  materialIcon: 'disabled_visible'
+                });
+              }
               if (location.name == 'graveyard') {
                 SoundEffect.play(PresetSound.sweep);
               } else {
                 SoundEffect.play(PresetSound.piecePut);
               }
+              EventSystem.call('UPDATE_INVENTORY', true);
             }
-          }
-        })
+          } 
+        }),
+      disabled: !gameObject.isVisible && !this.isGMMode
     });
     /*
     for (let location of locations) {
@@ -391,7 +433,8 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
       name: '製作副本', action: () => {
         this.cloneGameObject(gameObject);
         SoundEffect.play(PresetSound.piecePut);
-      }
+      },
+      disabled: !gameObject.isVisible && !this.isGMMode
     });
     actions.push({
       name: 'コピーを作る（自動採番）', action: () => {
@@ -412,7 +455,8 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
         cloneObject.name = baseName + '_' + (maxIndex + 1);
         cloneObject.update();
         SoundEffect.play(PresetSound.piecePut);
-      }
+      },
+      disabled: !gameObject.isVisible && !this.isGMMode
     });
     if (gameObject.location.name === 'graveyard') {
       actions.push(ContextMenuSeparator);
@@ -451,11 +495,19 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
     if (this.GuestMode()) return;
     let tabTitle = this.getTabTitle(this.selectTab);
     let gameObjects = this.getGameObjects(this.selectTab);
-    if (!confirm(`${tabTitle}存在${gameObjects.length}個物件，要永久刪除嗎？`)) return;
-    for (const gameObject of gameObjects) {
-      this.deleteGameObject(gameObject);
-    }
-    SoundEffect.play(PresetSound.sweep);
+    this.modalService.open(ConfirmationComponent, {
+      title: '墓場を空にする', 
+      text: 'キャラクターを完全に削除しますか？',
+      helpHtml: `<b>${ StringUtil.escapeHtml(tabTitle) }</b>に存在する <b>${ gameObjects.length }</b> 体のキャラクターを完全に削除します。`,
+      type: ConfirmationType.OK_CANCEL,
+      materialIcon: 'delete_forever',
+      action: () => {
+        for (const gameObject of gameObjects) {
+          this.deleteGameObject(gameObject);
+        }
+        SoundEffect.play(PresetSound.sweep);
+      }
+    });
   }
 
   private cloneGameObject(gameObject: TabletopObject) {
@@ -490,7 +542,7 @@ export class GameObjectInventoryComponent implements OnInit, AfterViewInit, OnDe
   focusGameObject(gameObject: GameCharacter, e: Event, ) {
     if (!(e.target instanceof HTMLElement)) return;
     if (new Set(['input', 'button']).has(e.target.tagName.toLowerCase())) return;
-    if (gameObject.location.name !== 'table') return;
+    if (gameObject.location.name !== 'table' || (!gameObject.isVisible && !this.isGMMode)) return;
     EventSystem.trigger('FOCUS_TABLETOP_OBJECT', { x: gameObject.location.x, y: gameObject.location.y, z: gameObject.posZ + (gameObject.altitude > 0 ? gameObject.altitude * 50 : 0) });
   }
 

@@ -25,7 +25,6 @@ import { StandSettingComponent } from 'component/stand-setting/stand-setting.com
 import { PeerMenuComponent } from 'component/peer-menu/peer-menu.component';
 import { ChatTab } from '@udonarium/chat-tab';
 import { CutInList } from '@udonarium/cut-in-list';
-import { element } from 'protractor';
 
 interface StandGroup {
   name: string,
@@ -95,6 +94,11 @@ export class ChatInputComponent implements OnInit, OnDestroy {
   isUseFaceIcon: boolean = true;
   isUseStandImage: boolean = true;
   
+  static history: string[] = new Array();
+  private currentHistoryIndex: number = -1;
+  private static MAX_HISTORY_NUM = 1000;
+  private tmpText;
+
   get character(): GameCharacter {
     let object = ObjectStore.instance.get(this.sendFrom);
     if (object instanceof GameCharacter) {
@@ -271,7 +275,8 @@ export class ChatInputComponent implements OnInit, OnDestroy {
         this.writingPeers.get(event.sendFrom).reset();
         //this.updateWritingPeerNames();
         this.updateWritingPeerNameAndColors();
-        this.batchService.add(() => this.ngZone.run(() => { }), this);
+        //this.batchService.add(() => this.ngZone.run(() => { }), this);
+        this.batchService.requireChangeDetection();
       });
   }
 
@@ -286,6 +291,7 @@ export class ChatInputComponent implements OnInit, OnDestroy {
       return {
         name: (peer ? peer.name : ''),
         color: (peer ? peer.color : PeerCursor.CHAT_TRANSPARENT_COLOR),
+        imageUrl: (peer ? peer.image.url : ''),
       };
     });
   }
@@ -313,6 +319,34 @@ export class ChatInputComponent implements OnInit, OnDestroy {
       }, 200);
     }
     this.previousWritingLength = this.text.length;
+    this.calcFitHeight();
+  }
+
+  moveHistory(event: KeyboardEvent, direction: number) {
+    if (event) event.preventDefault();
+    if (this.currentHistoryIndex < 0) this.tmpText = this.text;
+
+    if (direction < 0 && this.currentHistoryIndex < 0) {
+      this.currentHistoryIndex = -1;
+    } else if (direction > 0 && this.currentHistoryIndex >= ChatInputComponent.history.length - 1) {
+      this.currentHistoryIndex = ChatInputComponent.history.length - 1;
+      return;
+    } else {
+      this.currentHistoryIndex = this.currentHistoryIndex + direction;
+    }
+
+    let histText: string;
+    if (this.currentHistoryIndex < 0) {
+      this.currentHistoryIndex = -1;
+      histText = (this.tmpText && this.tmpText.length) ? this.tmpText : '';
+    } else {
+      histText = ChatInputComponent.history[this.currentHistoryIndex];
+    }
+
+    this.text = histText;
+    this.previousWritingLength = this.text.length;
+    let textArea: HTMLTextAreaElement = this.textAreaElementRef.nativeElement;
+    textArea.value = histText;
     this.calcFitHeight();
   }
 
@@ -387,18 +421,28 @@ export class ChatInputComponent implements OnInit, OnDestroy {
     if (matchMostLongText.length < cutInInfo.matchMostLongText.length) matchMostLongText = cutInInfo.matchMostLongText;
     text = text.slice(0, text.length - matchMostLongText.length);
     // 💭
-    if (this.character && StringUtil.cr(text).trim()) { 
+    if (this.character && StringUtil.cr(text).trim()) {
+      // CHOICEコマンドの引数は💭としない
+      const regArray = /^((srepeat|repeat|srep|rep|sx|x)?(\d+)?[ 　]+)?([^\n]*)?/ig.exec(text);
+      let dialogText = (regArray[4] != null) ? regArray[4].trim() : text.trim();
+      let choiceMatch;
+      if (/^(S?CHOICE\d*)[ 　]+([^ 　]*)/ig.test(dialogText)) {
+        dialogText = '';
+      } else if ((choiceMatch = /^(S?CHOICE\d*\[[^\[\]]+\])/ig.exec(dialogText)) || (choiceMatch = /^(S?CHOICE\d*\([^\(\)]+\))/ig.exec(dialogText))) {
+        dialogText = dialogText.slice(choiceMatch[1].length)
+      }
+      //console.log(dialogText)
       //💭はEvant機能使うようにする
-      const dialogRegExp = /「([\s\S]+?)」/gm;
+      const dialogRegExp = /「+([\s\S]+?)」/gm;
       // const dialogRegExp = /(?:^|[^\￥])「([\s\S]+?[^\￥])」/gm; 
       //ToDO ちゃんとパースする
       let match;
       let dialog = [];
-      while ((match = dialogRegExp.exec(text)) !== null) {
+      while ((match = dialogRegExp.exec(dialogText)) !== null) {
         dialog.push(match[1]);
       }
       if (dialog.length === 0) {
-        const emoteTest = text.split(/[\s　]/).slice(-1)[0];
+        const emoteTest = dialogText.split(/[\s　]/).slice(-1)[0];
         if (StringUtil.isEmote(emoteTest)) {
           dialog.push(emoteTest);
         }
@@ -430,7 +474,20 @@ export class ChatInputComponent implements OnInit, OnDestroy {
       }
     }
 
+    if (PeerCursor.isGMHold && !this.sendTo && !PeerCursor.myCursor.isGMMode && /GM(?:モード)?にな(?:ります|る)/i.test(StringUtil.toHalfWidth(text))) {
+      PeerCursor.myCursor.isGMMode = true;
+      this.chatMessageService.sendOperationLog('GMモードになった');
+      EventSystem.trigger('CHANGE_GM_MODE', null);
+    }
+
     if (StringUtil.cr(text).trim()) {
+      ChatInputComponent.history = ChatInputComponent.history.filter(string => string !== this.text);
+      ChatInputComponent.history.unshift(this.text);
+      if (ChatInputComponent.history.length >= ChatInputComponent.MAX_HISTORY_NUM) {
+        ChatInputComponent.history.pop();
+      }
+      this.currentHistoryIndex = -1;
+      this.tmpText = null;
       this.chat.emit({
         text: text,
         gameType: this.gameType,
@@ -477,8 +534,8 @@ export class ChatInputComponent implements OnInit, OnDestroy {
 
       let gameName: string = '骰子機械人';
       for (let diceBotInfo of DiceBot.diceBotInfos) {
-        if (diceBotInfo.script === this.gameType) {
-          gameName = '骰子機械人〈' + diceBotInfo.game + '〉'
+        if (diceBotInfo.id === this.gameType) {
+          gameName = 'ダイスボット〈' + diceBotInfo.game + '〉'
         }
       }
       gameName += '使用法';

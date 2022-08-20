@@ -14,9 +14,10 @@ import { PointerCoordinate } from 'service/pointer-device.service';
   styleUrls: ['./peer-cursor.component.css']
 })
 export class PeerCursorComponent implements OnInit, AfterViewInit, OnDestroy {
-
+  @ViewChild('chromeTrick') chromeTrickElementRef: ElementRef; // デスクトップWindows版Chrome 102-103対策
   @ViewChild('cursor') cursorElementRef: ElementRef;
   @ViewChild('opacity') opacityElementRef: ElementRef;
+  @ViewChild('rotate') rotateElementRef: ElementRef;
   @Input() cursor: PeerCursor = PeerCursor.myCursor;
 
   get iconUrl(): string { return this.cursor.image.url; }
@@ -24,8 +25,10 @@ export class PeerCursorComponent implements OnInit, AfterViewInit, OnDestroy {
   get isMine(): boolean { return this.cursor.isMine; }
   get color(): string { return (this.cursor.color && this.cursor.color != '#ffffff') ? this.cursor.color : '#f0dabd'; }
 
+  private chromeTrickElement: HTMLElement = null;
   private cursorElement: HTMLElement = null;
   private opacityElement: HTMLElement = null;
+  private rotateElement: HTMLElement = null;
   private fadeOutTimer: ResettableTimeout = null;
 
   private updateInterval: NodeJS.Timer = null;
@@ -44,7 +47,9 @@ export class PeerCursorComponent implements OnInit, AfterViewInit, OnDestroy {
 
   get nameTagRotate(): number {
     let x = (PeerCursorComponent.viewRotateX % 360) - 90;
-    return -(x > 0 ? x : 360 + x);
+    //console.log(-(x > 0 ? x : 360 + x))
+    const ret = -(x > 0 ? x : 360 + x);
+    return ret;
   }
 
   get delayMs(): number {
@@ -76,6 +81,7 @@ export class PeerCursorComponent implements OnInit, AfterViewInit, OnDestroy {
             this.stopTransition();
             this.setAnimatedTransition();
             this.setPosition(event.data[0], event.data[1], event.data[2]);
+            this.setRotate();
             this.resetFadeOut();
             this.changeDetector.markForCheck();
           }, this);
@@ -84,6 +90,7 @@ export class PeerCursorComponent implements OnInit, AfterViewInit, OnDestroy {
           this.ngZone.run(() => {
             PeerCursorComponent.viewRotateX = event.data['x'];
             PeerCursorComponent.viewRotateZ = event.data['z'];
+            if (this.rotateElement) this.setRotate();
             this.changeDetector.markForCheck();
           });
       });
@@ -97,8 +104,10 @@ export class PeerCursorComponent implements OnInit, AfterViewInit, OnDestroy {
         document.body.addEventListener('touchmove', this.callcack);
       });
     } else {
+      this.chromeTrickElement = this.chromeTrickElementRef.nativeElement;
       this.cursorElement = this.cursorElementRef.nativeElement;
       this.opacityElement = this.opacityElementRef.nativeElement;
+      this.rotateElement = this.rotateElementRef.nativeElement;
       this.setAnimatedTransition();
       this.setPosition(0, 0, 0);
       this.resetFadeOut();
@@ -149,13 +158,20 @@ export class PeerCursorComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private stopTransition() {
     this.cursorElement.style.transform = window.getComputedStyle(this.cursorElement).transform;
+    this.chromeTrickElement.style.transform = this.cursorElement.style.transform;
   }
 
   private setAnimatedTransition() {
     this.cursorElement.style.transition = `transform ${this.delayMs + 33}ms linear, opacity 0.5s ease-out`;
+    this.chromeTrickElement.style.transform = this.cursorElement.style.transform;
   }
 
   private setPosition(x: number, y: number, z: number) {
-    this.cursorElement.style.transform = 'translateX(' + x + 'px) translateY(' + y + 'px) translateZ(' + z + 'px)';
+    this.cursorElement.style.transform = `translateX(${x.toFixed(4)}px) translateY(${y.toFixed(4)}px) translateZ(${z.toFixed(4)}px)`;
+    this.chromeTrickElement.style.transform = this.cursorElement.style.transform;
+  }
+
+  private setRotate() {
+    this.rotateElement.style.transform = `rotateZ(${-this.rotateZ}deg) rotateX(${this.nameTagRotate}deg)`;
   }
 }
