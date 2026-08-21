@@ -1,4 +1,5 @@
 import { EventSystem, Network } from '../system';
+import { netDebug } from '../system/network/net-debug';
 import { GameObject, ObjectContext } from './game-object';
 import { markForChanged } from './object-event-extension';
 import { ObjectFactory } from './object-factory';
@@ -18,36 +19,48 @@ export class ObjectSynchronizer {
   private requestMap: Map<ObjectIdentifier, SynchronizeRequest> = new Map();
   private peerMap: Map<PeerId, SynchronizeTask[]> = new Map();
   private tasks: SynchronizeTask[] = [];
+  /** Nested hold: skip inbound apply and delay catalog send (folder resume / ZIP load). */
+  private peerSyncHold = 0;
+  private pendingCatalogPeers = new Set<PeerId>();
+  private pendingInboundCatalogs: { items: CatalogItem[]; sendFrom: string }[] = [];
+  private pendingInboundUpdates: { context: ObjectContext; sendFrom: string }[] = [];
+  /** Join probe: pull host catalogs/requests while still holding inbound apply. */
+  private joinFetch = false;
 
   private constructor() { }
 
   initialize() {
     this.destroy();
-    console.log('ObjectSynchronizer ready...');
     EventSystem.register(this)
       .on('CONNECT_PEER', 2, event => {
         if (!event.isSendFromSelf) return;
-        console.log('CONNECT_PEER GameRoomService !!!', event.data.peerId);
+        netDebug('CONNECT_PEER GameRoomService !!!', event.data.peerId);
+        if (this.peerSyncHold > 0) {
+          this.pendingCatalogPeers.add(event.data.peerId);
+          return;
+        }
         this.sendCatalog(event.data.peerId);
       })
       .on('DISCONNECT_PEER', event => {
         this.removePeerMap(event.data.peerId);
+        this.pendingCatalogPeers.delete(event.data.peerId);
       })
       .on<CatalogItem[]>('SYNCHRONIZE_GAME_OBJECT', event => {
         if (event.isSendFromSelf) return;
-        console.log('SYNCHRONIZE_GAME_OBJECT ' + event.sendFrom);
-        let catalog: CatalogItem[] = event.data;
-        for (let item of catalog) {
-          if (ObjectStore.instance.isDeleted(item.identifier)) {
-            EventSystem.call('DELETE_GAME_OBJECT', { aliasName: '', identifier: item.identifier }, event.sendFrom);
+        if (this.peerSyncHold > 0) {
+          if (this.joinFetch) {
+            this.applyInboundCatalog(event.data, event.sendFrom);
           } else {
-            this.addRequestMap(item, event.sendFrom);
+            const items = Array.isArray(event.data) ? event.data.slice() : [];
+            this.pendingInboundCatalogs.push({ items, sendFrom: event.sendFrom });
           }
+          return;
         }
-        this.synchronize();
+        this.applyInboundCatalog(event.data, event.sendFrom);
       })
       .on('REQUEST_GAME_OBJECT', event => {
         if (event.isSendFromSelf) return;
+        if (this.peerSyncHold > 0) return;
         if (ObjectStore.instance.isDeleted(event.data)) {
           EventSystem.call('DELETE_GAME_OBJECT', { aliasName: '', identifier: event.data }, event.sendFrom);
         } else {
@@ -56,30 +69,101 @@ export class ObjectSynchronizer {
         }
       })
       .on('UPDATE_GAME_OBJECT', 1000, event => {
-        let context: ObjectContext = event.data;
-        let object: GameObject = ObjectStore.instance.get(context.identifier);
-        if (object) {
-          let updateObject = event.isSendFromSelf ? object : this.updateObject(object, context);
-          if (updateObject) {
-            markForChanged(updateObject, event.sendFrom);
-          } else if (!event.isSendFromSelf) {
-            EventSystem.call('UPDATE_GAME_OBJECT', object.toContext(), event.sendFrom);
-          }
-        } else if (ObjectStore.instance.isDeleted(context.identifier)) {
-          EventSystem.call('DELETE_GAME_OBJECT', { aliasName: context.aliasName, identifier: context.identifier }, event.sendFrom);
-        } else {
-          let newObject = this.createObject(context);
-          if (newObject) markForChanged(newObject, event.sendFrom);
+        if (this.peerSyncHold > 0 && !event.isSendFromSelf) {
+          this.pendingInboundUpdates.push({ context: event.data, sendFrom: event.sendFrom });
+          return;
         }
+        this.applyInboundUpdate(event.data, event.sendFrom, event.isSendFromSelf);
       })
       .on('DELETE_GAME_OBJECT', 1000, event => {
+        // Local destroy already removed the object; the network layer echoes our own
+        // DELETE back on a later tick. Applying that echo after Room ZIP reload would
+        // delete the freshly recreated objects that reuse the same syncId.
+        if (event.isSendFromSelf) return;
+        if (this.peerSyncHold > 0) return;
         let identifier: ObjectIdentifier = event.data.identifier;
         ObjectStore.instance.delete(identifier, false);
       });
   }
 
+  /** Pause catalog/inbound apply so a join-then-load does not push lobby defaults. */
+  holdPeerSync() {
+    this.peerSyncHold++;
+  }
+
+  /** Join probe: request host objects without applying them to the local tabletop. */
+  enableJoinFetch() {
+    this.joinFetch = true;
+  }
+
+  disableJoinFetch() {
+    this.joinFetch = false;
+  }
+
+  /**
+   * Resume sync. When applyQueued is true, apply held inbound updates/catalogs then
+   * send our catalog. When false (failed join/load), drop the queues.
+   */
+  releasePeerSync(applyQueued = true) {
+    if (this.peerSyncHold < 1) return;
+    this.peerSyncHold--;
+    if (this.peerSyncHold > 0) return;
+    const updates = this.pendingInboundUpdates;
+    this.pendingInboundUpdates = [];
+    const inbound = this.pendingInboundCatalogs;
+    this.pendingInboundCatalogs = [];
+    if (applyQueued) {
+      updates.sort((a, b) => inboundApplyRank(a.context?.aliasName) - inboundApplyRank(b.context?.aliasName));
+      for (const { context, sendFrom } of updates) {
+        this.applyInboundUpdate(context, sendFrom, false);
+      }
+      for (const { items, sendFrom } of inbound) {
+        this.applyInboundCatalog(items, sendFrom);
+      }
+      for (const peerId of this.pendingCatalogPeers) {
+        this.sendCatalog(peerId);
+      }
+    }
+    this.pendingCatalogPeers.clear();
+  }
+
   destroy() {
     EventSystem.unregister(this);
+    this.peerSyncHold = 0;
+    this.pendingCatalogPeers.clear();
+    this.pendingInboundCatalogs = [];
+    this.pendingInboundUpdates = [];
+    this.joinFetch = false;
+  }
+
+  private applyInboundUpdate(context: ObjectContext, sendFrom: string, isSendFromSelf: boolean) {
+    let object: GameObject = ObjectStore.instance.get(context.identifier);
+    if (object) {
+      let updateObject = isSendFromSelf ? object : this.updateObject(object, context);
+      if (updateObject) {
+        markForChanged(updateObject, sendFrom);
+      } else if (!isSendFromSelf) {
+        EventSystem.call('UPDATE_GAME_OBJECT', object.toContext(), sendFrom);
+      }
+    } else if (ObjectStore.instance.isDeleted(context.identifier)) {
+      EventSystem.call('DELETE_GAME_OBJECT', { aliasName: context.aliasName, identifier: context.identifier }, sendFrom);
+    } else {
+      let newObject = this.createObject(context);
+      if (newObject) markForChanged(newObject, sendFrom);
+    }
+  }
+
+  private applyInboundCatalog(catalog: CatalogItem[], sendFrom: string) {
+    if (!Array.isArray(catalog) || catalog.length < 1) return;
+    netDebug('SYNCHRONIZE_GAME_OBJECT ' + sendFrom);
+    for (let item of catalog) {
+      if (ObjectStore.instance.isDeleted(item.identifier) && !this.joinFetch) {
+        EventSystem.call('DELETE_GAME_OBJECT', { aliasName: '', identifier: item.identifier }, sendFrom);
+      } else {
+        this.addRequestMap(item, sendFrom);
+      }
+    }
+    this.synchronize();
   }
 
   private updateObject(object: GameObject, context: ObjectContext): GameObject {
@@ -98,8 +182,18 @@ export class ObjectSynchronizer {
       console.warn(context.aliasName + ' is Unknown...?', context);
       return null;
     }
-    ObjectStore.instance.add(newObject, false);
-    newObject.apply(context);
+    // Room ZIP reload / peer resync reuses syncIds that were just DELETE-marked.
+    ObjectStore.instance.clearDeleted(context.identifier);
+    // Suppress SyncVar update() during add?apply so onStoreAdded cannot broadcast
+    // default 0,0 poses before real syncData is applied (multi-tab top-left drift).
+    // Add before apply so ObjectStore.get works when onChildAdded fires MESSAGE_ADDED.
+    newObject.syncSuppressed = true;
+    try {
+      ObjectStore.instance.add(newObject, false);
+      newObject.apply(context);
+    } finally {
+      newObject.syncSuppressed = false;
+    }
     return newObject;
   }
 
@@ -161,7 +255,7 @@ export class ObjectSynchronizer {
     }
 
     task.ontimeout = (task, remainedRequests) => {
-      console.log('GameObject synchronize timeout');
+      netDebug('GameObject synchronize timeout');
       remainedRequests.forEach(request => this.requestMap.set(request.identifier, request));
     }
 
@@ -176,7 +270,7 @@ export class ObjectSynchronizer {
       if (!request.holderIds.includes(targetPeerId)) continue;
 
       let gameObject = ObjectStore.instance.get(request.identifier);
-      if (!gameObject || gameObject.version < request.version) requests.push(request);
+      if (!gameObject || gameObject.version < request.version || this.joinFetch) requests.push(request);
 
       this.requestMap.delete(identifier);
     }
@@ -202,4 +296,10 @@ export class ObjectSynchronizer {
     }
     return selectPeerId;
   }
+}
+
+/** Data nodes first so tabletop parents attach a complete tree on join apply. */
+function inboundApplyRank(aliasName: string): number {
+  if (aliasName === 'data' || aliasName === 'node') return 0;
+  return 1;
 }

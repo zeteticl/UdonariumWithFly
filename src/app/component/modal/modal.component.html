@@ -1,6 +1,6 @@
 <div class="component">
   <div [@bgInOut]="'in'" class="modal-background" (click)="clickBackground($event)"></div>
-  <div [@flyInOut]="'in'" class="modal-panel">
+  <div [@flyInOut]="'in'" class="modal-panel" [style.width]="panelWidth" appDraggable [draggable.handle]="'.title'" [draggable.stack]="'.modal-panel'" [draggable.allowOverHalf]="true">
     <div class="title">
       <div class="title-text">{{modalService.title}}</div>
       <div class="title-button">

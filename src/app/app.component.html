@@ -1,91 +1,148 @@
 <div id="app-table-layer" data-tour-id="table.layer" style="position: absolute; width: 100%; height: 100%; overflow: hidden;">
   <game-table></game-table>
 </div>
-<ui-panel (rotateEvent)="rotateChange($event)" [top]="0" [left]="0" [width]="100" [height]="765" [title]="'menu.title' | i18n" [isAbleFullScreenButton]="false" [isAbleCloseButton]="false"  [isAbleRotateButton]="true">
+
+<!-- Desktop: classic left menu panel (unchanged behaviour). -->
+<ui-panel *ngIf="!isMobileLayout"
+  (rotateEvent)="rotateChange($event)" [top]="0" [left]="0" [width]="100" [height]="765" [title]="'menu.title' | i18n"
+  geometryKey="menu.main"
+  [isAbleFullScreenButton]="false" [isAbleCloseButton]="false"  [isAbleRotateButton]="true">
   <nav [ngClass]="{'horizontal': isHorizontal, 'vertical': !isHorizontal}">
-    <ul>
-      <li data-tour-id="menu.connection" [appTeachingTip]="'tip.menu.connection'" (click)="open('PeerMenuComponent')">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons icon-size">people</i></div>
-          <div>{{ 'menu.connection' | i18n }}</div>
-        </a>
-      </li>
-      <li data-tour-id="menu.chat" [appTeachingTip]="'tip.menu.chat'" (click)="open('ChatWindowComponent')">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons icon-size">speaker_notes</i></div>
-          <div>{{ 'menu.chat' | i18n }}</div>
-        </a>
-      </li>
-      <li data-tour-id="menu.table" [appTeachingTip]="'tip.menu.table'" (click)="open('GameTableSettingComponent')" *ngIf="!GuestMode()">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons icon-size">layers</i></div>
-          <div>{{ 'menu.table' | i18n }}</div>
-        </a>
-      </li>
-      <li data-tour-id="menu.images" [appTeachingTip]="'tip.menu.images'" (click)="open('FileStorageComponent')" *ngIf="!GuestMode()">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons icon-size">photo_library</i></div>
-          <div>{{ 'menu.images' | i18n }}</div>
-        </a>
-      </li>
-      <li data-tour-id="menu.music" [appTeachingTip]="'tip.menu.music'" (click)="open('JukeboxComponent')" *ngIf="!GuestMode()">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons">queue_music</i></div>
-          <div>{{ 'menu.music' | i18n }}</div>
-        </a>
-      </li>
-      <li data-tour-id="menu.toolbox" [appTeachingTip]="'tip.menu.toolbox'" (click)="toolBox($event)" *ngIf="!GuestMode()">
-        <a routerLink="/" routerLinkActive="active" style="pointer-events: none">
-          <div><i class="material-icons">build</i></div>
-          <div>{{ 'menu.toolbox' | i18n }}</div>
-        </a>
-      </li>
-      <li data-tour-id="menu.combat" [appTeachingTip]="'tip.menu.combat'" (click)="open('CombatTrackerComponent')">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons icon-size">sports_mma</i></div>
-          <div>{{ 'menu.combat' | i18n }}</div>
-        </a>
-      </li>
-      <li data-tour-id="menu.sceneTools" [appTeachingTip]="'tip.menu.sceneTools'" (click)="open('SceneToolsComponent')" *ngIf="canOpenSceneTools">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons icon-size">architecture</i></div>
-          <div>{{ 'menu.sceneTools' | i18n }}</div>
-        </a>
-      </li>
-      <li data-tour-id="menu.inventory" [appTeachingTip]="'tip.menu.inventory'" (click)="open('GameObjectInventoryComponent')" *ngIf="!GuestMode()">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons icon-size">folder_shared</i></div>
-          <div>{{ 'menu.inventory' | i18n }}</div>
-        </a>
-      </li>
-      <li data-tour-id="menu.notes" [appTeachingTip]="'tip.menu.notes'" (click)="open('NoteInventoryComponent')" *ngIf="!GuestMode()">
-        <a routerLink="/" routerLinkActive="active">
-          <div><i class="material-icons icon-size">note</i></div>
-          <div>{{ 'menu.notes' | i18n }}</div>
-        </a>
-      </li>
-      <li data-tour-id="menu.settings" [appTeachingTip]="'tip.menu.settings'" (click)="standSetteings($event)">
-        <a routerLink="/" routerLinkActive="active" style="pointer-events: none">
-          <div><i class="material-icons icon-size">how_to_reg</i></div>
-          <div>{{ 'menu.settings' | i18n }}<sup class="self-only">*</sup></div>
-        </a>
-      </li>
-      <li data-tour-id="menu.disconnect" [appTeachingTip]="'tip.menu.disconnect'" (click)="logout()">
-        <a routerLink="/" routerLinkActive="active">
-          <label>
-            <div><i class="material-icons">logout</i></div>
-            <div>{{ 'menu.disconnect' | i18n }}</div>
-          </label>
-        </a>
-      </li>
-    </ul>
+    <ng-container *ngTemplateOutlet="mainMenu"></ng-container>
     <div class="self-only-indicater" style="font-size: 8px; text-align: center;"><b><sup class="self-only">*</sup>{{ 'menu.selfOnly' | i18n }}</b></div>
   </nav>
 </ui-panel>
+
+<!-- Phone / tablet: Play or Edit — bottom nav or side rail via chromeMode class -->
+<nav *ngIf="isMobileLayout"
+  [class.mobile-bottom-nav]="!isTabletLandscape"
+  [class.mobile-side-rail]="isTabletLandscape"
+  [attr.aria-label]="isMobileEdit ? 'Edit menu' : 'Play menu'"
+  (contextmenu)="$event.preventDefault()">
+  <ul>
+    <li *ngFor="let item of mobileNavItems"
+      [attr.data-tour-id]="item.tourId"
+      [class.is-active]="isNavActive(item.tourId)"
+      [appTeachingTip]="item.tipKey"
+      (click)="onMobileNavClick(item, $event)">
+      <a routerLink="/" routerLinkActive="active" style="pointer-events: none">
+        <div [class.menu-chat-icon]="item.chatBadge">
+          <i class="material-icons" [class.icon-size]="!isTabletLandscape">{{ item.icon }}</i>
+          <span *ngIf="item.chatBadge && showChatUnreadBadge" class="menu-chat-badge" aria-hidden="true">{{ chatUnreadBadgeLabel }}</span>
+        </div>
+        <div>{{ item.labelKey | i18n }}</div>
+      </a>
+    </li>
+  </ul>
+</nav>
+
+<!-- Desktop full menu (also used conceptually; mobile "More" opens a subset via context menu). -->
+<ng-template #mainMenu>
+  <ul>
+    <li data-tour-id="menu.connection" [appTeachingTip]="'tip.menu.connection'" (click)="openOrToggle('PeerMenuComponent')">
+      <a routerLink="/" routerLinkActive="active">
+        <div><i class="material-icons icon-size">people</i></div>
+        <div>{{ 'menu.connection' | i18n }}</div>
+      </a>
+    </li>
+    <li data-tour-id="menu.chat" [appTeachingTip]="'tip.menu.chat'" (click)="open('ChatWindowComponent')">
+      <a routerLink="/" routerLinkActive="active">
+        <div class="menu-chat-icon"><i class="material-icons icon-size">speaker_notes</i><span *ngIf="showChatUnreadBadge" class="menu-chat-badge" aria-hidden="true">{{ chatUnreadBadgeLabel }}</span></div>
+        <div>{{ 'menu.chat' | i18n }}</div>
+      </a>
+    </li>
+    <li data-tour-id="menu.table" [appTeachingTip]="'tip.menu.table'" (click)="openOrToggle('GameTableSettingComponent')" *ngIf="canShowMenu('menu.table')">
+      <a routerLink="/" routerLinkActive="active">
+        <div><i class="material-icons icon-size">layers</i></div>
+        <div>{{ 'menu.table' | i18n }}</div>
+      </a>
+    </li>
+    <li data-tour-id="menu.images" [appTeachingTip]="'tip.menu.images'" (click)="openOrToggle('FileStorageComponent')" *ngIf="canShowMenu('menu.images')">
+      <a routerLink="/" routerLinkActive="active">
+        <div><i class="material-icons icon-size">photo_library</i></div>
+        <div>{{ 'menu.images' | i18n }}</div>
+      </a>
+    </li>
+    <li data-tour-id="menu.music" [appTeachingTip]="'tip.menu.music'" (click)="openOrToggle('JukeboxComponent')" *ngIf="canShowMenu('menu.music')">
+      <a routerLink="/" routerLinkActive="active">
+        <div><i class="material-icons">queue_music</i></div>
+        <div>{{ 'menu.music' | i18n }}</div>
+      </a>
+    </li>
+    <li data-tour-id="menu.toolbox" [appTeachingTip]="'tip.menu.toolbox'" (click)="toolBox($event)" *ngIf="canShowMenu('menu.toolbox')">
+      <a routerLink="/" routerLinkActive="active" style="pointer-events: none">
+        <div><i class="material-icons">build</i></div>
+        <div>{{ 'menu.toolbox' | i18n }}</div>
+      </a>
+    </li>
+    <li data-tour-id="menu.combat" [appTeachingTip]="'tip.menu.combat'" (click)="openOrToggle('CombatTrackerComponent')">
+      <a routerLink="/" routerLinkActive="active">
+        <div><i class="material-icons icon-size">sports_mma</i></div>
+        <div>{{ 'menu.combat' | i18n }}</div>
+      </a>
+    </li>
+    <li data-tour-id="menu.sceneTools" [appTeachingTip]="'tip.menu.sceneTools'" (click)="openOrToggle('SceneToolsComponent')" *ngIf="canShowMenu('menu.sceneTools')">
+      <a routerLink="/" routerLinkActive="active">
+        <div><i class="material-icons icon-size">architecture</i></div>
+        <div>{{ 'menu.sceneTools' | i18n }}</div>
+      </a>
+    </li>
+    <li data-tour-id="menu.scenePreset" [appTeachingTip]="'tip.menu.scenePreset'" (click)="openOrToggle('ScenePresetComponent')" *ngIf="canShowMenu('menu.scenePreset')">
+      <a routerLink="/" routerLinkActive="active">
+        <div><i class="material-icons icon-size">theaters</i></div>
+        <div>{{ 'menu.scenePreset' | i18n }}</div>
+      </a>
+    </li>
+    <li data-tour-id="menu.scenarioText" [appTeachingTip]="'tip.menu.scenarioText'" (click)="openOrToggle('ScenarioTextComponent')" *ngIf="canShowMenu('menu.scenarioText')">
+      <a routerLink="/" routerLinkActive="active">
+        <div><i class="material-icons icon-size">menu_book</i></div>
+        <div>{{ 'menu.scenarioText' | i18n }}</div>
+      </a>
+    </li>
+    <li data-tour-id="menu.inventory" [appTeachingTip]="'tip.menu.inventory'" (click)="openOrToggle('GameObjectInventoryComponent')" *ngIf="canShowMenu('menu.inventory')">
+      <a routerLink="/" routerLinkActive="active">
+        <div><i class="material-icons icon-size">folder_shared</i></div>
+        <div>{{ 'menu.inventory' | i18n }}</div>
+      </a>
+    </li>
+    <li data-tour-id="menu.notes" [appTeachingTip]="'tip.menu.notes'" (click)="openOrToggle('NoteInventoryComponent')" *ngIf="canShowMenu('menu.notes')">
+      <a routerLink="/" routerLinkActive="active">
+        <div><i class="material-icons icon-size">note</i></div>
+        <div>{{ 'menu.notes' | i18n }}</div>
+      </a>
+    </li>
+    <li data-tour-id="menu.settings" [appTeachingTip]="'tip.menu.settings'" (click)="standSetteings($event)">
+      <a routerLink="/" routerLinkActive="active" style="pointer-events: none">
+        <div><i class="material-icons icon-size">how_to_reg</i></div>
+        <div>{{ 'menu.settings' | i18n }}<sup class="self-only">*</sup></div>
+      </a>
+    </li>
+    <li data-tour-id="menu.disconnect" [appTeachingTip]="'tip.menu.disconnect'" (click)="logout()">
+      <a routerLink="/" routerLinkActive="active">
+        <label>
+          <div><i class="material-icons">logout</i></div>
+          <div>{{ 'menu.disconnect' | i18n }}</div>
+        </label>
+      </a>
+    </li>
+  </ul>
+</ng-template>
+
 <div #modalLayer></div>
 <teaching-tip></teaching-tip>
 <guided-tour></guided-tour>
 <combat-announce></combat-announce>
+<note-handout></note-handout>
+<scene-nav></scene-nav>
+<pause-overlay></pause-overlay>
+<connection-busy-overlay></connection-busy-overlay>
+<div class="ephemeral-notice" *ngIf="audioRejectToastLines.length"
+  role="status" aria-live="polite" aria-atomic="true">
+  <div class="ephemeral-notice-title">{{ 'jukebox.reject.title' | i18n }}</div>
+  <div class="ephemeral-notice-line" *ngFor="let line of audioRejectToastLines">{{ line }}</div>
+</div>
+<character-resource-hud></character-resource-hud>
+<music-hud></music-hud>
 <network-indicator class="networkIndicator"></network-indicator>
 <div *ngIf="imageUrl" class="image-view-background is-fill" (click)="closeImagePreview()" [@fadeInOut]="'in'">
   <div class="close-button is-pointer-events-none" style="z-index: 10"><i class="material-icons">close</i></div>

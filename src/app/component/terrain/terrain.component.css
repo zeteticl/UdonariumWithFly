@@ -104,6 +104,105 @@
   filter: brightness(0.8);
 }
 
+.of-underside {
+  top: 0px;
+  left: 0px;
+  transform-origin: 50% 50%;
+  transform: rotateX(180deg);
+  filter: brightness(0.55);
+  backface-visibility: hidden;
+}
+
+.of-underside.no-shadow {
+  filter: brightness(1.0);
+}
+
+/* Neon glow (CSS-only; prefer on a few signs, not every terrain). */
+.texture.neon {
+  --neon-color: #33ffff;
+}
+
+.of-wall-top.neon,
+.of-wall-bottom.neon,
+.of-wall-left.neon,
+.of-wall-right.neon,
+.texture.neon.neon-soft,
+.texture.neon.neon-tube,
+.texture.neon.neon-edge,
+.texture.neon.neon-flicker,
+.texture.neon.neon-pulse,
+.texture.neon.neon-strobe {
+  /* Override wall shading brightness when glowing. */
+  filter: brightness(1.2) drop-shadow(0 0 4px var(--neon-color));
+}
+
+.texture.neon-soft {
+  filter: brightness(1.18) drop-shadow(0 0 3px var(--neon-color)) drop-shadow(0 0 10px var(--neon-color));
+}
+
+.texture.neon-tube {
+  filter: brightness(1.4) saturate(1.25)
+    drop-shadow(0 0 1px #fff)
+    drop-shadow(0 0 4px var(--neon-color))
+    drop-shadow(0 0 12px var(--neon-color));
+}
+
+.texture.neon-edge {
+  filter: brightness(1.25)
+    drop-shadow(0 0 1px var(--neon-color))
+    drop-shadow(0 0 2px var(--neon-color))
+    drop-shadow(1px 0 0 var(--neon-color))
+    drop-shadow(-1px 0 0 var(--neon-color))
+    drop-shadow(0 1px 0 var(--neon-color))
+    drop-shadow(0 -1px 0 var(--neon-color));
+}
+
+.texture.neon-flicker {
+  filter: brightness(1.35) saturate(1.2)
+    drop-shadow(0 0 3px var(--neon-color))
+    drop-shadow(0 0 10px var(--neon-color));
+  animation: terrain-neon-flicker 2.4s steps(2, end) infinite;
+}
+
+.texture.neon-pulse {
+  filter: brightness(1.3)
+    drop-shadow(0 0 4px var(--neon-color))
+    drop-shadow(0 0 12px var(--neon-color));
+  animation: terrain-neon-pulse 2.2s ease-in-out infinite;
+}
+
+.texture.neon-strobe {
+  filter: brightness(1.45) saturate(1.3)
+    drop-shadow(0 0 2px #fff)
+    drop-shadow(0 0 8px var(--neon-color));
+  animation: terrain-neon-strobe 1.1s steps(1, end) infinite;
+}
+
+@keyframes terrain-neon-flicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; filter: brightness(1.35) saturate(1.2) drop-shadow(0 0 3px var(--neon-color)) drop-shadow(0 0 10px var(--neon-color)); }
+  20%, 24%, 55% { opacity: 0.55; filter: brightness(0.85) drop-shadow(0 0 1px var(--neon-color)); }
+}
+
+@keyframes terrain-neon-pulse {
+  0%, 100% { filter: brightness(1.15) drop-shadow(0 0 3px var(--neon-color)) drop-shadow(0 0 8px var(--neon-color)); }
+  50% { filter: brightness(1.45) drop-shadow(0 0 6px var(--neon-color)) drop-shadow(0 0 16px var(--neon-color)); }
+}
+
+@keyframes terrain-neon-strobe {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.2; filter: brightness(0.7) drop-shadow(0 0 2px var(--neon-color)); }
+}
+
+.thin-hit-pad {
+  position: absolute;
+  inset: 0;
+  transform-origin: center center;
+  opacity: 0;
+  /* Keep pickable while invisible */
+  pointer-events: auto;
+  z-index: 0;
+}
+
 .of-wall-top.is-slope, .of-wall-bottom.is-slope , .of-wall-left.is-slope, .of-wall-right.is-slope {
   clip-path: polygon(100% 0%, 0% 100%, 100% 100%);
 }
@@ -112,7 +211,7 @@
   clip-path: polygon(0% 0%, 100% 100%, 0% 100%);
 }
 
-.of-wall-top.no-shadow, .of-wall-left.no-shadow, .of-wall-right.no-shadow {
+.of-wall-top.no-shadow:not(.neon), .of-wall-left.no-shadow:not(.neon), .of-wall-right.no-shadow:not(.neon), .of-wall-bottom.no-shadow:not(.neon) {
   filter: brightness(1.0);
 }
 
@@ -135,6 +234,7 @@
   right: -14px;
   bottom: -14px;
   cursor: default;
+  pointer-events: none;
 
   box-sizing: border-box;
   border-top: solid 7px #CCC;
@@ -144,30 +244,51 @@
   border-radius: 14px;
 }
 
+/* Sit above the texture stack (z-index: 1) so corner hits reach scale/rotate. */
+.grab-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
 .rotate-grab {
   opacity: 0;
 }
 
-.rotate-grab-icon {
+.resize-grab {
+  opacity: 0;
+}
+
+.rotate-grab-icon,
+.resize-grab-icon {
   position: absolute;
   width: 28px;
   height: 28px;
   box-sizing: border-box;
   border: solid 2px #CCCCCC;
-  cursor: -moz-default;
-  cursor: -webkit-default;
   cursor: default;
   padding: 0;
   background-color: #CCCCCC;
   border-radius: 100%;
   color: #444;
   font-size: 8px;
+  z-index: 7;
+  touch-action: none;
 
   transform-style: preserve-3d;
   transform: translateZ(0.1px);
 }
 
-.component:hover .rotate-grab, .component:active .rotate-grab {
+.resize-grab-icon {
+  cursor: nwse-resize;
+  border-radius: 4px;
+}
+
+.component:hover .rotate-grab,
+.component:active .rotate-grab,
+.component:hover .resize-grab,
+.component:active .resize-grab {
   opacity: 1;
 }
 

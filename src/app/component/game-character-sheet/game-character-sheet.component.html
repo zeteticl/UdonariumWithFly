@@ -1,55 +1,58 @@
-<button (click)="toggleEditMode()">{{ 'sheet.toggleEdit' | i18n }}</button>
-<ng-container [ngSwitch]="tabletopObject.aliasName">
-  <ng-container *ngSwitchCase="'numberResource'">
-  </ng-container>
-  <ng-container *ngSwitchCase="'card'">
-    <button (click)="openModal('front')" [disabled]="!isVisible">{{ 'sheet.changeFrontImage' | i18n }}</button>
-    <button (click)="openModal('back')">{{ 'sheet.changeBackImage' | i18n }}</button>
-  </ng-container>
-  <ng-container *ngSwitchCase="'card-stack'">
-    <button (click)="openModalChangeAllCardImages()">{{ 'sheet.changeAllBackImages' | i18n }}</button>
-  </ng-container>
-  <ng-container *ngSwitchCase="'terrain'">
-    <button (click)="openModal('floor')">{{ 'sheet.changeFloorImage' | i18n }}</button>
-    <button (click)="openModal('wall')">{{ 'sheet.changeWallImage' | i18n }}</button>
-  </ng-container>
-  <ng-container *ngSwitchCase="'dice-symbol'">
-    <button (click)="openModal(tabletopObject['face'])" [disabled]="!isVisible">{{ 'sheet.changeDiceImage' | i18n }}</button>
-  </ng-container>
-  <ng-container *ngSwitchCase="'character'">
-    <button (click)="openModalReplaceImage(tabletopObject.imageFiles.length > 1 || 0 < tabletopObject.imageFile?.url.length)">{{ (tabletopObject.imageFiles?.length > 1) ? ('sheet.imageReplaceDelete' | i18n) : ('sheet.imageSet' | i18n) }}</button>
-    <button [disabled]="tabletopObject.faceIcons?.length >= MAX_IMAGE_ICON_COUNT" (click)="openModal('faceIcon')">{{ (tabletopObject.faceIcons?.length > 0) ? ('sheet.faceIconAdd' | i18n) : ('sheet.faceIconSet' | i18n) }}</button>
-  </ng-container>
-  <ng-container *ngSwitchDefault>
-    <ng-container *ngIf="tabletopObject.aliasName !== 'range'">
-      <button (click)="openModal('imageIdentifier', tabletopObject.imageFile && tabletopObject.imageFile.url.length > 0)">{{ 'sheet.changeImage' | i18n }}</button>
+<div class="settings-ui dense sheet-toolbar">
+  <button type="button" class="btn btn-sm" (click)="toggleEditMode()">{{ 'sheet.toggleEdit' | i18n }}</button>
+  <ng-container *ngIf="tabletopObject" [ngSwitch]="tabletopObject.aliasName">
+    <ng-container *ngSwitchCase="'numberResource'">
+    </ng-container>
+    <ng-container *ngSwitchCase="'card'">
+      <button type="button" class="btn btn-sm" (click)="openModal('front')" [disabled]="!isVisible">{{ 'sheet.changeFrontImage' | i18n }}</button>
+      <button type="button" class="btn btn-sm" (click)="openModal('back')">{{ 'sheet.changeBackImage' | i18n }}</button>
+    </ng-container>
+    <ng-container *ngSwitchCase="'card-stack'">
+      <button type="button" class="btn btn-sm" (click)="openModalChangeAllCardImages()">{{ 'sheet.changeAllBackImages' | i18n }}</button>
+    </ng-container>
+    <ng-container *ngSwitchCase="'terrain'">
+      <button type="button" class="btn btn-sm" (click)="openModal('floor')">{{ 'sheet.changeFloorImage' | i18n }}</button>
+      <button type="button" class="btn btn-sm" (click)="openModal('wall')">{{ 'sheet.changeWallImage' | i18n }}</button>
+    </ng-container>
+    <ng-container *ngSwitchCase="'dice-symbol'">
+      <button type="button" class="btn btn-sm" (click)="openModal(tabletopObject['face'])" [disabled]="!isVisible">{{ 'sheet.changeDiceImage' | i18n }}</button>
+    </ng-container>
+    <ng-container *ngSwitchCase="'character'">
+      <button type="button" class="btn btn-sm" (click)="openModalReplaceImage(tabletopObject.imageFiles.length > 1 || 0 < tabletopObject.imageFile?.url?.length)">{{ (tabletopObject.imageFiles?.length > 1) ? ('sheet.imageReplaceDelete' | i18n) : ('sheet.imageSet' | i18n) }}</button>
+      <button type="button" class="btn btn-sm" [disabled]="tabletopObject.faceIcons?.length >= MAX_IMAGE_ICON_COUNT" (click)="openModal('faceIcon')">{{ (tabletopObject.faceIcons?.length > 0) ? ('sheet.faceIconAdd' | i18n) : ('sheet.faceIconSet' | i18n) }}</button>
+    </ng-container>
+    <ng-container *ngSwitchDefault>
+      <ng-container *ngIf="tabletopObject.aliasName !== 'range'">
+        <button type="button" class="btn btn-sm" (click)="openModal('imageIdentifier', tabletopObject.imageFile && tabletopObject.imageFile.url.length > 0)">{{ 'sheet.changeImage' | i18n }}</button>
+      </ng-container>
     </ng-container>
   </ng-container>
-</ng-container>
-<button (click)="clone()">{{ 'sheet.createCopy' | i18n }}</button>
-<button [disabled]="isSaveing" (click)="saveToXML()">
-  <div style="position: relative;">
-    <div [ngClass]="{'is-hidden': isSaveing}">{{ 'sheet.download' | i18n }}</div>
-    <div *ngIf="isSaveing" class="progress">{{progresPercent}}%</div>
-  </div>
-</button>
-<ng-container *ngIf="tabletopObject.aliasName === 'character'">
-  <select #select *ngIf="tabletopObject" (change)="setLocation(select.value)" [ngModel]="tabletopObject.location.name">
-    <option value="table">{{ 'sheet.location.table' | i18n }}</option>
-    <option value="common">{{ 'sheet.location.common' | i18n }}</option>
-    <option value="{{networkService.peerId}}">{{ 'sheet.location.personal' | i18n }}</option>
-    <option value="graveyard">{{ 'sheet.location.graveyard' | i18n }}</option>
-  </select>
-  <button (click)="openModal('shadowImageIdentifier', tabletopObject.shadowImageFile.url.length > 0)" [disabled]="!tabletopObject.imageElement || tabletopObject.imageElement.value == 'null'">{{ 'sheet.changeShadow' | i18n }}</button>
-</ng-container>
+  <button type="button" class="btn btn-sm" (click)="importXml()">{{ 'sheet.import' | i18n }}</button>
+  <button type="button" class="btn btn-sm" [disabled]="isSaveing" (click)="saveToXML()">
+    <div class="sheet-download-label">
+      <div [ngClass]="{'is-hidden': isSaveing}">{{ 'sheet.download' | i18n }}</div>
+      <div *ngIf="isSaveing" class="progress">{{progresPercent}}%</div>
+    </div>
+  </button>
+  <button type="button" class="btn btn-sm" *ngIf="tabletopObject?.aliasName === 'character'" (click)="exportCcfoliaJson()">{{ 'sheet.exportCcfoliaJson' | i18n }}</button>
+  <ng-container *ngIf="tabletopObject?.aliasName === 'character'">
+    <select #select *ngIf="tabletopObject" (change)="setLocation(select.value)" [ngModel]="tabletopObject.location.name">
+      <option value="table">{{ 'sheet.location.table' | i18n }}</option>
+      <option value="common">{{ 'sheet.location.common' | i18n }}</option>
+      <option value="{{networkService.peerId}}">{{ 'sheet.location.personal' | i18n }}</option>
+      <option value="graveyard">{{ 'sheet.location.graveyard' | i18n }}</option>
+    </select>
+    <button type="button" class="btn btn-sm" (click)="openModal('shadowImageIdentifier', tabletopObject.shadowImageFile?.url?.length > 0)" [disabled]="!tabletopObject.imageElement || tabletopObject.imageElement.value == 'null'">{{ 'sheet.changeShadow' | i18n }}</button>
+  </ng-container>
+</div>
 <div *ngIf="tabletopObject" class="flex-container">
   <span>
     <img class="shadow-image" style="cursor: pointer" [src]="tabletopObject.shadowImageFile.url | safe: 'resourceUrl'" [alt]="tabletopObject.shadowImageFile.name" (click)="openModal('shadowImageIdentifier', true)" draggable="false" />
   </span>
-  <div *ngIf="(0 < tabletopObject.imageFile?.url.length || 0 < tabletopObject.faceIcons?.length) && tabletopObject.aliasName != 'table-mask'" class="box main-image-box">
+  <div *ngIf="(0 < tabletopObject.imageFile?.url?.length || 0 < tabletopObject.faceIcons?.length) && tabletopObject.aliasName != 'table-mask'" class="box main-image-box">
     <div class="icons-box">
       <div *ngFor="let faceIconImage of tabletopObject.faceIcons; index as i; trackBy: identify" style="position: relative" [style.top.px]="-showIconOffset(i)">
-        <span @bounceInOut *ngIf="0 < faceIconImage.url.length" class="icon-image-box" style="display: block" [ngClass]="{'current-icon': tabletopObject.currntIconIndex == i}">
+        <span @bounceInOut *ngIf="0 < faceIconImage?.url?.length" class="icon-image-box" style="display: block" [ngClass]="{'current-icon': tabletopObject.currntIconIndex == i}">
           <img [src]="faceIconImage.url | safe: 'resourceUrl'" [style.cursor]="tabletopObject.currntIconIndex == i ? 'auto' : 'pointer'" [alt]="faceIconImage.name" (click)="selectIcon(i)" draggable="false" />
           <button *ngIf="tabletopObject.currntIconIndex == i" class="button-delete-icon" [title]="'sheet.deleteFaceIcon' | i18n" (click)="deleteIcon(i, faceIconImage.identifier)">
             <b class="material-icons" style="font-size: 1rem;">close</b>
@@ -57,11 +60,11 @@
         </span>
       </div>
     </div>
-    <div class="image-showcase" style="position: absolute; height: 50px; top: 300px">
+    <div class="image-showcase" style="position: absolute; height: 50px; top: 220px">
       <span *ngFor="let imageFile of tabletopObject.imageFiles; index as i" class="image-thumbnail" [ngClass]="{'hide': tabletopObject.currntImageIndex == i}" style="position: absolute;" [style.left.px]="(tabletopObject.currntImageIndex <= i ? i-1 : i) * 50 - showCaseOffset(i)">
         <img @bounceInOut [src]="imageFile.url | safe: 'resourceUrl'" style="cursor: pointer" [alt]="imageFile.name" (click)="selectImage(i)" draggable="false" />
       </span>
-      <button *ngIf="tabletopObject.aliasName == 'character' && tabletopObject.imageFiles.length < MAX_IMAGE_ICON_COUNT && (tabletopObject.imageFiles.length > 1 || 0 < tabletopObject.imageFile?.url.length)"
+      <button *ngIf="tabletopObject.aliasName == 'character' && tabletopObject.imageFiles.length < MAX_IMAGE_ICON_COUNT && (tabletopObject.imageFiles.length > 1 || 0 < tabletopObject.imageFile?.url?.length)"
         (click)="openModalAddImage()"
         style="position: relative; bottom: 30px; z-index: 700;" 
         [style.left.px]="tabletopObject.imageFiles.length < 0 ? -5 : (tabletopObject.imageFiles.length - 1) * 45 - 5 - showCaseOffset(tabletopObject.imageFiles.length-2)">{{ tabletopObject.imageFiles.length < 2 ? ('sheet.switchImageSettings' | i18n) : '＋' }}</button>

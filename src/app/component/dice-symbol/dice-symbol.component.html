@@ -1,6 +1,6 @@
 <div class="component is-3d is-grab is-pointer-events-none" [style.width.px]="size * gridSize" [style.height.px]="size * gridSize"
   appMovable [movable.option]="movableOption" (movable.ondragstart)="onMove()" (movable.ondragend)="onMoved()">
-  <div class="component-content is-3d" [@bounceInOut]="'in'">
+  <div class="component-content is-3d" [@bounceInOut]="'in'" [@.disabled]="skipEnterBounce">
     <div appRotable [rotable.option]="rotableOption" (rotable.ondragstart)="onMove()" (rotable.ondragend)="onMoved()"
       class="component-content is-3d is-pointer-events-auto" (dblclick)="onDoubleClick($event)">
       <ng-container *ngIf="!isIconHidden">
@@ -15,7 +15,8 @@
       <div *ngIf="isSelected" class="selected-highlight" [ngClass]="{'is-magnetic': isMagnetic}"></div>
       <div class="pedestal-outer"></div>
       <div class="component-content is-3d">
-        <div class="upright-transform is-fit-width is-3d">
+        <div class="upright-transform is-fit-width is-3d" [class.is-flat-2d]="is2DMode"
+          [ngStyle]="is2DMode ? {'transform': 'translateZ(1px)'} : null">
           <div class="rotate-frame is-3d" [style.width.px]="size * gridSize" [style.height.px]="size * gridSize">
             <div class="rotate-inner is-3d">
               <div class="is-3d" [ngStyle]="{'transform': 'translateX(' + size * gridSize / 2 +'px) rotateX(' + nameTagRotate + 'deg)'}">
@@ -24,7 +25,7 @@
                   <div class="back-tag is-3d"><i *ngIf="isLock && hasOwner" class="material-icons lock-icon">lock</i>{{name}}<span *ngIf="0 < name.length">{{ 'common.colon' | i18n }}</span><span *ngIf="isVisible">{{face}}</span><span *ngIf="!isVisible">{{ 'dice.hidden' | i18n }}</span></div>
                 </div>
               </div>
-              <div *ngIf="hasOwner && 0 < ownerName.length" class="owner-tag is-nowrap is-black-background is-3d" [ngStyle]="{'background-color': ownerColor + 'dd', 'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) rotateX(' + nameTagRotate + 'deg)'}">
+              <div *ngIf="hasOwner && 0 < ownerName?.length" class="owner-tag is-nowrap is-black-background is-3d" [ngStyle]="{'background-color': ownerColor + 'dd', 'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) rotateX(' + nameTagRotate + 'deg)'}">
                 <div class="fornt-tag is-3d" style="color: whitesmoke"><b>{{ownerName}}</b></div>
                 <div class="back-tag is-3d" style="color: whitesmoke"><b>{{ownerName}}</b></div>
               </div>
@@ -38,7 +39,7 @@
             </div>
           </div>
         </div>
-        <div class="is-3d" style="position: relative; top: -20%;" [style.width.px]="size * gridSize" [style.height.px]="size * gridSize"
+        <div *ngIf="!is2DMode" class="is-3d" style="position: relative; top: -20%;" [style.width.px]="size * gridSize" [style.height.px]="size * gridSize"
           [@changeFace]="!isCoin && isVisible ? face : null" [@changeFaceCoin]="isCoin && isVisible ? (face == faces[0] ? 1 : 2) : null"
           [@diceRoll]="animeState"
           (@diceRoll.done)="animationShuffleDone($event)">

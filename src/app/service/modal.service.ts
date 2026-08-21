@@ -22,6 +22,8 @@ class ModalContext {
 export class ModalService {
   private modalContext: ModalContext = null;
   private count = 0;
+  /** Child modal services currently open (top = last). */
+  private static activeStack: ModalService[] = [];
 
   title: string = 'Untitled dialog';
 
@@ -41,6 +43,23 @@ export class ModalService {
     return this.count > 0;
   }
 
+  /** Dismiss the topmost modal as cancel (false). Returns true if a modal was closed. */
+  static dismissTop(): boolean {
+    const top = ModalService.activeStack[ModalService.activeStack.length - 1];
+    if (!top?.modalContext) return false;
+    top.resolve(false);
+    return true;
+  }
+
+  private static pushActive(service: ModalService) {
+    ModalService.activeStack.push(service);
+  }
+
+  private static popActive(service: ModalService) {
+    const i = ModalService.activeStack.lastIndexOf(service);
+    if (i >= 0) ModalService.activeStack.splice(i, 1);
+  }
+
   open<T>(childComponent: { new(...args: any[]) }, option?, parentViewContainerRef?: ViewContainerRef): Promise<T> {
     if (!parentViewContainerRef) {
       parentViewContainerRef = ModalService.defaultParentViewContainerRef;
@@ -49,6 +68,7 @@ export class ModalService {
       // 建立 Injector
       const _resolve = (val: T) => {
         if (panelComponentRef) {
+          ModalService.popActive(childModalService);
           panelComponentRef.destroy();
           resolve(val);
           this.count--;
@@ -57,6 +77,7 @@ export class ModalService {
 
       const _reject = (reason?: any) => {
         if (panelComponentRef) {
+          ModalService.popActive(childModalService);
           panelComponentRef.destroy();
           reject(reason);
           this.count--;
@@ -65,6 +86,7 @@ export class ModalService {
 
       const childModalService: ModalService = new ModalService(this.i18n);
       childModalService.modalContext = new ModalContext(_resolve, _reject, option);
+      ModalService.pushActive(childModalService);
 
       const parentInjector = parentViewContainerRef.injector;
       const injector = Injector.create({ providers: [{ provide: ModalService, useValue: childModalService }], parent: parentInjector });
@@ -73,6 +95,7 @@ export class ModalService {
       let bodyComponentRef: ComponentRef<any> = panelComponentRef.instance.content.createComponent(childComponent);
 
       panelComponentRef.onDestroy(() => {
+        ModalService.popActive(childModalService);
         panelComponentRef = null;
         this.count--;
       });

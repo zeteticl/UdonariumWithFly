@@ -27,7 +27,7 @@ export class StandImageService {
         instance.toGhostly();
       } else if (gameCharacter.identifier == identifier && gameCharacter.location.name != 'graveyard') {
         instance.standElement = standElement;
-        instance.color = color ? color : gameCharacter.chatPalette.color;
+        instance.color = color ? color : gameCharacter.chatPalette?.color;
         instance.isSecret = isSecret;
         instance.refleshImageUrls();
         instance.toFront();
@@ -42,7 +42,7 @@ export class StandImageService {
       const standImageComponentRef = StandImageService.defaultParentViewContainerRef.createComponent(StandImageComponent);
       standImageComponentRef.instance.gameCharacter = gameCharacter;
       standImageComponentRef.instance.standElement = standElement;
-      standImageComponentRef.instance.color = color ? color : gameCharacter.chatPalette.color;
+      standImageComponentRef.instance.color = color ? color : gameCharacter.chatPalette?.color;
       standImageComponentRef.instance.isSecret = isSecret;
       standImageComponentRef.instance.refleshImageUrls();
       standImageComponentRef.instance.toFront();

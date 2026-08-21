@@ -131,27 +131,42 @@ export class WeatherRender {
   setEnabled(enabled: boolean) {
     if (enabled && !this.running) {
       this.running = true;
+      // Paint immediately so enable does not flash an empty oversized canvas for one frame.
+      this.tick();
       const loop = () => {
         if (!this.running) return;
         this.tick();
         this.rafId = requestAnimationFrame(loop);
       };
       this.rafId = requestAnimationFrame(loop);
-    } else if (!enabled && this.running) {
+    } else if (!enabled && (this.running || this.lastW > 0 || this.lastH > 0)) {
       this.running = false;
       cancelAnimationFrame(this.rafId);
+      this.rafId = 0;
       this.flash = 0;
       this.flashCooldown = 0;
       this.bolt = [];
+      this.lastW = 0;
+      this.lastH = 0;
+      this.lastIntensity = -1;
       for (const layer of this.layers) {
-        const ctx = layer.canvas.getContext('2d');
-        if (ctx) ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
         layer.particles = [];
+        // Release GPU/CPU backing store while weather is off.
+        if (layer.canvas.width !== 0) layer.canvas.width = 0;
+        if (layer.canvas.height !== 0) layer.canvas.height = 0;
       }
     }
   }
 
   sync(table: GameTable) {
+    const type = table.weatherType || 'none';
+    const intensity = Math.max(0, Math.min(1, table.weatherIntensity ?? 0.5));
+    if (type === 'none' || intensity <= 0) {
+      this.setEnabled(false);
+      this.lastType = type;
+      return;
+    }
+
     const tableW = table.width * table.gridSize;
     const tableH = table.height * table.gridSize;
     const pad = WeatherRender.marginFor(tableW, tableH);
@@ -162,21 +177,13 @@ export class WeatherRender {
       if (layer.canvas.height !== height) layer.canvas.height = height;
     }
 
-    const type = table.weatherType || 'none';
-    const intensity = Math.max(0, Math.min(1, table.weatherIntensity ?? 0.5));
-    if (type === 'none' || intensity <= 0) {
-      this.setEnabled(false);
-      this.lastType = type;
-      return;
-    }
-
     if (type !== this.lastType || intensity !== this.lastIntensity || width !== this.lastW || height !== this.lastH) {
       this.lastType = type;
       this.lastIntensity = intensity;
       this.lastW = width;
       this.lastH = height;
       this.flash = 0;
-      this.flashCooldown = 50 + Math.random() * 90;
+      this.flashCooldown = 100 + Math.random() * 160;
       this.bolt = [];
       this.rebuild(type, intensity, width, height);
     }
@@ -348,7 +355,43 @@ export class WeatherRender {
         }
         this.drawParticle(ctx, type, p, depth);
       }
+      this.applyEdgeFade(ctx, width, height);
     }
+  }
+
+  /** Soften the hard rectangular weather volume so edges dissolve instead of clipping. */
+  private applyEdgeFade(ctx: CanvasRenderingContext2D, width: number, height: number) {
+    const fade = Math.max(72, Math.round(Math.min(width, height) * 0.16));
+    const f = Math.min(fade, Math.floor(width / 2), Math.floor(height / 2));
+    if (f < 8) return;
+
+    const fx = f / width;
+    const fy = f / height;
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-in';
+
+    const gx = ctx.createLinearGradient(0, 0, width, 0);
+    gx.addColorStop(0, 'rgba(0,0,0,0)');
+    gx.addColorStop(fx * 0.45, 'rgba(0,0,0,0.4)');
+    gx.addColorStop(fx, 'rgba(0,0,0,1)');
+    gx.addColorStop(1 - fx, 'rgba(0,0,0,1)');
+    gx.addColorStop(1 - fx * 0.45, 'rgba(0,0,0,0.4)');
+    gx.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gx;
+    ctx.fillRect(0, 0, width, height);
+
+    // Product of H×V fades gives soft corners (not a second hard box).
+    const gy = ctx.createLinearGradient(0, 0, 0, height);
+    gy.addColorStop(0, 'rgba(0,0,0,0)');
+    gy.addColorStop(fy * 0.45, 'rgba(0,0,0,0.4)');
+    gy.addColorStop(fy, 'rgba(0,0,0,1)');
+    gy.addColorStop(1 - fy, 'rgba(0,0,0,1)');
+    gy.addColorStop(1 - fy * 0.45, 'rgba(0,0,0,0.4)');
+    gy.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gy;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.restore();
   }
 
   private updateFlash(type: WeatherType, intensity: number, width: number, height: number) {
@@ -358,15 +401,16 @@ export class WeatherRender {
       return;
     }
     if (this.flash > 0) {
-      this.flash = Math.max(0, this.flash - 0.065);
+      this.flash = Math.max(0, this.flash - 0.09);
       if (this.flash <= 0) this.bolt = [];
       return;
     }
     this.flashCooldown -= 1;
     if (this.flashCooldown > 0) return;
-    this.flash = 0.88 + Math.random() * 0.12;
-    this.flashCooldown = 55 + Math.random() * (150 - intensity * 70);
-    if (Math.random() < 0.4) this.flashCooldown = 10 + Math.random() * 16;
+    // Softer, rarer flashes — avoid rapid strobing.
+    this.flash = 0.42 + Math.random() * 0.28;
+    this.flashCooldown = 140 + Math.random() * (260 - intensity * 90);
+    if (Math.random() < 0.12) this.flashCooldown = 28 + Math.random() * 36;
     this.rebuildBolt(width, height);
   }
 
@@ -508,7 +552,7 @@ export class WeatherRender {
       case 'thunderstorm': {
         this.wash(ctx, width, height, [36, 48, 72], this.layerWash(index, 0.34, 0.22, 0.13) * i);
         if (this.flash > 0) {
-          this.wash(ctx, width, height, [220, 235, 255], this.flash * this.layerWash(index, 0.2, 0.3, 0.48) * i);
+          this.wash(ctx, width, height, [220, 235, 255], this.flash * this.layerWash(index, 0.1, 0.16, 0.26) * i);
         }
         break;
       }
@@ -561,13 +605,13 @@ export class WeatherRender {
 
   private drawBolt(ctx: CanvasRenderingContext2D, intensity: number) {
     if (this.bolt.length < 2) return;
-    const a = this.flash * 0.7 * intensity;
+    const a = this.flash * 0.55 * intensity;
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     // Glow
-    ctx.strokeStyle = `rgba(180, 210, 255, ${a * 0.35})`;
-    ctx.lineWidth = 6 + intensity * 3;
+    ctx.strokeStyle = `rgba(180, 210, 255, ${a * 0.28})`;
+    ctx.lineWidth = 5 + intensity * 2.2;
     ctx.beginPath();
     ctx.moveTo(this.bolt[0].x, this.bolt[0].y);
     for (let i = 1; i < this.bolt.length; i++) ctx.lineTo(this.bolt[i].x, this.bolt[i].y);

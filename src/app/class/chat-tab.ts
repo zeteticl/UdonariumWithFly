@@ -3,8 +3,9 @@ import { ImageFile } from './core/file-storage/image-file';
 import { SyncObject, SyncVar } from './core/synchronize-object/decorator';
 import { ObjectNode } from './core/synchronize-object/object-node';
 import { InnerXml, ObjectSerializer } from './core/synchronize-object/object-serializer';
-import { EventSystem } from './core/system';
+import { EventSystem, Network } from './core/system';
 import { StringUtil } from './core/system/util/string-util';
+import { PeerCursor } from './peer-cursor';
 import { translate } from 'i18n';
 
 @SyncObject('chat-tab')
@@ -12,11 +13,34 @@ export class ChatTab extends ObjectNode implements InnerXml {
   @SyncVar() name: string = translate('chatTab.defaultName');
   @SyncVar() isUseStandImage: boolean = true;
   @SyncVar() recieveOperationLogLevel: number = 0;
+  @SyncVar() isPrivate: boolean = false;
+  @SyncVar() memberUserIds: string = '';
+  @SyncVar() creatorUserId: string = '';
   get chatMessages(): ChatMessage[] { return <ChatMessage[]>this.children; }
 
   private _unreadLength: number = 0;
   get unreadLength(): number { return this._unreadLength; }
   get hasUnread(): boolean { return 0 < this.unreadLength; }
+
+  get memberIds(): string[] {
+    return (this.memberUserIds || '').trim().split(/\s+/).filter(id => !!id);
+  }
+
+  setMembers(userIds: string[]) {
+    this.memberUserIds = Array.from(new Set(userIds.filter(id => !!id))).join(' ');
+  }
+
+  isMember(userId: string = Network.peer?.userId): boolean {
+    if (!userId) return false;
+    if (this.creatorUserId && this.creatorUserId === userId) return true;
+    return this.memberIds.includes(userId);
+  }
+
+  canView(userId: string = Network.peer?.userId, isGM: boolean = !!PeerCursor.myCursor?.isGMMode): boolean {
+    if (!this.isPrivate) return true;
+    if (isGM) return true;
+    return this.isMember(userId);
+  }
 
   get latestTimeStamp(): number {
     let lastIndex = this.chatMessages.length - 1;

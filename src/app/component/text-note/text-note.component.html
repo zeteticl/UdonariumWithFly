@@ -1,55 +1,138 @@
-<div class="component is-3d is-pointer-events-none" [ngClass]="{'is-grab': !isLocked}"
-  appMovable [movable.option]="movableOption" [movable.disable]="isEditorSelected || isLocked" (movable.ondragstart)="onMove()" (movable.ondragend)="onMoved()">
-  <div class="is-3d" appRotable [rotable.option]="rotableOption" [rotable.disable]="isLocked" (rotable.ondragstart)="onMove()" (rotable.ondragend)="onMoved()">
+<div class="component is-3d is-pointer-events-none"
+  [ngClass]="{'is-grab': !isLocked && !GuestMode()}"
+  appMovable [movable.option]="movableOption" [movable.disable]="isLocked || GuestMode()"
+  (movable.ondragstart)="onMove()" (movable.ondragend)="onMoved()">
+  <div class="is-3d" appRotable [rotable.option]="rotableOption" [rotable.disable]="isLocked || GuestMode()"
+    (rotable.ondragstart)="onMove()" (rotable.ondragend)="onMoved()">
     <div class="component-content is-3d is-pointer-events-auto" (dblclick)="onDoubleClick($event)"
       [style.width.px]="width * gridSize">
-      <div class="is-3d" [ngClass]="{'fall': altitude == 0, 'softy': !isUpright}" [ngStyle]="{'transform': 'translateZ(' + (altitude * gridSize) + 'px) rotateY(90deg)'}">
-        <div class="is-3d is-transition" [ngStyle]="{'transform': 'rotateZ(' + (isUpright ? 0 : 90) + 'deg) rotateY(-90deg)'}">
-          <div class="upright-transform is-3d is-bg-color is-front is-bg-texture chrome-smooth-image-trick" [ngClass]="{'is-bg-filter': isWhiteOut}"
-            [style.background-image]="'url(' + imageFile?.url + ')' | safe: 'style'" [style.width.px]="width * gridSize" [style.min-height.px]="height * gridSize">
-            <div *ngIf="isShowTitle && title.length" class="title is-3d is-black-background is-pointer-events-none">{{title}}</div>
-            <textarea #textArea (input)="calcFitHeight();" class="textarea is-3d" [ngClass]="{'is-pointer-events-none': !isEditorSelected, 'is-pointer-events-auto': isEditorSelected, 'hide-area': !isEditorSelected}"
-              [style.font-size.px]="fontSize + 9" [(ngModel)]="text" spellcheck="false"></textarea>
-            <div class="is-3d is-outline-text note-text" style="margin-top:-18px" [ngClass]="{'hide-area': isEditorSelected}" (click)="activate()"
-              [style.font-size.px]="fontSize + 9" [style.color]="color" [style.text-shadow]="textShadowCss" [innerHTML]="lastNewLineAdjust(rubiedText) | safe: 'html'"></div>
-              <div *ngIf="isSelected" class="selected-highlight" [ngClass]="{'is-magnetic': isMagnetic}"></div>
-          </div>
-          <div class="upright-transform is-3d is-back is-bg-color is-bg-texture chrome-smooth-image-trick"
-            [style.background-image]="'url(' + imageFile?.url + ')' | safe: 'style'" [style.width.px]="width * gridSize" [style.min-height.px]="height * gridSize">
-            <div *ngIf="isSelected" class="selected-highlight" [ngClass]="{'is-magnetic': isMagnetic}"></div>
-            <div class="is-3d is-pointer-events-none" style="visibility: hidden">
-              <div *ngIf="isShowTitle && title.length" class="title is-3d is-black-background is-pointer-events-none">{{title}}</div>
-              <textarea class="textarea is-3d hide-area is-pointer-events-none"
-                [style.font-size.px]="fontSize + 9" [(ngModel)]="text" spellcheck="false" readonly></textarea>
-              <div class="is-3d is-outline-text note-text is-pointer-events-none" style="margin-top:-18px"
-                [style.font-size.px]="fontSize + 9" [innerHTML]="lastNewLineAdjust(rubiedText) | safe: 'html'"></div>
+      <!--
+        2D only: table-plane hit footprint (3D flat notes must not add this — an extra
+        untransformed WxH plane next to cards breaks preserve-3d compositing / looks misaligned).
+        Do NOT size .component — movable uses clientWidth/Height as center offset.
+      -->
+      <div *ngIf="useFlatHitPlate"
+        class="note-flat-hit"
+        (click)="activate()"
+        [style.width.px]="width * gridSize"
+        [style.height.px]="height * gridSize"></div>
+      <!--
+        2D: keep paper coplanar (translateZ only) — no tip-over rotateY(90)→rotateX(-90)
+        (that edge-on chain was culled on Mobile Safari). Keep preserve-3d so
+        .push-pin translateZ(4px) can sit above the yarn plane (photo < yarn < pin).
+      -->
+      <div class="note-visual is-3d" [class.note-visual-pe-pass]="useFlatHitPlate"
+        [ngClass]="is2DMode ? null : {'fall': altitude == 0, 'softy': !isUpright}"
+        [ngStyle]="{'transform': 'translateZ(' + (is2DMode ? 0 : altitude * gridSize) + 'px)' + (is2DMode ? '' : ' rotateY(90deg)')}">
+        <div class="is-3d" [class.is-transition]="!is2DMode"
+          [ngStyle]="is2DMode ? null : {'transform': 'rotateZ(' + (isUpright ? 0 : 90) + 'deg) rotateY(-90deg)'}">
+          <div class="upright-transform is-3d is-bg-color"
+            [class.is-front]="!is2DMode"
+            [class.note-flat-face-2d]="is2DMode"
+            [ngClass]="{
+              'is-ghosted': isGhosted,
+              'paper-a4': paperStyle === 'a4',
+              'paper-sticky': paperStyle === 'sticky'
+            }"
+            [style.width.px]="width * gridSize"
+            [style.min-height.px]="height * gridSize"
+            [style.height.px]="is2DMode ? height * gridSize : null">
+            <span *ngIf="pushPin" class="push-pin is-3d"
+              [style.left.px]="pushPinLeft"
+              [style.top.px]="pushPinTop"
+              [style.transform]="'translateZ(4px) rotate(' + pushPinAngle + 'deg)'">
+              <img class="push-pin-img" alt="" draggable="false" [src]="pushPinSrc" />
+              <i class="push-pin-tip" [attr.data-clue-pin]="textNote.identifier" aria-hidden="true"></i>
+            </span>
+            <!-- Flip only the face body so push-pin / resize stay upright. -->
+            <div class="note-face-body is-3d is-bg-texture"
+              [ngClass]="{
+                'is-bg-filter': isWhiteOut && isTextContent && !showBackFace,
+                'is-content-flipped': isContentFlipped
+              }"
+              [style.background-image]="(!showBackFace && isTextContent && imageFile?.url) ? ('url(' + imageFile.url + ')' | safe: 'style') : null">
+              <div *ngIf="isShowTitle && title.length && !showBackFace" class="title is-3d is-pointer-events-none"
+                [style.background-color]="titleBgColor"
+                [style.color]="titleFgColor">{{title}}</div>
+
+              <!-- Has back art: swap to back image. No back art: keep front + CSS mirror. -->
+              <div *ngIf="showBackFace" class="image-wrap is-3d">
+                <img *ngIf="imageFile?.url" class="note-image is-3d" [src]="imageFile.url | safe: 'resourceUrl'" draggable="false" />
+              </div>
+              <ng-container *ngIf="!showBackFace" [ngSwitch]="contentKind">
+                <div *ngSwitchCase="'pdf'" class="pdf-wrap is-3d">
+                  <canvas #pdfCanvas class="pdf-canvas is-3d"></canvas>
+                  <div class="pdf-nav is-3d" data-no-dblclick
+                    (pointerdown)="$event.stopPropagation()"
+                    (mousedown)="$event.stopPropagation()"
+                    (click)="$event.stopPropagation()"
+                    (dblclick)="$event.stopPropagation(); $event.preventDefault()">
+                    <button type="button" class="pdf-btn" (click)="prevPdfPage($event)" [disabled]="textNote.pdfPageCount <= 1">‹</button>
+                    <span class="pdf-page">{{ textNote.pdfPage }}{{ textNote.pdfPageCount ? ' / ' + textNote.pdfPageCount : '' }}</span>
+                    <button type="button" class="pdf-btn" (click)="nextPdfPage($event)"
+                      [disabled]="textNote.pdfPageCount <= 1">›</button>
+                  </div>
+                </div>
+
+                <div *ngSwitchCase="'video'" class="video-wrap is-3d" data-no-dblclick
+                  (pointerdown)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()"
+                  (dblclick)="$event.stopPropagation(); $event.preventDefault()">
+                  <video *ngIf="videoSrc" class="note-video is-3d" [src]="videoSrc | safe: 'resourceUrl'"
+                    controls playsinline preload="metadata"
+                    (click)="$event.stopPropagation()"
+                    (dblclick)="$event.stopPropagation(); $event.preventDefault()"></video>
+                  <div *ngIf="!videoSrc" class="media-loading is-3d">…</div>
+                </div>
+
+                <div *ngSwitchCase="'image'" class="image-wrap is-3d">
+                  <img *ngIf="imageFile?.url" class="note-image is-3d" [src]="imageFile.url | safe: 'resourceUrl'" draggable="false" />
+                </div>
+
+                <ng-container *ngSwitchDefault>
+                  <textarea #textArea (input)="calcFitHeight();" class="textarea is-3d"
+                    (pointerdown)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()"
+                    [ngClass]="{'is-pointer-events-none': !isEditorSelected, 'is-pointer-events-auto': isEditorSelected, 'hide-area': !isEditorSelected}"
+                    [style.font-size.px]="fontSize + 9" [style.text-align]="textAlign"
+                    [(ngModel)]="text" spellcheck="false"></textarea>
+                  <div class="is-3d is-outline-text note-text" style="margin-top:-18px"
+                    [ngClass]="{'hide-area': isEditorSelected}" (click)="activate()"
+                    [style.font-size.px]="fontSize + 9" [style.color]="color" [style.text-shadow]="textShadowCss"
+                    [style.text-align]="textAlign"
+                    [innerHTML]="lastNewLineAdjust(rubiedText) | safe: 'html'"></div>
+                </ng-container>
+              </ng-container>
             </div>
+
+            <div *ngIf="isSelected" class="selected-highlight" [ngClass]="{'is-magnetic': isMagnetic}"></div>
+            <div *ngIf="!isLocked && !GuestMode() && !textNote.isSizeLocked"
+              #resizeGrab
+              class="resize-grab of-right-bottom is-pointer-events-auto"
+              data-no-dblclick
+              (dblclick)="$event.stopPropagation(); $event.preventDefault()"
+              [attr.title]="resizeHintKey | i18n">
+              <i class="material-icons">open_in_full</i>
+            </div>
+          </div>
+          <div *ngIf="!is2DMode" class="upright-transform is-3d is-back is-bg-color is-bg-texture"
+            [ngClass]="{'is-ghosted': isGhosted}"
+            [style.background-image]="(isTextContent && imageFile?.url) ? ('url(' + imageFile.url + ')' | safe: 'style') : null"
+            [style.width.px]="width * gridSize" [style.min-height.px]="height * gridSize">
+            <div *ngIf="isSelected" class="selected-highlight" [ngClass]="{'is-magnetic': isMagnetic}"></div>
           </div>
         </div>
       </div>
-      <div *ngIf="!isLocked" [ngClass]="{'is-grab': !isLocked}" class="grand-grabing-area" style="position: absolute"
+      <div *ngIf="!isLocked && !GuestMode()" [ngClass]="{'is-grab': !isLocked}" class="grand-grabing-area" style="position: absolute"
         [ngStyle]="{'transform': 'translateX(' + gridSize / 2 + 'px) translateY(' + (-gridSize / 4) + 'px)'}"
         [style.width.px]="(width - 1) * gridSize"
         [style.min-height.px]="gridSize / 2"></div>
-      <div [ngStyle]="{'transform': 'translateZ(' + (altitude * gridSize) + 'px)'}">
+      <div *ngIf="!isLocked && !GuestMode()" [ngStyle]="{'transform': 'translateZ(' + (is2DMode ? 0 : altitude * gridSize) + 'px)'}">
         <div class="rotate-grab of-left-top">
-          <i class="material-icons" style="display: inline-block" [ngClass]="{'is-inverse': isInverse}">{{ isLocked ? 'lock' : 'autorenew' }}</i>
-        </div>
-        <div class="rotate-grab of-right-top">
-          <i class="material-icons" style="display: inline-block" [ngClass]="{'is-inverse': isInverse}">{{ isLocked ? 'lock' : 'autorenew' }}</i>
-        </div>
-      </div>
-      <div *ngIf="!isLocked">
-        <div class="rotate-grab of-left-top">
-          <i class="material-icons" style="display: inline-block" [ngClass]="{'is-inverse': isInverse}">autorenew</i>
-        </div>
-        <div class="rotate-grab of-right-top">
           <i class="material-icons" style="display: inline-block" [ngClass]="{'is-inverse': isInverse}">autorenew</i>
         </div>
       </div>
     </div>
   </div>
-  <div class="is-3d" *ngIf="isAltitudeIndicate && math.abs(textNoteAltitude) >= 0.5"
+  <div class="is-3d" *ngIf="!is2DMode && isAltitudeIndicate && math.abs(textNoteAltitude) >= 0.5"
     style="display: flex; align-items: center; border-left: 2px dashed blanchedalmond; transform-origin: top left"
     [style.height.px]="math.abs(textNoteAltitude * gridSize)"
     [ngStyle]="{transform: 'rotateX(-90deg) translateY(' + (altitude > 0 ? -altitude * gridSize : 0) + 'px) rotateY(' + (viewRotateZ) + 'deg)'}">

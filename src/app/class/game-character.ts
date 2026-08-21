@@ -1,7 +1,8 @@
 import { ChatPalette } from './chat-palette';
 import { SyncObject, SyncVar } from './core/synchronize-object/decorator';
 import { DataElement } from './data-element';
-import { TabletopObject } from './tabletop-object';
+import { TabletopObject, TablePlacementPose } from './tabletop-object';
+import { moveToBackmost, moveToTopmost, moveToTopmostInTier } from './tabletop-object-util';
 import { UUID } from '@udonarium/core/system/util/uuid';
 
 import { StandList } from './stand-list';
@@ -9,6 +10,7 @@ import { Network } from './core/system';
 import { PeerCursor } from './peer-cursor';
 import { ObjectStore } from './core/synchronize-object/object-store';
 import { translate } from 'i18n';
+import type { CharacterToken } from './character-token';
 
 @SyncObject('character')
 export class GameCharacter extends TabletopObject {
@@ -19,8 +21,15 @@ export class GameCharacter extends TabletopObject {
 
   @SyncVar() rotate: number = 0;
   @SyncVar() roll: number = 0;
+  /**
+   * Dense paint order among layer peers (0..n-1 after reconcile / [ ] / click).
+   * Default hierarchy is applied by reconcileLayerStack (desk < mask < character).
+   */
+  @SyncVar() zindex: number = 0;
   @SyncVar() isDropShadow: boolean = true;
   @SyncVar() isShowChatBubble: boolean = true;
+  /** Show name on token (name-tag, or Polaroid caption when framed). */
+  @SyncVar() isShowName: boolean = true;
   @SyncVar() owner: string = '';
   /**
    * Peer userId that claims this as their PC token (not stealth).
@@ -40,11 +49,261 @@ export class GameCharacter extends TabletopObject {
    */
   @SyncVar() visionOwner: string = '';
 
+  /** Session-only: Advanced copy applies auto-number to Token/Character clones. */
+  static menuCloneAutoNumber = false;
+
   /** Local preferred chat character (last「作為我的角色」claim). */
   private static preferredChatCharacterId = '';
 
   /** HTML5 DnD type for dragging inventory characters onto the table. */
   static readonly INVENTORY_DRAG_MIME = 'application/x-udonarium-character';
+  /** CTRL+drag from inventory: spawn a temporary copy (delete skips graveyard). */
+  static readonly INVENTORY_TEMP_COPY_MIME = 'application/x-udonarium-character-temp';
+
+  /**
+   * Escape hatch for unit tests that exercise TabletopObject placement APIs via GameCharacter.
+   * Product code must leave this false — bodies never sit on the table.
+   */
+  static allowLegacyBodyOnTable = false;
+
+  /**
+   * Clone an independent temporary sheet + Token on the map.
+   * Stats (HP etc.) are NOT shared with the source; copy is hidden from inventory
+   * and destroyed on delete (no graveyard). Use {@link CharacterToken.create}
+   * (temporary:true) only when you intentionally want a shared-body projection.
+   */
+  static createTemporaryCopy(
+    source: GameCharacter,
+    pose?: { x?: number; y?: number; posZ?: number },
+    tableId?: string,
+    copyAppearanceFrom?: GameCharacter | CharacterToken
+  ): CharacterToken {
+    // Lazy require breaks character-token ↔ game-character cycle at module init.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { CharacterToken } = require('./character-token') as typeof import('./character-token');
+    const body = source.clone() as GameCharacter;
+    body.isTemporaryCopy = true;
+    body.isInventoryIndicate = false;
+    body.playerOwner = '';
+    body.visionOwner = '';
+    body.owner = '';
+    body.tablePlacements = '';
+    body.tableIdentifier = '';
+    const inventoryName = source.location.name && source.location.name !== 'table'
+      ? source.location.name
+      : 'common';
+    body.location.name = inventoryName;
+    CharacterToken.ensureBodyOffTable(body);
+    body.update();
+
+    const id = tableId || TabletopObject.resolveViewTableIdentifier() || '';
+    return CharacterToken.create(body.identifier, {
+      x: pose?.x ?? source.location.x,
+      y: pose?.y ?? source.location.y,
+      posZ: pose?.posZ ?? source.posZ,
+    }, {
+      tableId: id || undefined,
+      temporary: true,
+      copyAppearanceFrom: copyAppearanceFrom || source,
+      // Do not steal major from an existing token on this map (plan: first only).
+    });
+  }
+
+  /**
+   * Duplicate the sheet (new inventory body). Optionally place one Token on the current view.
+   * Distinct from Token duplicate ({@link CharacterToken.duplicateToken}) which shares the same body.
+   */
+  static cloneCharacter(
+    source: GameCharacter,
+    opts?: {
+      pose?: { x?: number; y?: number; posZ?: number };
+      tableId?: string;
+      /** Default true when a view / table id is available. */
+      placeToken?: boolean;
+      numbered?: boolean;
+      copyAppearanceFrom?: GameCharacter | CharacterToken;
+    }
+  ): { body: GameCharacter; token: CharacterToken | null } {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { CharacterToken } = require('./character-token') as typeof import('./character-token');
+    const body = source.clone() as GameCharacter;
+    body.playerOwner = '';
+    body.visionOwner = '';
+    body.owner = '';
+    body.isTemporaryCopy = false;
+    body.tablePlacements = '';
+    const inventoryName = source.location.name && source.location.name !== 'table'
+      ? source.location.name
+      : 'common';
+    body.location.name = inventoryName;
+    body.tableIdentifier = '';
+
+    if (opts?.numbered) {
+      body.name = GameCharacter.nextNumberedName(body.name);
+    }
+    body.update();
+
+    const tableId = opts?.tableId || TabletopObject.resolveViewTableIdentifier() || '';
+    const shouldPlace = opts?.placeToken !== false && !!tableId;
+    let token: CharacterToken | null = null;
+    if (shouldPlace) {
+      const pose = opts?.pose || { x: (source.location.x || 0) + 50, y: (source.location.y || 0) + 50, posZ: source.posZ || 0 };
+      token = CharacterToken.create(body.identifier, pose, {
+        tableId,
+        copyAppearanceFrom: opts?.copyAppearanceFrom || source,
+        major: true,
+      });
+    }
+    return { body, token };
+  }
+
+  /** Auto-number suffix for character / token display names (`Hero` → `Hero_1`). */
+  static nextNumberedName(name: string, existingNames?: Iterable<string>): string {
+    const tmp = (name || '').split('_');
+    let baseName: string;
+    if (tmp.length > 1 && /\d+/.test(tmp[tmp.length - 1])) {
+      baseName = tmp.slice(0, tmp.length - 1).join('_');
+    } else {
+      baseName = tmp.join('_') || 'character';
+    }
+    let maxIndex = 0;
+    const names = existingNames
+      ? Array.from(existingNames)
+      : ObjectStore.instance.getObjects(GameCharacter).map(c => c.name);
+    for (const n of names) {
+      if (!n || !n.startsWith(baseName)) continue;
+      const index = n.match(/_(\d+)$/) ? +RegExp.$1 : 0;
+      if (index > maxIndex) maxIndex = index;
+    }
+    return baseName + '_' + (maxIndex + 1);
+  }
+
+  /**
+   * Bodies must not sit on the table — spawn / update a {@link CharacterToken} instead.
+   * Appearance SyncVars on the body are copied onto the Token.
+   */
+  override addToTable(
+    tableId?: string,
+    pose?: Partial<TablePlacementPose>,
+    exclusive = false
+  ) {
+    if (GameCharacter.allowLegacyBodyOnTable) {
+      super.addToTable(tableId, pose, exclusive);
+      return;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { CharacterToken } = require('./character-token') as typeof import('./character-token');
+    const id = tableId || TabletopObject.resolveViewTableIdentifier() || this.tableIdentifier || '';
+    const nextPose = {
+      x: pose?.x ?? this.location.x,
+      y: pose?.y ?? this.location.y,
+      posZ: pose?.posZ ?? this.posZ,
+    };
+
+    this.ensureBodyInventoryLocation(id);
+
+    if (exclusive) {
+      const onTarget = id ? CharacterToken.tokensOnTable(this.identifier, id) : [];
+      const keep = onTarget[0] || null;
+      for (const t of ObjectStore.instance.getObjects(CharacterToken)) {
+        if (t.characterId !== this.identifier) continue;
+        if (keep && t === keep) continue;
+        t.destroy();
+      }
+      if (keep) {
+        keep.addToTable(id, nextPose, true);
+        CharacterToken.copyTableAppearance(keep, this);
+        CharacterToken.reconcileMajor(this.identifier, id, keep.identifier);
+        this.owner = '';
+        return;
+      }
+      CharacterToken.destroyTokensForCharacter(this.identifier);
+    } else if (id) {
+      const onMap = CharacterToken.tokensOnTable(this.identifier, id);
+      if (onMap.length > 0) {
+        const t = CharacterToken.focusTokenForCharacter(this.identifier, id) || onMap[0];
+        t.addToTable(id, nextPose, false);
+        CharacterToken.copyTableAppearance(t, this);
+        this.owner = '';
+        return;
+      }
+    }
+
+    const legacyId = CharacterToken.legacyTokenId(this.identifier);
+    const legacyFree = !(ObjectStore.instance.get(legacyId) instanceof CharacterToken);
+    const noTokensYet = CharacterToken.tokensOnTable(this.identifier).length < 1
+      && ObjectStore.instance.getObjects(CharacterToken).every(t => t.characterId !== this.identifier);
+
+    CharacterToken.create(this.identifier, nextPose, {
+      tableId: id || undefined,
+      identifier: (legacyFree && noTokensYet) ? legacyId : undefined,
+      copyAppearanceFrom: this,
+      major: true,
+    });
+    CharacterToken.ensureBodyOffTable(this);
+    this.owner = '';
+  }
+
+  override setLocation(location: string, tableIdentifier?: string) {
+    if (location === 'table' && !GameCharacter.allowLegacyBodyOnTable) {
+      this.addToTable(tableIdentifier, {
+        x: this.location.x,
+        y: this.location.y,
+        posZ: this.posZ,
+      });
+      return;
+    }
+    if (location === 'graveyard') {
+      this.destroyMapTokens();
+      super.setLocation(location, tableIdentifier);
+      // Room-wide trash: never bind the sheet to a single map.
+      if (this.tableIdentifier) {
+        this.tableIdentifier = '';
+        this.update();
+      }
+      return;
+    }
+    super.setLocation(location, tableIdentifier);
+  }
+
+  /**
+   * leaveCurrentTable → removeFromTable may set location.name to graveyard without
+   * going through setLocation; still tear down map Tokens and unbind the map.
+   */
+  override removeFromTable(tableId?: string, inventoryLocation = 'common') {
+    super.removeFromTable(tableId, inventoryLocation);
+    if (this.location.name === 'graveyard') {
+      this.destroyMapTokens();
+      if (this.tableIdentifier) {
+        this.tableIdentifier = '';
+        this.update();
+      }
+    }
+  }
+
+  /** Sheet in graveyard must not leave orphan map projections. */
+  private destroyMapTokens() {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { CharacterToken } = require('./character-token') as typeof import('./character-token');
+    CharacterToken.destroyTokensForCharacter(this.identifier);
+  }
+
+  /** Keep sheet in inventory (common by default) with no table placements. */
+  private ensureBodyInventoryLocation(tableId: string) {
+    if (this.location.name === 'table') {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { CharacterToken } = require('./character-token') as typeof import('./character-token');
+      CharacterToken.ensureBodyOffTable(this);
+      return;
+    }
+    if (this.tablePlacements) this.tablePlacements = '';
+    // Revive from graveyard (or unbound) into common when placing a map Token.
+    if (!this.location.name || this.location.name === 'table' || this.location.name === 'graveyard') {
+      this.tableIdentifier = tableId || this.tableIdentifier || TabletopObject.resolveViewTableIdentifier() || '';
+      this.location.name = 'common';
+      this.update();
+    }
+  }
 
   /** characterId → userId for chat-window auto vision (local session only). */
   private static autoVisionUser = new Map<string, string>();
@@ -77,6 +336,19 @@ export class GameCharacter extends TabletopObject {
   @SyncVar() floorRing: string = 'none';
   @SyncVar() floorRingColor: string = '';
   @SyncVar() floorRingSpeed: number = 1;
+
+  /** Clue-board frame overlay: none | polaroid | photo | card */
+  @SyncVar() tokenFrame: string = 'none';
+  @SyncVar() tokenFrameCaption: string = '';
+  @SyncVar() pushPin: boolean = false;
+  @SyncVar() pushPinAngle: number = 0;
+  /** Legacy SyncVar (unused for art; kept for room XML compat). */
+  @SyncVar() pushPinColor: string = 'red';
+  /** Active oblique styles: 2 | 3 | 6 | 7. 0 = derive from identifier. */
+  @SyncVar() pushPinStyle: number = 0;
+  /** CSS left/top of `.push-pin` on the token image-box (randomized). */
+  @SyncVar() pushPinLeft: number = -4;
+  @SyncVar() pushPinTop: number = -20;
   
   text = '';
   dialog = null;
@@ -130,21 +402,47 @@ export class GameCharacter extends TabletopObject {
     return Number.isNaN(num) ? 0 : num;
   }
 
-  get chatPalette(): ChatPalette {
+  /**
+   * Chat palette child. Does not auto-create — accidental empty creates during
+   * sync races were blanking palettes room-wide. Use {@link ensureChatPalette}
+   * when opening/editing the palette UI.
+   */
+  get chatPalette(): ChatPalette | null {
+    return this.findChatPalette();
+  }
+
+  /** Existing palette on this character or already in ObjectStore (sync race safe). */
+  findChatPalette(): ChatPalette | null {
     for (let child of this.children) {
       if (child instanceof ChatPalette) return child;
+    }
+    const existing = ObjectStore.instance.get<ChatPalette>('ChatPalette_' + this.identifier);
+    if (existing instanceof ChatPalette) {
+      if (existing.parent !== this) this.appendChild(existing);
+      return existing;
     }
     return null;
   }
 
+  /** Create a palette only when the UI explicitly needs one (e.g. confirm edit). */
+  ensureChatPalette(initialValue?: string): ChatPalette {
+    const found = this.findChatPalette();
+    if (found) return found;
+    const palette = new ChatPalette('ChatPalette_' + this.identifier);
+    // Seed content before initialize(): SyncVar update() is a no-op until the
+    // object is in ObjectStore, so the first broadcast includes text (not empty).
+    if (initialValue != null) palette.setPalette(initialValue);
+    palette.initialize();
+    this.appendChild(palette);
+    return palette;
+  }
+
   get ownerName(): string {
-    let object = PeerCursor.findByUserId(this.owner);
-    return object ? object.name : null;
+    return PeerCursor.findByUserId(this.owner)?.name || '';
   }
 
   get ownerColor(): string {
-    let object = PeerCursor.findByUserId(this.owner);
-    return object ? object.color : '#444444';
+    return PeerCursor.findByUserId(this.owner)?.color || '#444444';
   }
 
   get playerOwnerName(): string {
@@ -156,15 +454,77 @@ export class GameCharacter extends TabletopObject {
     const object = PeerCursor.findByUserId(this.playerOwner);
     return object ? object.color : '#64748b';
   }
+
+  /** Chat send-from label: "Name (Player)" when claimed as someone's PC. */
+  get chatSelectLabel(): string {
+    const name = this.name || '';
+    if (!this.playerOwner) return name;
+    const owner = this.playerOwnerName;
+    return owner ? `${name} (${owner})` : name;
+  }
   
-  get standList(): StandList {
+  /**
+   * Stand list child. Does not auto-create — same sync-race class as chatPalette.
+   * Use {@link ensureStandList} when the stand-setting UI needs one.
+   */
+  get standList(): StandList | null {
+    return this.findStandList();
+  }
+
+  findStandList(): StandList | null {
     for (let child of this.children) {
       if (child instanceof StandList) return child;
     }
-    let standList = new StandList('StandList_' + this.identifier);
+    const existing = ObjectStore.instance.get<StandList>('StandList_' + this.identifier);
+    if (existing instanceof StandList) {
+      if (existing.parent !== this) this.appendChild(existing);
+      return existing;
+    }
+    return null;
+  }
+
+  /** Create an empty stand list only when the UI explicitly needs one. */
+  ensureStandList(): StandList {
+    const found = this.findStandList();
+    if (found) return found;
+    const standList = new StandList('StandList_' + this.identifier);
     standList.initialize();
     this.appendChild(standList);
     return standList;
+  }
+
+  toTopmost() {
+    moveToTopmost(this);
+  }
+
+  /** Click / drag: stay in character tier (above masks/desk unless [ ] was used). */
+  raiseInTier() {
+    moveToTopmostInTier(this);
+  }
+
+  toBackmost() {
+    moveToBackmost(this);
+  }
+
+  // GameObject Lifecycle
+  onStoreAdded() {
+    super.onStoreAdded();
+  }
+
+  /**
+   * Always cascade-destroy map Tokens when the sheet is destroyed
+   * (plan: delete body → Tokens; callers should not need to remember).
+   */
+  override destroy() {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { CharacterToken } = require('./character-token') as typeof import('./character-token');
+    CharacterToken.destroyTokensForCharacter(this.identifier);
+    if (GameCharacter.preferredChatCharacterId === this.identifier) {
+      GameCharacter.preferredChatCharacterId = '';
+    }
+    GameCharacter.autoVisionUser.delete(this.identifier);
+    GameCharacter.autoVisionRefCount.delete(this.identifier);
+    super.destroy();
   }
 
   static create(name: string, size: number, imageIdentifier: string): GameCharacter {
@@ -172,6 +532,32 @@ export class GameCharacter extends TabletopObject {
     gameCharacter.createDataElements();
     gameCharacter.initialize();
     gameCharacter.createTestGameDataElement(name, size, imageIdentifier);
+
+    return gameCharacter;
+  }
+
+  /** Minimal character sheet (no sample resources/skills). Used by CCFOLIA clipboard import. */
+  static createEmpty(name: string, size: number = 1): GameCharacter {
+    const gameCharacter = new GameCharacter();
+    gameCharacter.createDataElements();
+    gameCharacter.initialize();
+
+    gameCharacter.commonDataElement.appendChild(
+      DataElement.create('name', name, {}, 'name_' + gameCharacter.identifier)
+    );
+    gameCharacter.commonDataElement.appendChild(
+      DataElement.create('size', size, {}, 'size_' + gameCharacter.identifier)
+    );
+    gameCharacter.commonDataElement.appendChild(
+      DataElement.create('height', 0, { currentValue: '' }, 'height_' + gameCharacter.identifier)
+    );
+    gameCharacter.commonDataElement.appendChild(
+      DataElement.create('altitude', 0, {}, 'altitude_' + gameCharacter.identifier)
+    );
+
+    const standList = new StandList('StandList_' + gameCharacter.identifier);
+    standList.initialize();
+    gameCharacter.appendChild(standList);
 
     return gameCharacter;
   }
@@ -241,14 +627,22 @@ export class GameCharacter extends TabletopObject {
     const preferredId = GameCharacter.preferredChatCharacterId;
     if (preferredId) {
       const preferred = ObjectStore.instance.get(preferredId);
-      if (preferred instanceof GameCharacter && preferred.playerOwner === userId) {
+      if (preferred instanceof GameCharacter
+        && !preferred.isTemporaryCopy
+        && preferred.playerOwner === userId) {
         return preferred;
       }
     }
     for (const ch of ObjectStore.instance.getObjects(GameCharacter)) {
+      if (ch.isTemporaryCopy) continue;
       if (ch.playerOwner === userId) return ch;
     }
     return null;
+  }
+
+  /** Local session: which userId has chat-window auto vision on this character. */
+  static getAutoVisionUserId(characterId: string): string | undefined {
+    return GameCharacter.autoVisionUser.get(characterId);
   }
 
   /** Whether this character contributes FoW vision for the given peer userId. */
@@ -274,10 +668,10 @@ export class GameCharacter extends TabletopObject {
   }
 
   static get isStealthMode(): boolean {
-    for (const character of ObjectStore.instance.getObjects(GameCharacter)) {
-      if (character.isHideIn && character.isVisible && character.location.name === 'table') return true;
-    }
-    return false;
+    // Stealth is per-Token (plan). Delegate — do not scan legacy on-table bodies.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { CharacterToken } = require('./character-token') as { CharacterToken: typeof import('./character-token').CharacterToken };
+    return CharacterToken.isStealthMode;
   }
 
   complement(): void {

@@ -1,9 +1,10 @@
 import { animate, keyframes, style, transition, trigger } from '@angular/animations';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ChatMessage } from '@udonarium/chat-message';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 
 import { StringUtil } from '@udonarium/core/system/util/string-util';
+import { skipEmptyDialogQuotes, stripEmptyDialogQuotes } from '@udonarium/chat-balloon';
 import { ModalService } from 'service/modal.service';
 import { OpenUrlComponent } from 'component/open-url/open-url.component';
 import { EventSystem } from '@udonarium/core/system';
@@ -56,7 +57,7 @@ import { imageEffectFilter, imageEffectOpacity, imageEffectTransform, unpackImag
     standalone: false
 })
 
-export class ChatMessageComponent implements OnInit {
+export class ChatMessageComponent implements OnInit, OnDestroy {
   @Input() chatMessage: ChatMessage;
   @Input() compact: boolean = false;
   @Input() leftOnly: boolean = false; // TODO: 之後改為可切換
@@ -70,6 +71,10 @@ export class ChatMessageComponent implements OnInit {
 
   get isGMMode(): boolean {
     return this.chatMessage.isGMMode;
+  }
+
+  get attachedImages(): ImageFile[] {
+    return this.chatMessage?.attachedImages || [];
   }
 
   constructor(
@@ -97,6 +102,9 @@ export class ChatMessageComponent implements OnInit {
     })
     .on('LOCALE_CHANGED', () => {
       this.changeDetector.markForCheck();
+    })
+    .on('UPDATE_FILE_RESOURE', () => {
+      if (this.chatMessage?.attachedImageIdentifiers) this.changeDetector.markForCheck();
     });
 
     let file: ImageFile = this.chatMessage.image;
@@ -104,6 +112,10 @@ export class ChatMessageComponent implements OnInit {
     file = this.chatMessage.toImage;
     if (file) this.toImageFile = file;
     //if (this.chatMessageService.getTime() - 10 * 1000 < this.chatMessage.timestamp) this.animeState = 'active';
+  }
+
+  ngOnDestroy() {
+    EventSystem.unregister(this);
   }
 
   get isMine(): boolean {
@@ -141,7 +153,11 @@ export class ChatMessageComponent implements OnInit {
   } 
 
   get htmlEscapedText():string  {
-    let text = this._htmlEscapeLinking(this.chatMessage.text, false, !this.chatMessage.isOperationLog);
+    let raw = this.chatMessage.text || '';
+    if (skipEmptyDialogQuotes) {
+      raw = stripEmptyDialogQuotes(raw);
+    }
+    let text = this._htmlEscapeLinking(raw, false, !this.chatMessage.isOperationLog);
     if (this.chatMessage.isDicebot) text = ChatMessage.decorationDiceResult(text);
     return text;
   }
@@ -184,7 +200,7 @@ export class ChatMessageComponent implements OnInit {
   }
 
   discloseMessage() {
-    this.chatMessage.tag = this.chatMessage.tag.replace('secret', '');
+    this.chatMessage.tag = (this.chatMessage.tag || '').replace('secret', '');
   }
 
   editStart() {

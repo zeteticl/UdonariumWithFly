@@ -1,7 +1,10 @@
-<div class="settings-ui settings-layout">
+<div class="settings-ui dense settings-layout" appFitPanel [fitMinHeight]="240" [fitMaxHeight]="520">
   <aside class="settings-aside">
     <button type="button" class="btn btn-primary btn-block" (click)="create()">
       <i class="material-icons">add</i>{{ 'chatTab.create' | i18n }}
+    </button>
+    <button type="button" class="btn btn-block" (click)="createPrivate()" [disabled]="GuestMode()">
+      <i class="material-icons">lock</i>{{ 'chatTab.createPrivate' | i18n }}
     </button>
     <select
       #select
@@ -13,17 +16,16 @@
       <option
         *ngFor="let chatTab of chatTabs"
         [value]="chatTab.identifier"
-        [title]="chatTab.name"
+        [title]="tabLabel(chatTab)"
         [class.is-unnamed]="chatTab.name == ''"
       >
-        {{ chatTab.name == '' ? ('chatTab.untitled' | i18n) : chatTab.name }}
+        {{ tabLabel(chatTab) }}{{ chatTab.isPrivate ? ' 🔒' : '' }}
       </option>
     </select>
   </aside>
 
   <main class="settings-main" *ngIf="!isEmpty && selectedTab">
     <section class="card">
-      <header class="card-head"><h3>{{ 'chatTab.name' | i18n }}</h3></header>
       <div class="field-row">
         <label class="field grow" [class.disabled]="!isEditable">
           <span>{{ 'chatTab.name' | i18n }}</span>
@@ -53,6 +55,23 @@
           />
           {{ 'chatTab.showOperationLog' | i18n }}
         </label>
+        <label [class.disabled]="!isEditable || GuestMode()" [style.cursor]="isEditable ? 'pointer' : 'default'">
+          <input type="checkbox" [(ngModel)]="isPrivate" [disabled]="!isEditable || GuestMode()" />
+          {{ 'chatTab.private' | i18n }}
+        </label>
+      </div>
+      <div class="members" *ngIf="isPrivate">
+        <header class="card-head"><h3>{{ 'chatTab.members' | i18n }}</h3></header>
+        <p class="hint">{{ 'chatTab.membersHint' | i18n }}</p>
+        <label class="member-row" *ngFor="let peer of peerCandidates">
+          <input
+            type="checkbox"
+            [checked]="isMemberChecked(peer.userId)"
+            (change)="toggleMember(peer.userId, $any($event.target).checked)"
+            [disabled]="!isEditable || GuestMode()"
+          />
+          <span [style.color]="peer.color">{{ peer.name }}</span>
+        </label>
       </div>
     </section>
 
@@ -64,8 +83,9 @@
           <button type="button" class="btn" (click)="showLogOutput()">
             <i class="material-icons">history_edu</i>{{ 'chatTab.log' | i18n }}
           </button>
+          <button type="button" class="btn" (click)="importXml()">{{ 'sheet.import' | i18n }}</button>
           <button type="button" class="btn" [disabled]="isSaveing" (click)="save()">
-            <span class="btn-label" [class.is-hidden]="isSaveing">{{ 'chatTab.download' | i18n }}</span>
+            <span class="btn-label" [class.is-hidden]="isSaveing">{{ 'sheet.download' | i18n }}</span>
             <span *ngIf="isSaveing" class="btn-progress">{{progresPercent}}%</span>
           </button>
           <button

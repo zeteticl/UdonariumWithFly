@@ -1,0 +1,40 @@
+<div class="settings-ui dense object-settings card-stack-settings" *ngIf="cardStack; else emptyBlock" appFitPanel [fitMinHeight]="200">
+  <section class="card card-dense">
+    <div class="title-row">
+      <label class="field grow">
+        <span>{{ 'stack.settings.name' | i18n }}</span>
+        <input type="text" [(ngModel)]="stackName" [disabled]="GuestMode()" />
+      </label>
+      <button type="button" class="image-frame stack-preview" [class.image-frame-empty]="!cardStack.imageFile?.url" disabled>
+        <img *ngIf="cardStack.imageFile?.url" [src]="cardStack.imageFile.url | safe: 'resourceUrl'" alt="" />
+        <i *ngIf="!cardStack.imageFile?.url" class="material-icons">style</i>
+      </button>
+    </div>
+    <p class="hint">{{ 'stack.settings.count' | i18n:{ n: cardStack.cards.length } }}</p>
+  </section>
+
+  <section class="card card-dense">
+    <div class="footer-actions">
+      <button type="button" class="btn btn-sm btn-primary" (click)="changeAllBackImages()" [disabled]="GuestMode() || !cardStack.cards.length">
+        <i class="material-icons">image</i>{{ 'sheet.changeAllBackImages' | i18n }}
+      </button>
+      <button type="button" class="btn btn-sm" (click)="openStackList()" [disabled]="GuestMode()">
+        <i class="material-icons">view_list</i>{{ 'stack.settings.openList' | i18n }}
+      </button>
+    </div>
+    <div class="check-row tight">
+      <label><input type="checkbox" [(ngModel)]="cardStack.isShowTotal" [disabled]="GuestMode()" /> {{ 'stack.settings.showTotal' | i18n }}</label>
+      <label><input type="checkbox" [(ngModel)]="cardStack.isLocked" [disabled]="GuestMode()" /> {{ 'stack.settings.locked' | i18n }}</label>
+    </div>
+  </section>
+
+  <section class="card card-dense footer-actions actions tight">
+    <button type="button" class="btn btn-sm" (click)="importXml()" [disabled]="GuestMode()">{{ 'sheet.import' | i18n }}</button>
+    <button type="button" class="btn btn-sm" [disabled]="isSaveing || GuestMode()" (click)="saveToXML()">
+      {{ isSaveing ? (progresPercent + '%') : ('sheet.download' | i18n) }}
+    </button>
+  </section>
+</div>
+<ng-template #emptyBlock>
+  <div class="settings-ui empty-hint">{{ 'stack.settingsEmpty' | i18n }}</div>
+</ng-template>

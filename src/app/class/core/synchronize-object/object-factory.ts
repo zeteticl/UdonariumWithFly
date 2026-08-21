@@ -15,7 +15,7 @@ export class ObjectFactory {
   private constructorMap: Map<string, Type<GameObject>> = new Map();
   private aliasMap: Map<Type<GameObject>, string> = new Map();
 
-  private constructor() { console.log('ObjectFactory ready...'); };
+  private constructor() { };
 
   register<T extends GameObject>(constructor: Type<T>, alias?: string) {
     if (!alias) alias = constructor.name ?? (constructor.toString().match(/function\s*([^(]*)\(/)?.[1] ?? '');
@@ -27,7 +27,6 @@ export class ObjectFactory {
       console.error('constructor is already registered', constructor);
       return;
     }
-    console.log('addGameObjectFactory -> ' + alias);
     this.constructorMap.set(alias, constructor);
     this.aliasMap.set(constructor, alias);
   }
@@ -35,7 +34,8 @@ export class ObjectFactory {
   create<T extends GameObject>(alias: string, identifer?: string): T | null {
     let classConstructor = this.constructorMap.get(alias);
     if (!classConstructor) {
-      console.error('GameObject class named ' + alias + ' is not defined');
+      // Unknown aliases are common in resilient room load; warn instead of error.
+      console.warn('GameObject class named ' + alias + ' is not defined');
       return null;
     }
     let gameObject: GameObject = new classConstructor(identifer);

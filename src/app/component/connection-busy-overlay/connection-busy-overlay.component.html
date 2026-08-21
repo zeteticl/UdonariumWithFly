@@ -1,0 +1,9 @@
+<div class="connection-busy" *ngIf="visible" role="status" aria-live="polite" aria-busy="true">
+  <div class="connection-busy-card">
+    <div class="connection-busy-spinner" aria-hidden="true">
+      <span class="ring ring-a"></span>
+      <span class="ring ring-b"></span>
+    </div>
+    <p class="connection-busy-message">{{ message }}</p>
+  </div>
+</div>

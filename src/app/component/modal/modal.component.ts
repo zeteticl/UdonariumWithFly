@@ -36,6 +36,12 @@ export class ModalComponent {
   constructor(
     public modalService: ModalService) { }
 
+  /** Optional CSS width from modalService.option.panelWidth (e.g. '420px'). */
+  get panelWidth(): string | null {
+    const w = this.modalService.option?.panelWidth;
+    return typeof w === 'string' && w.trim() ? w.trim() : null;
+  }
+
   /** Suppress browser context menu on modals (same as ui-panel / map). */
   @HostListener('contextmenu', ['$event'])
   onHostContextMenu(e: MouseEvent) {

@@ -1,4 +1,4 @@
-<div class="settings-ui scene-tools" *ngIf="canOpen; else noAccess">
+<div class="settings-ui dense scene-tools" *ngIf="canOpen; else noAccess" appFitPanel [fitMinHeight]="280" [fitMaxHeight]="560">
   <section class="card">
     <header class="card-head"><h3>{{ 'scene.title' | i18n }}</h3></header>
     <div class="mode-grid">

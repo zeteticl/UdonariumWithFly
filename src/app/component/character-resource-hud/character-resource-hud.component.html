@@ -1,0 +1,44 @@
+<div class="resource-hud" *ngIf="visible" [class.is-collapsed]="collapsed" [style.left.px]="left" [style.top.px]="top"
+  (contextmenu)="$event.preventDefault()">
+  <header class="hud-head" (pointerdown)="startDrag($event)">
+    <button type="button" class="hud-drag" [attr.title]="'resourceHud.move' | i18n" [attr.aria-label]="'resourceHud.move' | i18n">
+      <i class="material-icons">drag_indicator</i>
+    </button>
+    <span class="hud-title">{{ 'resourceHud.title' | i18n }}</span>
+    <label *ngIf="isGm && !collapsed" class="gm-toggle" (pointerdown)="$event.stopPropagation()">
+      <input type="checkbox" [checked]="showAllForGm" (change)="toggleShowAll()" />
+      {{ 'resourceHud.showAll' | i18n }}
+    </label>
+    <button type="button" class="hud-collapse" (pointerdown)="$event.stopPropagation()" (click)="toggleCollapsed()" [attr.title]="(collapsed ? 'resourceHud.expand' : 'resourceHud.collapse') | i18n">
+      <i class="material-icons">{{ collapsed ? 'expand_more' : 'expand_less' }}</i>
+    </button>
+  </header>
+  <ng-container *ngIf="!collapsed">
+    <p class="empty" *ngIf="!characters.length">{{ 'resourceHud.noClaim' | i18n }}</p>
+    <section class="char-block" *ngFor="let ch of characters">
+      <div class="char-name">{{ ch.name }}</div>
+      <div class="res-row" *ngFor="let el of resourcesOf(ch)">
+        <span class="res-label">{{ el.name }}</span>
+        <button type="button" class="btn-nudge" (click)="nudge(el, ch, -1)" [disabled]="!canEditCharacter(ch)">−</button>
+        <input
+          type="range"
+          [min]="0"
+          [max]="max(el) || 1"
+          [value]="current(el)"
+          (input)="onRange(el, ch, $event)"
+          [disabled]="!canEditCharacter(ch)"
+        />
+        <input
+          type="number"
+          class="res-num"
+          [ngModel]="current(el)"
+          (ngModelChange)="setCurrent(el, ch, $event)"
+          [disabled]="!canEditCharacter(ch)"
+        />
+        <span class="res-max">/ {{ max(el) }}</span>
+        <button type="button" class="btn-nudge" (click)="nudge(el, ch, 1)" [disabled]="!canEditCharacter(ch)">+</button>
+      </div>
+      <p class="empty" *ngIf="!resourcesOf(ch).length">{{ 'resourceHud.noResources' | i18n }}</p>
+    </section>
+  </ng-container>
+</div>

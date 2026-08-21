@@ -1,4 +1,21 @@
-<div class="settings-ui combat-tracker" *ngIf="encounter">
+<!-- No appFitPanel: turn clicks mutate the list; live fit was resetting user-resized height. -->
+<div class="settings-ui dense combat-tracker" *ngIf="encounter">
+  <section class="card combat-controls" [class.is-running]="encounter.isStarted">
+    <div class="actions controls">
+      <ng-container *ngIf="!encounter.isStarted">
+        <button type="button" class="btn btn-primary" (click)="begin()" [disabled]="isGuest || !encounter.combatants.length">{{ 'combat.start' | i18n }}</button>
+      </ng-container>
+      <ng-container *ngIf="encounter.isStarted">
+        <button type="button" class="btn btn-sm" (click)="prevRound()" [disabled]="isGuest">{{ 'combat.prevRound' | i18n }}</button>
+        <button type="button" class="btn btn-sm" (click)="prevTurn()" [disabled]="isGuest">{{ 'combat.prevTurn' | i18n }}</button>
+        <button type="button" class="btn btn-sm btn-primary" (click)="nextTurn()" [disabled]="isGuest">{{ 'combat.nextTurn' | i18n }}</button>
+        <button type="button" class="btn btn-sm" (click)="nextRound()" [disabled]="isGuest">{{ 'combat.nextRound' | i18n }}</button>
+        <button type="button" class="btn btn-sm btn-primary" *ngIf="isMyCombatTurn()" (click)="endMyTurn()">{{ 'combat.endMyTurn' | i18n }}</button>
+        <button type="button" class="btn btn-sm btn-danger" (click)="end()" [disabled]="isGuest">{{ 'combat.end' | i18n }}</button>
+      </ng-container>
+    </div>
+  </section>
+
   <section class="card">
     <header class="card-head"><h3>{{ 'combat.name' | i18n }}</h3></header>
     <div class="actions enc-nav">
@@ -135,18 +152,4 @@
       </li>
     </ul>
   </section>
-
-  <footer class="actions controls">
-    <ng-container *ngIf="!encounter.isStarted">
-      <button type="button" class="btn btn-primary" (click)="begin()" [disabled]="isGuest || !encounter.combatants.length">{{ 'combat.start' | i18n }}</button>
-    </ng-container>
-    <ng-container *ngIf="encounter.isStarted">
-      <button type="button" class="btn btn-sm" (click)="prevRound()" [disabled]="isGuest">{{ 'combat.prevRound' | i18n }}</button>
-      <button type="button" class="btn btn-sm" (click)="prevTurn()" [disabled]="isGuest">{{ 'combat.prevTurn' | i18n }}</button>
-      <button type="button" class="btn btn-sm btn-primary" (click)="nextTurn()" [disabled]="isGuest">{{ 'combat.nextTurn' | i18n }}</button>
-      <button type="button" class="btn btn-sm" (click)="nextRound()" [disabled]="isGuest">{{ 'combat.nextRound' | i18n }}</button>
-      <button type="button" class="btn btn-sm btn-primary" *ngIf="isMyCombatTurn()" (click)="endMyTurn()">{{ 'combat.endMyTurn' | i18n }}</button>
-      <button type="button" class="btn btn-sm btn-danger" (click)="end()" [disabled]="isGuest">{{ 'combat.end' | i18n }}</button>
-    </ng-container>
-  </footer>
 </div>

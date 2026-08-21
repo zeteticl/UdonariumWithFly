@@ -1,10 +1,13 @@
 import { SyncObject, SyncVar } from './core/synchronize-object/decorator';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
+import { CharacterToken } from '@udonarium/character-token';
 import { GameCharacter } from '@udonarium/game-character';
 import { DataElement } from './data-element';
 import { TabletopObject } from './tabletop-object';
-import { moveToTopmost } from './tabletop-object-util';
+import { moveToBackmost, moveToTopmost } from './tabletop-object-util';
 import { UUID } from './core/system/util/uuid';
+
+export type RangeFollowTarget = CharacterToken | GameCharacter;
 
 @SyncObject('range')
 export class RangeArea extends TabletopObject {
@@ -56,11 +59,11 @@ export class RangeArea extends TabletopObject {
     return this.type === 'LINE' || this.type === 'CORN';
   }
 
-  get followingCharactor(): GameCharacter {
+  get followingCharactor(): RangeFollowTarget {
     if (this.followingCharctorIdentifier) {
       if (!this.followingCharactorCache || this.followingCharactorCache.identifier !== this.followingCharctorIdentifier) {
         let object = ObjectStore.instance.get(this.followingCharctorIdentifier);
-        if (object && object instanceof GameCharacter) {
+        if (object instanceof CharacterToken || object instanceof GameCharacter) {
           this.followingCharactorCache = object;
         } else {
           this.followingCharctorIdentifier = null;
@@ -72,16 +75,16 @@ export class RangeArea extends TabletopObject {
     }
     return this.followingCharactorCache;
   }
-  set followingCharactor(followingCharacter: GameCharacter) {
+  set followingCharactor(followingCharacter: RangeFollowTarget) {
     if (!followingCharacter) {
-      this. followingCharactorCache = null;
+      this.followingCharactorCache = null;
       this.followingCharctorIdentifier = null;
     } else {
       this.followingCharactorCache = followingCharacter;
       this.followingCharctorIdentifier = followingCharacter.identifier;
     }
   }
-  private followingCharactorCache: GameCharacter = null;
+  private followingCharactorCache: RangeFollowTarget = null;
 
   gridSize: number = 50;
 
@@ -110,6 +113,10 @@ export class RangeArea extends TabletopObject {
 
   toTopmost() {
     moveToTopmost(this);
+  }
+
+  toBackmost() {
+    moveToBackmost(this);
   }
 
   static create(name: string, width: number, length: number, opacity: number, identifier?: string): RangeArea {

@@ -4,11 +4,17 @@
   "license": "MIT",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "version:git": "node scripts/write-git-version.mjs",
+    "prestart": "node scripts/write-git-version.mjs",
+    "prebuild": "node scripts/write-git-version.mjs",
+    "pretest": "node scripts/write-git-version.mjs",
+    "start": "ng serve --ssl --host 127.0.0.1 --port 4200 --proxy-config proxy.conf.js",
     "build": "ng build",
-    "watch": "ng build --watch --configuration development",
+    "watch": "node scripts/write-git-version.mjs && ng build --watch --configuration development",
     "test": "ng test",
-    "postinstall": "patch-package"
+    "test:ci": "node scripts/write-git-version.mjs && ng test --watch=false --browsers=ChromeHeadlessCI --code-coverage",
+    "e2e:smoke": "node scripts/write-git-version.mjs && playwright test",
+    "postinstall": "patch-package && node scripts/write-git-version.mjs"
   },
   "private": true,
   "dependencies": {
@@ -38,8 +44,9 @@
     "msgpack-lite": "^0.1.26",
     "ngx-linky": "^4.0.0",
     "pako": "^2.1.0",
+    "pdfjs-dist": "^4.10.38",
     "rxjs": "^7.8.2",
-    "skyway-js": "^4.4.5",
+    "three": "^0.170.0",
     "tslib": "^2.6.3",
     "vkbeautify": "^0.99.3",
     "zone.js": "~0.15.1"
@@ -48,6 +55,7 @@
     "@angular-devkit/build-angular": "^20.3.28",
     "@angular/cli": "^20.3.28",
     "@angular/compiler-cli": "^20.3.25",
+    "@playwright/test": "^1.49.1",
     "@types/crypto-js": "^4.2.2",
     "@types/file-saver": "^2.0.7",
     "@types/hammerjs": "^2.0.45",
@@ -58,6 +66,7 @@
     "@types/msgpack-lite": "^0.1.11",
     "@types/node": "^12.20.55",
     "@types/pako": "^2.0.4",
+    "@types/three": "^0.170.0",
     "@types/vkbeautify": "^0.99.4",
     "jasmine-core": "~5.1.2",
     "karma": "~6.4.3",

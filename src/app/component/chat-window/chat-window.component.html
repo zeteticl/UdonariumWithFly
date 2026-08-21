@@ -1,48 +1,64 @@
 <!--<h2>聊天系統</h2>-->
 <div class="component">
 <div class="log">
-  <chat-tab #chatTabComponemt *ngIf="chatTab" [chatTab]="chatTab" [compact]="isCompact" [leftOnly]="isLeftOnly" (onAddMessage)="scrollToBottom()"></chat-tab>
+  <chat-tab #chatTabComponemt *ngIf="chatTab" [chatTab]="chatTab" [compact]="isCompact" [leftOnly]="isLeftOnly" (onAddMessage)="scheduleScrollToBottom()"></chat-tab>
 </div>
 <div class="sticky-bottom" [ngClass]="{'is-clarify': ClarifyModeActive()}">
   <form *ngIf="!ClarifyModeActive()">
-    <div class="chat-toolbar">
-      <div class="chat-tab">
-        <label *ngFor="let chatTab of chatMessageService.chatTabs; trackBy: trackByChatTab" class="tab">
-          <input name="chat-tab" type="radio" value="{{chatTab.identifier}}" ng-control="options" [(ngModel)]="chatTabidentifier">
-          <div><span [style.cursor]="chatTabidentifier != chatTab.identifier ? 'pointer' : ''" [style.color]="chatTab.name == '' && chatTabidentifier != chatTab.identifier ? 'gray' : ''">{{chatTab.name == '' ? ('chat.unnamedTab' | i18n) : chatTab.name}}</span><i *ngIf="chatTab.isUseStandImage" class="material-icons small-font">how_to_reg</i><i *ngIf="chatTab.recieveOperationLogLevel > 0" class="material-icons small-font">history_edu</i><badge *ngIf="chatTab.hasUnread" class="badge" [count]="chatTab.unreadLength"></badge></div>
-        </label>
-        <button type="button" class="tab-setting small-font" (click)="showTabSetting()" *ngIf="!GuestMode()"><i class="material-icons small-font">settings</i>{{ 'chat.tabsButton' | i18n }}</button>
-        <button type="button" class="tab-setting small-font" (click)="showLogOutput()" *ngIf="!GuestMode()"><i class="material-icons small-font">history_edu</i>{{ 'chat.logButton' | i18n }}</button>
+    <div class="chat-toolbar" [class.actions-open]="toolbarActionsOpen">
+      <div class="chat-toolbar-main">
+        <div class="chat-tab">
+          <label *ngFor="let chatTab of chatTabs; trackBy: trackByChatTab" class="tab" [class.is-private]="chatTab.isPrivate"
+            (mousedown)="preventTabFocusScroll($event)">
+            <input name="chat-tab" type="radio" value="{{chatTab.identifier}}" ng-control="options" [(ngModel)]="chatTabidentifier">
+            <div><span [style.cursor]="chatTabidentifier != chatTab.identifier ? 'pointer' : ''" [style.color]="chatTab.name == '' && chatTabidentifier != chatTab.identifier ? 'gray' : ''"><i *ngIf="chatTab.isPrivate" class="material-icons small-font">lock</i>{{tabLabel(chatTab)}}</span><i *ngIf="chatTab.isUseStandImage" class="material-icons small-font">how_to_reg</i><i *ngIf="chatTab.recieveOperationLogLevel > 0" class="material-icons small-font">history_edu</i><badge *ngIf="chatTab.hasUnread" class="badge" [count]="chatTab.unreadLength"></badge></div>
+            <div class="private-members-tip" *ngIf="chatTab.isPrivate">
+              <div class="private-members-tip-head">{{ 'chatTab.members' | i18n }}</div>
+              <ng-container *ngIf="privateTabMemberNames(chatTab) as names">
+                <div *ngFor="let name of names" class="private-members-tip-name">{{ name }}</div>
+                <div *ngIf="!names.length" class="private-members-tip-empty">{{ 'chatTab.membersEmpty' | i18n }}</div>
+              </ng-container>
+            </div>
+          </label>
+          <button type="button" class="tab-setting small-font" (click)="showTabSetting()" *ngIf="!GuestMode()"><i class="material-icons small-font">settings</i>{{ 'chat.tabsButton' | i18n }}</button>
+          <button type="button" class="tab-setting small-font" (click)="showLogOutput()" *ngIf="!GuestMode()"><i class="material-icons small-font">history_edu</i>{{ 'chat.logButton' | i18n }}</button>
+        </div>
+        <button type="button" class="toolbar-more" [title]="'chat.toolbarMoreTitle' | i18n"
+          [attr.aria-expanded]="toolbarActionsOpen"
+          [attr.aria-label]="'chat.toolbarMoreTitle' | i18n"
+          (click)="toggleToolbarActions()">
+          <i class="material-icons">{{ toolbarActionsOpen ? 'expand_less' : 'tune' }}</i>
+        </button>
       </div>
       <div class="chat-toolbar-actions">
         <button type="button" class="indicate" style="font-size: 0.8em; padding: 2px 5px" [title]="'chat.musicTitle' | i18n" [ngClass]="{'is-active': isMusicOn}" (click)="toggleMusic()">
           <i class="material-icons" style="font-size: 1em">{{ isMusicOn ? 'music_note' : 'music_off'}}</i>
-          <sup style="color: red">*</sup>
+          <sup class="local-mark">*</sup>
         </button>
         <button type="button" class="indicate" style="font-size: 0.8em; padding: 2px 5px" [title]="'chat.soundEffectTitle' | i18n" [ngClass]="{'is-active': isSoundEffectOn}" (click)="toggleSoundEffect()">
           <i class="material-icons" style="font-size: 1em">{{ isSoundEffectOn ? 'volume_up' : 'volume_off'}}</i>
-          <sup style="color: red">*</sup>
+          <sup class="local-mark">*</sup>
         </button>
         <button type="button" class="indicate" style="font-size: 0.8em; padding: 2px 5px" [appTeachingTip]="'tip.chat.notice'" [title]="'chat.noticeTitle' | i18n" [ngClass]="{'is-active': isNoticeOn}" (click)="isNoticeOn = !isNoticeOn">
           <i class="material-icons" style="font-size: 1em">{{ isNoticeOn ? 'notifications_active' : 'notifications_paused'}}</i>
-          <sup style="color: red">*</sup>
+          <sup class="local-mark">*</sup>
         </button>
         <button type="button" class="indicate" style="font-size: 0.8em; padding: 2px 2px" [title]="'chat.leftOnlyTitle' | i18n" [ngClass]="{'is-active': isLeftOnly}" (click)="isLeftOnly = !isLeftOnly">
           <i class="material-icons" [ngStyle]="{'font-size': isLeftOnly ? '1em' : '1.3em' }">{{ isLeftOnly ? 'arrow_forward' : 'compare_arrows'}}</i>
-          <sup style="color: red">*</sup>
+          <sup class="local-mark">*</sup>
         </button>
         <button type="button" class="indicate" style="font-size: 0.8em; padding: 2px 5px" [appTeachingTip]="'tip.chat.compact'" [title]="'chat.compactTitle' | i18n" [ngClass]="{'is-active': isCompactOff}" (click)="toggleCompact()">
           <i class="material-icons" style="font-size: 1em">{{ isCompactOff ? 'forum' : 'list'}}</i>
-          <sup style="color: red">*</sup>
+          <sup class="local-mark">*</sup>
         </button>
         <button type="button" class="indicate" style="font-size: 0.8em; padding: 2px 5px" [appTeachingTip]="'tip.chat.clarify'" [title]="'chat.clarifyTitle' | i18n" [ngClass]="{'is-active': isClarifyOff}" (click)="toggleClarifyMode()">
           <i class="material-icons" style="font-size: 1em">{{ isClarifyOff ? 'view_agenda' : 'view_day'}}</i>
-          <sup style="color: red">*</sup>
+          <sup class="local-mark">*</sup>
         </button>
       </div>
     </div>
   </form>
-  <chat-input [chatTabidentifier]="chatTabidentifier" [(gameType)]="gameType" [(sendFrom)]="sendFrom" (chat)="sendChat($event)"></chat-input>
+  <chat-input [chatTabidentifier]="chatTabidentifier" [mobileExtrasOpen]="toolbarActionsOpen" [(gameType)]="gameType" [(sendFrom)]="sendFrom" (chat)="sendChat($event)"></chat-input>
   <button *ngIf="ClarifyModeActive()" type="button" class="clarify-restore" [title]="'chat.clarifyRestoreTitle' | i18n" (click)="toggleClarifyMode()">
     <i class="material-icons">view_agenda</i>
   </button>

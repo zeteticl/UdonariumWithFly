@@ -5,9 +5,10 @@
   <meta name="google" content="notranslate">
   <title id="document-title">烏冬桌 @ HKTRPG</title>
   <base href="./">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <!-- Social / share card -->
   <meta name="twitter:card" content="summary">
   <meta name="twitter:image" content="https://z01.hktrpg.com/hktrpg-icon.png">
@@ -83,6 +84,15 @@
         var noscript = document.getElementById('boot-noscript');
         if (noscript) noscript.textContent = d.noscript;
       });
+    })();
+  </script>
+  <!-- Kick SW update during the loading screen (before Angular boots). -->
+  <script>
+    (function () {
+      if (!('serviceWorker' in navigator)) return;
+      navigator.serviceWorker.getRegistration().then(function (reg) {
+        if (reg) return reg.update();
+      }).catch(function () { /* ignore */ });
     })();
   </script>
 </head>

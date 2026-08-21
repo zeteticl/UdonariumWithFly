@@ -1,0 +1,30 @@
+.terrain-settings {
+  /* shared object-settings styles */
+}
+
+.terrain-settings .face-grid {
+  margin-top: 8px;
+}
+
+.terrain-settings .face-grid .image-label small {
+  opacity: 0.65;
+  font-weight: normal;
+}
+
+.terrain-settings .neon-presets {
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.terrain-settings .field-check {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 4.5rem;
+}
+
+.terrain-settings .field-check input[type="checkbox"] {
+  width: auto;
+  align-self: flex-start;
+  margin: 0.35rem 0 0.15rem;
+}

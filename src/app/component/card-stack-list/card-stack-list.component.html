@@ -1,7 +1,7 @@
-<div>
+<div *ngIf="cardStack">
   <button (click)="close(true)">{{ 'stack.shuffleAndClose' | i18n }}</button>
   <hr/>
-  <div *ngFor="let card of cardStack.cards; trackBy: trackByCard" class="box">
+  <div *ngFor="let card of cards; trackBy: trackByCard" class="box">
     <card-list-image [card]="card"></card-list-image>
     <div style="display: inline-block; margin-left: 2px">
       <button type="submit" (click)="drawCard(card)">{{ 'stack.takeFromStack' | i18n }}</button>

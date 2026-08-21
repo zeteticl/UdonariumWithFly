@@ -1,0 +1,172 @@
+<div class="settings-ui dense character-settings" *ngIf="character; else emptyBlock" appFitPanel [fitMinHeight]="280">
+  <section class="card card-dense actions-card">
+    <button type="button" class="btn btn-sm" (click)="importXml()" [disabled]="GuestMode()">{{ 'sheet.import' | i18n }}</button>
+    <button type="button" class="btn btn-sm" [disabled]="isSaveing || GuestMode()" (click)="saveToXML()">
+      {{ isSaveing ? (progresPercent + '%') : ('sheet.download' | i18n) }}
+    </button>
+    <button type="button" class="btn btn-sm" (click)="exportCcfoliaJson()" [disabled]="GuestMode()">{{ 'sheet.exportCcfoliaJson' | i18n }}</button>
+  </section>
+
+  <!-- Identity -->
+  <section class="card card-dense id-card">
+    <div class="id-grid">
+      <div class="portrait-col">
+        <button type="button" class="portrait" [class.is-empty]="!character.imageFile?.url"
+          (click)="openModalReplaceImage(character.imageFiles.length > 1 || 0 < character.imageFile?.url?.length)"
+          [disabled]="GuestMode()" [title]="'sheet.imageSet' | i18n">
+          <img *ngIf="character.imageFile?.url" [src]="character.imageFile.url | safe: 'resourceUrl'" alt="" />
+          <i *ngIf="!character.imageFile?.url" class="material-icons">person</i>
+        </button>
+        <div class="icon-strip">
+          <button type="button" class="icon-btn" (click)="openModalReplaceImage(character.imageFiles.length > 1 || 0 < character.imageFile?.url?.length)"
+            [disabled]="GuestMode()" [title]="(character.imageFiles?.length > 1) ? ('sheet.imageReplaceDelete' | i18n) : ('sheet.imageSet' | i18n)">
+            <i class="material-icons">image</i>
+          </button>
+          <button type="button" class="icon-btn"
+            [disabled]="GuestMode() || character.faceIcons?.length >= MAX_IMAGE_ICON_COUNT"
+            (click)="openModal('faceIcon')"
+            [title]="(character.faceIcons?.length > 0) ? ('sheet.faceIconAdd' | i18n) : ('sheet.faceIconSet' | i18n)">
+            <i class="material-icons">face</i>
+          </button>
+          <button type="button" class="icon-btn"
+            (click)="openModal('shadowImageIdentifier', character.shadowImageFile?.url?.length > 0)"
+            [disabled]="GuestMode() || !character.imageElement || character.imageElement.value == 'null'"
+            [title]="'sheet.changeShadow' | i18n">
+            <i class="material-icons">blur_on</i>
+          </button>
+          <button type="button" class="icon-btn"
+            *ngIf="character.imageFiles.length < MAX_IMAGE_ICON_COUNT && (character.imageFiles.length > 1 || 0 < character.imageFile?.url?.length)"
+            (click)="openModalAddImage()" [disabled]="GuestMode()" [title]="'sheet.switchImageSettings' | i18n">
+            <i class="material-icons">add</i>
+          </button>
+        </div>
+      </div>
+
+      <div class="meta-col">
+        <label class="field name-field">
+          <span>{{ 'char.settings.name' | i18n }}</span>
+          <input type="text" [(ngModel)]="character.name" [disabled]="GuestMode()" />
+        </label>
+        <div class="field-row metrics">
+          <label class="field">
+            <span>{{ 'char.settings.size' | i18n }}</span>
+            <input type="number" min="0.5" step="0.5" [(ngModel)]="size" [disabled]="GuestMode()" />
+          </label>
+          <label class="field">
+            <span>{{ 'char.settings.height' | i18n }}</span>
+            <input type="number" min="0" step="0.1" [(ngModel)]="heightRaw" [disabled]="GuestMode()" />
+          </label>
+          <label class="field">
+            <span>{{ 'mask.fieldAltitude' | i18n }}</span>
+            <input type="number" step="0.5" [(ngModel)]="altitude" [disabled]="GuestMode()" />
+          </label>
+          <label class="field grow">
+            <span>{{ 'char.settings.location' | i18n }}</span>
+            <select [ngModel]="character.location.name" (ngModelChange)="setLocation($event)" [disabled]="GuestMode()">
+              <option value="table">{{ 'sheet.location.table' | i18n }}</option>
+              <option value="common">{{ 'sheet.location.common' | i18n }}</option>
+              <option value="{{networkService.peerId}}">{{ 'sheet.location.personal' | i18n }}</option>
+              <option value="graveyard">{{ 'sheet.location.graveyard' | i18n }}</option>
+            </select>
+          </label>
+        </div>
+        <label class="height-scale-row" [class.strike]="!heightScale">
+          <input type="checkbox" [(ngModel)]="heightScale" [disabled]="GuestMode()" />
+          {{ 'sheet.data.heightScale' | i18n }}
+          <span class="hint-inline">{{ 'sheet.data.heightImage' | i18n }}</span>
+        </label>
+        <div class="thumb-row" *ngIf="character.imageFiles?.length > 1 || character.faceIcons?.length">
+          <ng-container *ngIf="character.imageFiles?.length > 1">
+            <button type="button" class="thumb" *ngFor="let imageFile of character.imageFiles; index as i"
+              [class.is-active]="character.currntImageIndex === i"
+              (click)="selectImage(i)" [disabled]="GuestMode()">
+              <img *ngIf="imageFile.url" [src]="imageFile.url | safe: 'resourceUrl'" alt="" />
+            </button>
+          </ng-container>
+          <ng-container *ngIf="character.faceIcons?.length">
+            <button type="button" class="thumb face" *ngFor="let faceIconImage of character.faceIcons; index as i; trackBy: identify"
+              [class.is-active]="character.currntIconIndex === i"
+              (click)="selectIcon(i)" [disabled]="GuestMode()">
+              <img *ngIf="faceIconImage.url" [src]="faceIconImage.url | safe: 'resourceUrl'" alt="" />
+              <span class="thumb-x" *ngIf="character.currntIconIndex === i"
+                role="button" tabindex="0"
+                (click)="deleteIcon(i, faceIconImage.identifier); $event.stopPropagation()"
+                (keydown.enter)="deleteIcon(i, faceIconImage.identifier); $event.stopPropagation()"
+                [attr.title]="'sheet.deleteFaceIcon' | i18n">×</span>
+            </button>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Options -->
+  <section class="card card-dense opts-card">
+    <div class="check-row tight">
+      <label><input type="checkbox" [ngModel]="placementFlag('isShowName', true)" (ngModelChange)="setPlacementFlag('isShowName', $event)" [disabled]="GuestMode()" /> {{ 'char.settings.showName' | i18n }}</label>
+      <label><input type="checkbox" [(ngModel)]="character.isAllowsChat" [disabled]="GuestMode()" /> {{ 'char.settings.allowsChat' | i18n }}</label>
+      <label><input type="checkbox" [ngModel]="placementFlag('isShowChatBubble', true)" (ngModelChange)="setPlacementFlag('isShowChatBubble', $event)" [disabled]="GuestMode()" /> {{ 'char.settings.chatBubble' | i18n }}</label>
+      <label><input type="checkbox" [(ngModel)]="character.isInventoryIndicate" [disabled]="GuestMode()" /> {{ 'char.settings.inventory' | i18n }}</label>
+      <label><input type="checkbox" [ngModel]="placementFlag('isAltitudeIndicate', true)" (ngModelChange)="setPlacementFlag('isAltitudeIndicate', $event)" [disabled]="GuestMode()" /> {{ 'char.settings.altitudeIndicate' | i18n }}</label>
+      <label><input type="checkbox" [ngModel]="placementFlag('isDropShadow', true)" (ngModelChange)="setPlacementFlag('isDropShadow', $event)" [disabled]="GuestMode()" /> {{ 'char.settings.dropShadow' | i18n }}</label>
+    </div>
+    <label class="field" *ngIf="placementFlag('tokenFrame', 'none') === 'polaroid'">
+      <span>{{ 'char.settings.polaroidCaption' | i18n }}</span>
+      <input type="text" [ngModel]="placementFlag('tokenFrameCaption', '')" (ngModelChange)="setPlacementFlag('tokenFrameCaption', $event)" [disabled]="GuestMode() || !placementFlag('isShowName', true)"
+        [attr.placeholder]="character.name || ''" />
+    </label>
+    <div class="field-row metrics vision-row">
+      <label class="field">
+        <span>{{ 'char.settings.vision' | i18n }}</span>
+        <input type="number" min="0" step="1" [ngModel]="visionRange"
+          (ngModelChange)="setVisionRange($event)" [disabled]="GuestMode()" />
+      </label>
+      <label class="field">
+        <span>{{ 'char.settings.bright' | i18n }}</span>
+        <input type="number" min="0" step="1" [ngModel]="brightLight"
+          (ngModelChange)="setBrightLight($event)" [disabled]="GuestMode()" />
+      </label>
+      <label class="field">
+        <span>{{ 'char.settings.dim' | i18n }}</span>
+        <input type="number" min="0" step="1" [ngModel]="dimLight"
+          (ngModelChange)="setDimLight($event)" [disabled]="GuestMode()" />
+      </label>
+      <div class="tool-actions">
+        <button type="button" class="btn btn-sm" (click)="showChatPalette()" [disabled]="!isAllowsChat">
+          <i class="material-icons">chat</i>{{ 'sheet.showChatPalette' | i18n }}
+        </button>
+        <button type="button" class="btn btn-sm" (click)="showStandSetting()" [disabled]="!isAllowsChat">
+          <i class="material-icons">accessibility_new</i>{{ 'sheet.standSettings' | i18n }}
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Detail data only (common name/size/height/altitude live in identity card). -->
+  <section class="card card-dense sheet-card" *ngIf="detailSections.length || isEdit">
+    <header class="sheet-head">
+      <span class="sheet-title">{{ 'char.settings.sheet' | i18n }}</span>
+      <div class="sheet-tools">
+        <button type="button" class="btn btn-sm" [class.is-active]="isEdit" (click)="toggleEditMode()" [disabled]="GuestMode()">
+          {{ 'sheet.toggleEdit' | i18n }}
+        </button>
+        <button type="button" class="btn btn-sm" *ngIf="isEdit" (click)="addDataElement()" [disabled]="GuestMode()">
+          {{ 'sheet.addItem' | i18n }}
+        </button>
+      </div>
+    </header>
+    <div class="sheet-scroll" [class.is-empty]="!detailSections.length">
+      <div class="sheet-grid" *ngIf="detailSections.length">
+        <div class="data-card" *ngFor="let childElement of detailSections">
+          <div class="sheet-section" game-data-element
+            [gameDataElement]="$any(childElement)" [tabletopObject]="character"
+            [isEdit]="isEdit" [isNoLogging]="false" [descriptionType]="'character'" [dense]="true"></div>
+        </div>
+      </div>
+      <p class="hint" *ngIf="!detailSections.length">{{ 'char.settings.sheetEmpty' | i18n }}</p>
+    </div>
+  </section>
+</div>
+<ng-template #emptyBlock>
+  <div class="settings-ui empty-hint">{{ 'char.settingsEmpty' | i18n }}</div>
+</ng-template>

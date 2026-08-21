@@ -1,0 +1,65 @@
+<div class="settings-ui dense terrain-bake-crop">
+  <section class="card">
+    <header class="card-head">
+      <h3>
+        <i class="material-icons head-icon" aria-hidden="true">crop</i>
+        {{ 'terrainBakeCrop.title' | i18n }}
+      </h3>
+    </header>
+    <p class="hint" *ngIf="total > 1">{{ 'terrainBakeCrop.boxOf' | i18n:{ current: index + 1, total: total } }}</p>
+    <p class="hint">{{ 'terrainBakeCrop.hint' | i18n }}</p>
+
+    <div class="face-grid">
+      <button type="button" class="face-thumb" *ngFor="let t of thumbs"
+        [class.is-selected]="selectedFace === t.face"
+        (click)="selectFace(t.face)">
+        <span class="face-caption">{{ t.labelKey | i18n }}</span>
+        <span class="thumb-frame">
+          <img *ngIf="t.url" [src]="t.url | safe: 'resourceUrl'" [style.clip-path]="clipFor(t.face)" alt="" />
+        </span>
+      </button>
+    </div>
+
+    <div class="slider-grid">
+      <label class="field">
+        <span>{{ 'terrainBakeCrop.north' | i18n }} {{ pct('north') }}%</span>
+        <input type="range" min="0" [max]="sliderMax" step="0.5"
+          [ngModel]="pct('north')" (ngModelChange)="setPct('north', $event)" />
+      </label>
+      <label class="field">
+        <span>{{ 'terrainBakeCrop.south' | i18n }} {{ pct('south') }}%</span>
+        <input type="range" min="0" [max]="sliderMax" step="0.5"
+          [ngModel]="pct('south')" (ngModelChange)="setPct('south', $event)" />
+      </label>
+      <label class="field">
+        <span>{{ 'terrainBakeCrop.west' | i18n }} {{ pct('west') }}%</span>
+        <input type="range" min="0" [max]="sliderMax" step="0.5"
+          [ngModel]="pct('west')" (ngModelChange)="setPct('west', $event)" />
+      </label>
+      <label class="field">
+        <span>{{ 'terrainBakeCrop.east' | i18n }} {{ pct('east') }}%</span>
+        <input type="range" min="0" [max]="sliderMax" step="0.5"
+          [ngModel]="pct('east')" (ngModelChange)="setPct('east', $event)" />
+      </label>
+    </div>
+  </section>
+
+  <section class="card footer-actions actions tight">
+    <button type="button" class="btn" (click)="autoCrop()" [disabled]="autoBusy">
+      <i class="material-icons" aria-hidden="true">auto_fix_high</i>{{ 'terrainBakeCrop.auto' | i18n }}
+    </button>
+    <button *ngIf="mode === 'import'" type="button" class="btn" (click)="abort()">
+      {{ 'terrainBakeCrop.abort' | i18n }}
+    </button>
+    <span class="actions-spacer"></span>
+    <button *ngIf="mode === 'import'" type="button" class="btn" (click)="skip()">
+      {{ 'terrainBakeCrop.skipBox' | i18n }}
+    </button>
+    <button *ngIf="mode === 'import'" type="button" class="btn btn-primary" (click)="confirm()">
+      <i class="material-icons" aria-hidden="true">check</i>{{ 'terrainBakeCrop.confirm' | i18n }}
+    </button>
+    <button *ngIf="mode === 'edit'" type="button" class="btn btn-primary" (click)="confirm()">
+      <i class="material-icons" aria-hidden="true">check</i>{{ 'terrainBakeCrop.done' | i18n }}
+    </button>
+  </section>
+</div>

@@ -6,8 +6,8 @@ import { CompareOption, StringUtil } from './core/system/util/string-util';
 
 @SyncObject('data')
 export class DataElement extends ObjectNode {
-  @SyncVar() name: string;
-  @SyncVar() type: string;
+  @SyncVar() name: string = '';
+  @SyncVar() type: string = '';
   @SyncVar() currentValue: number | string;
 
   get isSimpleNumber(): boolean { return this.type != null && this.type === 'simpleNumber'; }
@@ -29,10 +29,35 @@ export class DataElement extends ObjectNode {
     }
     dataElement.attributes = attributes;
     dataElement.name = name;
+    // XML / getAttribute('name') read the attributes bag; keep SyncVar + attribute aligned
+    // without setAttribute() (which would call update() before initialize()).
+    if (name && dataElement.attributes['name'] !== name) {
+      dataElement.attributes['name'] = name;
+    }
+    if (attributes) {
+      if (attributes['type'] != null && !dataElement.type) dataElement.type = String(attributes['type']);
+      if (attributes['currentValue'] != null && dataElement.currentValue == null) {
+        dataElement.currentValue = attributes['currentValue'] as number | string;
+      }
+    }
     dataElement.value = value;
     dataElement.initialize();
 
     return dataElement;
+  }
+
+  /**
+   * Room XML stores name/type/currentValue on the attributes bag (ObjectNode XmlAttributes).
+   * Mirror them onto SyncVars so templates and sheet logic keep working after legacy load.
+   */
+  override parseAttributes(attributes: NamedNodeMap) {
+    super.parseAttributes(attributes);
+    const attrName = this.getAttribute('name');
+    const attrType = this.getAttribute('type');
+    const attrCurrent = this.attributes['currentValue'];
+    if (attrName && !this.name) this.name = attrName;
+    if (attrType && !this.type) this.type = attrType;
+    if (this.currentValue == null && attrCurrent != null) this.currentValue = attrCurrent;
   }
 
   get loggingValue(): string {

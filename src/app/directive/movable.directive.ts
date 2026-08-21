@@ -14,6 +14,11 @@ import { GridType } from '@udonarium/game-table';
 import { isHexGrid, snapToHexCell } from '@udonarium/hex-grid';
 import { TableSelecter } from '@udonarium/table-selecter';
 import { TabletopObject } from '@udonarium/tabletop-object';
+import {
+  LAYER_PEER_ALIASES,
+  LAYER_PEER_MOVABLE_Z_PX,
+  stackTranslateZPx,
+} from '@udonarium/tabletop-object-util';
 import { BatchService } from 'service/batch.service';
 import { CoordinateService } from 'service/coordinate.service';
 import { TabletopService } from 'service/tabletop.service';
@@ -23,6 +28,8 @@ import { UndoService } from 'service/undo.service';
 
 import { InputHandler } from './input-handler';
 import { MovableSelectionSynchronizer } from './movable-selection-synchronizer';
+import { poseDebug } from '@udonarium/table-fx/pose-debug';
+import { folderBackupDebug } from 'service/folder-backup-debug';
 
 type LayerName = string;
 
@@ -39,6 +46,7 @@ export interface MovableOption {
 })
 export class MovableDirective implements AfterViewInit, OnChanges, OnDestroy {
   static readonly layerMap: Map<LayerName, Set<MovableDirective>> = new Map();
+  private static poseFlushHooked = false;
 
   private _tabletopObject: TabletopObject;
   private _layerName: string = '';
@@ -119,7 +127,22 @@ export class MovableDirective implements AfterViewInit, OnChanges, OnDestroy {
   ) { }
 
   ngAfterViewInit() {
-    this.batchService.add(() => this.initialize(), this.onstart);
+    MovableDirective.ensurePoseFlushHook();
+    this.batchService.add(() => {
+      this.initialize();
+      if (this.tabletopObject) {
+        const before = { x: this._posX, y: this._posY, z: this._posZ };
+        this.setPosition(this.tabletopObject);
+        const data = this.tabletopObject.getPoseForView();
+        if (before.x !== data.x || before.y !== data.y || before.z !== data.posZ) {
+          poseDebug('movable ngAfterViewInit corrected', {
+            id: this.tabletopObject.identifier,
+            before: `${before.x | 0},${before.y | 0},${before.z | 0}`,
+            after: `${data.x | 0},${data.y | 0},${data.posZ | 0}`,
+          });
+        }
+      }
+    }, this.onstart);
   }
 
   ngOnChanges(): void {
@@ -164,6 +187,8 @@ export class MovableDirective implements AfterViewInit, OnChanges, OnDestroy {
     this.input.onContextMenu = this.onContextMenu.bind(this);
 
     this.findCollidableElements();
+    // Repair PE after a prior drag may have stripped inline auto (masks/cards).
+    this.setPointerEvents(true);
   }
 
   cancel() {
@@ -254,14 +279,17 @@ export class MovableDirective implements AfterViewInit, OnChanges, OnDestroy {
     pointer2d.x = Math.min(window.innerWidth - 0.1, Math.max(pointer2d.x, 0.1));
     pointer2d.y = Math.min(window.innerHeight - 0.1, Math.max(pointer2d.y, 0.1));
 
-    let element = document.elementFromPoint(pointer2d.x, pointer2d.y) as HTMLElement;
+    // elementsFromPoint still lists PE-none peers (mask / character), unlike elementFromPoint.
+    const hitStack = document.elementsFromPoint(pointer2d.x, pointer2d.y) as Element[];
+    let element = (hitStack[0] as HTMLElement) || null;
     if (element == null) return;
 
     let pointer3d = this.coordinateService.calcTabletopLocalCoordinate(pointer2d, element);
     pointer3d.x -= this.width / 2;
     pointer3d.y -= this.height / 2;
 
-    if (this.posX === pointer3d.x && this.posY === pointer3d.y && this.posZ === pointer3d.z) return;
+    const nextZ = this.resolveDragPosZ(element, pointer3d.z, hitStack);
+    if (this.posX === pointer3d.x && this.posY === pointer3d.y && this.posZ === nextZ) return;
 
     if (!this.input.isDragging) this.ondragstart.emit(e as PointerEvent);
     this.ondrag.emit(e as PointerEvent);
@@ -272,26 +300,21 @@ export class MovableDirective implements AfterViewInit, OnChanges, OnDestroy {
       this.ratio += (ratio - this.ratio) * 0.1;
     }
 
-    //this.posX = this.pointer3d.x + (this.pointerOffset3d.x * this.ratio) + (-(this.width / 2) * (1.0 - this.ratio));
-    //this.posY = this.pointer3d.y + (this.pointerOffset3d.y * this.ratio) + (-(this.height / 2) * (1.0 - this.ratio));
-    //this.posZ = this.pointer3d.z;
-    //this.posX = pointer3d.x;
-    //this.posY = pointer3d.y;
-    //this.posZ = pointer3d.z;
-    
     //let tableSelecter = ObjectStore.instance.get<TableSelecter>('tableSelecter');
     const viewTable = TableSelecter.instance.viewTable;
     viewTable.gridClipRect = null;
     viewTable.gridHeight = this.posZ + 0.5;
+    const nextX = pointer3d.x;
+    const nextY = pointer3d.y;
     let delta = {
-      x: pointer3d.x - this.posX,
-      y: pointer3d.y - this.posY,
-      z: pointer3d.z - this.posZ,
+      x: nextX - this.posX,
+      y: nextY - this.posY,
+      z: nextZ - this.posZ,
     };
 
-    this.posX = pointer3d.x;
-    this.posY = pointer3d.y;
-    this.posZ = pointer3d.z;
+    this.posX = nextX;
+    this.posY = nextY;
+    this.posZ = nextZ;
 
     this.synchronizer.updateMove(delta);
   }
@@ -307,6 +330,9 @@ export class MovableDirective implements AfterViewInit, OnChanges, OnDestroy {
     };
 
     if (this.shouldSnapToGrid(e)) this.snapToGrid();
+
+    // After XY snap, re-sample analytic slope Z so feet stay on the ramp.
+    MovableSelectionSynchronizer.syncTerrainFloor(this);
 
     let delta = {
       x: this.posX - prev.x,
@@ -370,9 +396,10 @@ export class MovableDirective implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private setPosition(object: TabletopObject) {
-    this._posX = object.location.x;
-    this._posY = object.location.y;
-    this._posZ = object.posZ;
+    const pose = object.getPoseForView();
+    this._posX = pose.x;
+    this._posY = pose.y;
+    this._posZ = pose.posZ;
     this.updateTransformCss();
   }
 
@@ -389,26 +416,217 @@ export class MovableDirective implements AfterViewInit, OnChanges, OnDestroy {
 
   static syncPoseFromUndo(object: TabletopObject, x: number, y: number, posZ: number) {
     if (!object) return;
-    const layer = MovableDirective.layerMap.get(object.aliasName);
-    if (!layer) return;
-    for (const movable of layer) {
+    const apply = (movable: MovableDirective) => {
       if (movable.tabletopObject === object) {
         movable.applyExternalPose(x, y, posZ);
       }
+    };
+    const layer = MovableDirective.layerMap.get(object.aliasName);
+    if (layer) {
+      for (const movable of layer) apply(movable);
+      return;
+    }
+    for (const set of MovableDirective.layerMap.values()) {
+      for (const movable of set) apply(movable);
     }
   }
 
   private setUpdateBatching() {
     if (!this.isUpdateBatching && this.tabletopObject) {
       this.isUpdateBatching = true;
+      // Pin the map id at queue time — resolveViewTableIdentifier() at flush can be a different map.
+      const batchViewId = TabletopObject.resolveViewTableIdentifier();
       this.batchService.add(() => {
-        this.tabletopObject.location.x = this.posX;
-        this.tabletopObject.location.y = this.posY;
-        this.tabletopObject.posZ = this.posZ;
+        if (this.tabletopObject.location.name === 'table' && batchViewId
+          && this.tabletopObject.hasPlacement(batchViewId)) {
+          this.tabletopObject.setPoseForTable(batchViewId, {
+            x: this._posX,
+            y: this._posY,
+            posZ: this._posZ,
+          }, true);
+        } else {
+          // Never invent a placement on another map — only refresh live location.
+          this.tabletopObject.location.x = this._posX;
+          this.tabletopObject.location.y = this._posY;
+          this.tabletopObject.posZ = this._posZ;
+        }
         this.isUpdateBatching = false;
-      });
+      }, this);
     }
     this.updateTransformCss();
+  }
+
+  /** Write directive pose into tablePlacements for the given (or current) view. */
+  flushPoseToTable(tableId?: string) {
+    if (!this.tabletopObject || this.tabletopObject.location.name !== 'table') return;
+    const viewId = tableId || TabletopObject.resolveViewTableIdentifier();
+    if (!viewId) return;
+    // Never invent a placement on another map — only refresh poses already on this map.
+    if (!this.tabletopObject.hasPlacement(viewId)) return;
+    this.batchService.remove(this);
+    this.isUpdateBatching = false;
+    this.tabletopObject.setPoseForTable(viewId, {
+      x: this._posX,
+      y: this._posY,
+      posZ: this._posZ,
+    }, true);
+  }
+
+  /** Force screen pose from the object's current-view placement (map switch). */
+  syncPoseFromObject() {
+    if (!this.tabletopObject) return;
+    if (this.input.isGrabbing) {
+      UndoService.instance?.discardTransformGesture();
+      this.cancel();
+    }
+    this.state = SelectionState.NONE;
+    this.setAnimatedTransition(false);
+    this.stopTransition();
+    this.batchService.remove(this);
+    this.isUpdateBatching = false;
+    this.setPosition(this.tabletopObject);
+  }
+
+  /** Flush every movable’s live pose before a map switch. */
+  static flushAllPosesToTable(tableId?: string) {
+    let n = 0;
+    for (const set of MovableDirective.layerMap.values()) {
+      for (const movable of set) {
+        movable.flushPoseToTable(tableId);
+        n++;
+      }
+    }
+    poseDebug('flushAllPosesToTable', { tableId: tableId || '(view)', movableCount: n });
+  }
+
+  /** After hydrate: snap every movable to placements[view] (ignores selection). */
+  static syncAllPosesFromObjects() {
+    const viewId = TabletopObject.resolveViewTableIdentifier();
+    let n = 0;
+    let driftBefore = 0;
+    let driftAfter = 0;
+    const samples: Array<{
+      id: string;
+      screenBefore: string;
+      data: string;
+      screenAfter: string;
+      visible: boolean;
+      placements: string;
+    }> = [];
+    for (const set of MovableDirective.layerMap.values()) {
+      for (const movable of set) {
+        const obj = movable.tabletopObject;
+        const screenBefore = { x: movable.posX, y: movable.posY, z: movable.posZ };
+        const data = obj ? obj.getPoseForView() : null;
+        if (obj && data
+          && (screenBefore.x !== data.x || screenBefore.y !== data.y || screenBefore.z !== data.posZ)) {
+          driftBefore++;
+        }
+        movable.syncPoseFromObject();
+        n++;
+        if (obj && data) {
+          const screenAfter = { x: movable.posX, y: movable.posY, z: movable.posZ };
+          if (screenAfter.x !== data.x || screenAfter.y !== data.y || screenAfter.z !== data.posZ) {
+            driftAfter++;
+          }
+          if (samples.length < 8) {
+            samples.push({
+              id: obj.identifier,
+              screenBefore: `${screenBefore.x | 0},${screenBefore.y | 0},${screenBefore.z | 0}`,
+              data: `${data.x | 0},${data.y | 0},${data.posZ | 0}`,
+              screenAfter: `${screenAfter.x | 0},${screenAfter.y | 0},${screenAfter.z | 0}`,
+              visible: obj.isVisibleOnTable,
+              placements: (obj.tablePlacements || '').slice(0, 120),
+            });
+          }
+        }
+      }
+    }
+    poseDebug('syncAllPosesFromObjects', {
+      viewId: viewId || '(none)',
+      movableCount: n,
+      driftBefore,
+      driftAfter,
+      samples,
+      layerKeys: Array.from(MovableDirective.layerMap.keys()),
+    });
+    // Also emit under FolderBackup filter during room-load diagnosis.
+    if (driftBefore > 0 || driftAfter > 0 || n === 0) {
+      folderBackupDebug('movable syncAllPoses', {
+        viewId: viewId || '(none)',
+        movableCount: n,
+        driftBefore,
+        driftAfter,
+        samples: samples.map(s => `${s.id.slice(0, 8)}|${s.screenBefore}→${s.screenAfter}|data=${s.data}|vis=${s.visible}`),
+      });
+    }
+  }
+
+  /** Register map-switch / archive-load pose hooks (safe to call early). */
+  static ensurePoseFlushHook() {
+    if (MovableDirective.poseFlushHooked) {
+      poseDebug('ensurePoseFlushHook already registered');
+      return;
+    }
+    MovableDirective.poseFlushHooked = true;
+    poseDebug('ensurePoseFlushHook REGISTERED');
+    EventSystem.register(MovableDirective)
+      .on('BEFORE_VIEW_TABLE_CHANGE', event => {
+        const tableId: string = event.data?.tableId || '';
+        poseDebug('event BEFORE_VIEW_TABLE_CHANGE', { tableId });
+        MovableDirective.flushAllPosesToTable(tableId || undefined);
+      })
+      .on('AFTER_VIEW_TABLE_CHANGE', event => {
+        poseDebug('event AFTER_VIEW_TABLE_CHANGE', { tableId: event.data?.tableId || '' });
+        MovableDirective.syncAllPosesFromObjects();
+      })
+      .on('ARCHIVE_LOAD_COMPLETE', () => {
+        const viewId = TabletopObject.resolveViewTableIdentifier();
+        let movableCount = 0;
+        for (const set of MovableDirective.layerMap.values()) movableCount += set.size;
+        poseDebug('event ARCHIVE_LOAD_COMPLETE (Movable)', {
+          viewId: viewId || '(none)',
+          movableCount,
+        });
+        folderBackupDebug('movable ARCHIVE_LOAD_COMPLETE', {
+          viewId: viewId || '(none)',
+          movableCount,
+        });
+        if (viewId) TabletopObject.hydrateAllForView(viewId, true);
+        MovableDirective.syncAllPosesFromObjects();
+        setTimeout(() => {
+          const id = TabletopObject.resolveViewTableIdentifier();
+          let n = 0;
+          for (const set of MovableDirective.layerMap.values()) n += set.size;
+          poseDebug('ARCHIVE_LOAD_COMPLETE +0ms retry', { viewId: id || '(none)', movableCount: n });
+          folderBackupDebug('movable ARCHIVE +0ms', { viewId: id || '(none)', movableCount: n });
+          if (id) TabletopObject.hydrateAllForView(id, true);
+          MovableDirective.syncAllPosesFromObjects();
+        }, 0);
+        setTimeout(() => {
+          let n = 0;
+          for (const set of MovableDirective.layerMap.values()) n += set.size;
+          poseDebug('ARCHIVE_LOAD_COMPLETE +100ms retry', { movableCount: n });
+          folderBackupDebug('movable ARCHIVE +100ms', { movableCount: n });
+          MovableDirective.syncAllPosesFromObjects();
+        }, 100);
+      })
+      .on('TABLETOP_LAYER_CHANGED', () => {
+        // zindex SyncVar updates alone skip movable setPosition (shouldTransition).
+        // Refresh micro translateZ lift without CSS transition (avoids a slide/flash).
+        for (const set of MovableDirective.layerMap.values()) {
+          for (const movable of set) movable.refreshLayerLiftCss();
+        }
+      });
+  }
+
+  /** Apply [ ] peer translateZ from current zindex without animating. */
+  refreshLayerLiftCss() {
+    if (!LAYER_PEER_ALIASES.has(this.layerName)) return;
+    const prevTransition = this.nativeElement.style.transition;
+    this.nativeElement.style.transition = '';
+    this.updateTransformCss();
+    this.nativeElement.style.transition = prevTransition;
   }
 
   private findCollidableElements() {
@@ -440,8 +658,83 @@ export class MovableDirective implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   setPointerEvents(isEnable: boolean) {
-    let css = isEnable ? 'auto' : 'none';
-    this.collidableElements.forEach(element => element.style.pointerEvents = css);
+    // Children with `pointer-events: auto` still receive hits when only the parent is none.
+    // Force the whole subtree off while dragging so 3D faces cannot leak Z into posZ.
+    this.nativeElement.classList.toggle('is-movable-pe-none', !isEnable);
+    // Always set 'auto' when enabling — removeProperty() strips inline PE from masks/cards
+    // (e.g. style="pointer-events: auto") and they stay unhittable under PE-none ancestors.
+    const css = isEnable ? 'auto' : 'none';
+    this.collidableElements.forEach(element => {
+      element.style.pointerEvents = css;
+    });
+  }
+
+  /**
+   * Adopt picked Z only on true ride surfaces (terrain / notes / …).
+   * Never climb when a non-ride peer (mask / character / other cards) occupies the
+   * same screen point — even if PE-none let the pick punch through to terrain/table.
+   * Climbing there floats the piece between a flat mask and a tall character while
+   * zindex correctly stays below both.
+   */
+  private resolveDragPosZ(hit: HTMLElement, pickedZ: number, hitStack?: Element[]): number {
+    const z = 0 < pickedZ ? pickedZ : 0;
+    // Keep desk altitude under peers (honor existing zindex paint order).
+    if (this.hitStackHasNonRidePeer(hitStack) || this.isHitOnNonRidePeer(hit)) {
+      return z <= this.posZ + 0.01 ? z : this.posZ;
+    }
+    if (this.isHitOnColideLayer(hit)) return z;
+    if (z <= this.posZ + 0.01) return z;
+    return this.posZ;
+  }
+
+  /**
+   * True only when the pick landed on a collidable movable (root or descendant).
+   * Do NOT use hit.contains(root): #app-game-table contains every note/terrain and
+   * would always match, letting any elevated convertLocalToLocal Z through.
+   */
+  private isHitOnColideLayer(hit: HTMLElement): boolean {
+    if (!hit || !this.colideLayers?.length) return false;
+    for (const layerName of this.colideLayers) {
+      const layer = MovableDirective.layerMap.get(layerName);
+      if (!layer) continue;
+      for (const movable of layer) {
+        if (movable === this) continue;
+        if (layerName === 'character' && (this.tabletopObject?.isNotRide || !!TableSelecter.instance?.viewTable?.is2DMode)) continue;
+        const root = movable.nativeElement;
+        if (!root) continue;
+        if (root === hit || root.contains(hit)) return true;
+      }
+    }
+    return false;
+  }
+
+  /** True when elementFromPoint landed on another movable we must not climb. */
+  private isHitOnNonRidePeer(hit: HTMLElement): boolean {
+    if (!hit) return false;
+    for (const [layerName, layer] of MovableDirective.layerMap) {
+      if (this.colideLayers?.includes(layerName)) continue;
+      for (const movable of layer) {
+        if (movable === this) continue;
+        const root = movable.nativeElement;
+        if (!root) continue;
+        if (root === hit || root.contains(hit)) return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * elementsFromPoint includes PE-none nodes. If a mask/character/card is under the
+   * cursor, dragging must not adopt elevated Z from terrain behind them.
+   */
+  private hitStackHasNonRidePeer(hitStack?: Element[]): boolean {
+    if (!hitStack?.length) return false;
+    for (const el of hitStack) {
+      if (!(el instanceof HTMLElement)) continue;
+      if (this.nativeElement === el || this.nativeElement.contains(el)) continue;
+      if (this.isHitOnNonRidePeer(el)) return true;
+    }
+    return false;
   }
 
   setAnimatedTransition(isEnable: boolean, durationMs: number = 132) {
@@ -457,7 +750,16 @@ export class MovableDirective implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private updateTransformCss() {
-    let css = `${this.transformCssOffset} translate3d(${this.posX.toFixed(4)}px, ${this.posY.toFixed(4)}px, ${this.posZ.toFixed(4)}px)`;
+    let offset = this.transformCssOffset || '';
+    // Shared [ ] peers: base lift + micro zindex step (3D paint without DOM reorder).
+    if (LAYER_PEER_ALIASES.has(this.layerName)) {
+      const raw = this.tabletopObject as TabletopObject & { zindex?: number };
+      const zindex = typeof raw?.zindex === 'number' ? raw.zindex : 0;
+      const lift = LAYER_PEER_MOVABLE_Z_PX + stackTranslateZPx(zindex);
+      offset = offset.replace(/translateZ\([^)]*\)\s*/g, '');
+      offset = `translateZ(${lift.toFixed(4)}px)`;
+    }
+    const css = `${offset} translate3d(${this.posX.toFixed(4)}px, ${this.posY.toFixed(4)}px, ${this.posZ.toFixed(4)}px)`;
     this.nativeElement.style.transform = css;
   }
 
@@ -468,7 +770,8 @@ export class MovableDirective implements AfterViewInit, OnChanges, OnDestroy {
       if (this.colideLayers.includes(layerName)) {
         //isEnable = this.input.isGrabbing ? isCollidable : true;
         if (layerName == 'character') {
-          isEnable = this.input.isGrabbing ? isCollidable && !this.tabletopObject.isNotRide : true;
+          const canRide = !this.tabletopObject.isNotRide && !TableSelecter.instance?.viewTable?.is2DMode;
+          isEnable = this.input.isGrabbing ? isCollidable && canRide : true;
         } else {
           isEnable = this.input.isGrabbing ? isCollidable : true;
         }

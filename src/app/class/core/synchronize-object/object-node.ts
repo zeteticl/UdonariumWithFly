@@ -44,6 +44,16 @@ export class ObjectNode extends GameObject implements XmlAttributes, InnerXml {
     this._children = [];
   }
 
+  /** Cascade-remove children locally without broadcasting DELETE. */
+  destroyLocal() {
+    for (let child of this._children.concat()) {
+      child.destroyLocal();
+    }
+    this._children = [];
+    if (orphanNodes[this.identifier]) delete orphanNodes[this.identifier];
+    ObjectStore.instance.delete(this, false);
+  }
+
   // GameObject Lifecycle
   onStoreAdded() {
     super.onStoreAdded();
@@ -90,6 +100,7 @@ export class ObjectNode extends GameObject implements XmlAttributes, InnerXml {
     if (orphanNodes[this.identifier] == null) return;
     let objects = orphanNodes[this.identifier];
     for (let object of objects) {
+      if (ObjectStore.instance.get(object.identifier) == null) continue;
       if (object.parent === this) this.updateChildren(object);
     }
     if (orphanNodes[this.identifier]) {
@@ -154,6 +165,10 @@ export class ObjectNode extends GameObject implements XmlAttributes, InnerXml {
     if (isAdded) {
       children.push(child);
       this._onChildAdded(child);
+    } else {
+      // Existing child: majorIndex changed but _children order is stale until sorted.
+      // Without this, toTopmost()/bringToFront (appendChild on self) has no effect.
+      this.needsSort = true;
     }
 
     return child;
@@ -262,8 +277,13 @@ export class ObjectNode extends GameObject implements XmlAttributes, InnerXml {
     let length = children.length;
     if (0 < length) {
       for (let i = 0; i < length; i++) {
-        let child = ObjectSerializer.instance.parseXml(children[i]);
-        if (child instanceof ObjectNode) this.appendChild(child);
+        try {
+          let child = ObjectSerializer.instance.parseXml(children[i]);
+          if (child instanceof ObjectNode) this.appendChild(child);
+        } catch (e) {
+          // parseXml already traps most failures; keep parent usable if append throws.
+          console.warn('[ObjectNode] skip corrupt child', children[i]?.tagName, e);
+        }
       }
     } else {
       this.value = XmlUtil.decodeEntityReference(element.innerHTML);

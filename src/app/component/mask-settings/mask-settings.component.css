@@ -1,0 +1,363 @@
+.mask-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0;
+  font-size: 11px;
+}
+
+.mask-settings.is-dragover {
+  outline: 2px dashed #8a6a45;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.image-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.image-frame.image-frame-sm {
+  flex: 0 0 72px;
+  width: 72px;
+  height: 52px;
+  min-height: 52px;
+  padding: 0;
+}
+
+.image-frame.image-frame-sm .material-icons {
+  font-size: 20px;
+}
+
+.image-actions {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.image-actions .hint {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 9px;
+  color: #7a6550;
+  line-height: 1.2;
+}
+
+.image-actions .btn .material-icons {
+  font-size: 13px;
+  margin-right: 2px;
+}
+
+.mask-settings .card.card-dense {
+  padding: 4px 6px;
+}
+
+.mask-settings .card + .card {
+  margin-top: 0;
+}
+
+.mask-settings .field {
+  margin-top: 0;
+  gap: 1px;
+}
+
+.mask-settings .field > span {
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.mask-settings .field-row {
+  margin-top: 3px;
+  gap: 3px;
+}
+
+.mask-settings .field-row.nowrap {
+  flex-wrap: nowrap;
+}
+
+.mask-settings .field input[type='text'],
+.mask-settings .field input[type='number'],
+.mask-settings .field select,
+.mask-settings .field textarea {
+  min-height: 22px;
+  padding: 1px 4px;
+  font-size: 11px;
+}
+
+.mask-settings .field input[type='number'] {
+  width: 3.6em;
+  min-width: 3.6em;
+}
+
+.mask-settings .field input[type='color'] {
+  min-height: 22px;
+  width: 28px;
+  padding: 0;
+}
+
+.mask-settings .btn.btn-sm {
+  min-height: 22px;
+  padding: 1px 6px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.mask-settings .check-row.tight {
+  margin-top: 0;
+  gap: 2px 8px;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.title-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.title-row .grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.metrics .field {
+  flex: 0 0 auto;
+}
+
+.color-row .color-field {
+  flex: 0 0 auto;
+}
+
+.color-row .grow {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.thumb-btn {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #c4b29a;
+  border-radius: 4px;
+  background: #ebe2d4;
+  overflow: hidden;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #7a6550;
+}
+
+.thumb-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumb-btn .material-icons {
+  font-size: 16px;
+}
+
+.action-head {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0 0 3px;
+}
+
+.action-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #5c4630;
+  letter-spacing: 0.03em;
+}
+
+.action-hint {
+  margin: 0 !important;
+  font-size: 9px !important;
+  line-height: 1.25 !important;
+  color: #7a6550;
+}
+
+.mode-tabs.action-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 2px;
+  margin: 0;
+}
+
+.check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 10px;
+  color: #5c4630;
+  white-space: nowrap;
+}
+
+.alt-block {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed #d4c4ae;
+}
+
+.fx-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+  margin-top: 4px;
+  font-size: 10px;
+  color: #5c4630;
+  line-height: 1.25;
+}
+
+.fx-grid .fx-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.fx-grid .fx-item input[type='checkbox'] {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.fx-grid .fx-item span {
+  line-height: 1.2;
+}
+
+.token-fx-altitude {
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.token-fx-altitude .field {
+  min-width: 8em;
+}
+
+.mode-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 34px;
+  padding: 3px 2px;
+  border: 1px solid #c4b29a;
+  border-radius: 3px;
+  background: #fffdf8;
+  color: #5c4630;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.mode-tab span {
+  display: block;
+  max-width: 100%;
+}
+
+.mode-tab .material-icons {
+  font-size: 14px;
+  opacity: 0.85;
+  line-height: 1;
+}
+
+.mode-tab.is-active {
+  border-color: #8a6a45;
+  background: #f0e0c8;
+  box-shadow: inset 0 -2px 0 #8a6a45;
+}
+
+.mode-tab:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.mask-settings .mode-tabs + .field,
+.mask-settings .mode-tabs + .action-panels {
+  margin-top: 3px;
+}
+
+.action-panels {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.action-panel {
+  margin: 0;
+  padding: 0;
+}
+
+.action-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 24px;
+  padding: 2px 4px;
+  border: 1px solid #d4c4ae;
+  border-radius: 3px;
+  background: #f7f0e6;
+  color: #5c4630;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.action-panel-head:hover {
+  background: #f0e0c8;
+}
+
+.action-panel-head .material-icons {
+  font-size: 14px;
+  opacity: 0.9;
+  line-height: 1;
+}
+
+.action-panel-head .chevron {
+  font-size: 16px;
+  opacity: 0.75;
+}
+
+.action-panel-head span {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.action-panel.is-collapsed .action-panel-head {
+  background: #fffdf8;
+}
+
+.action-panel-body {
+  padding: 4px 2px 2px;
+}
+
+.text-body {
+  max-height: 36px;
+  min-height: 22px !important;
+  resize: vertical;
+}
+
+.opts-card .check-row {
+  display: flex;
+  flex-wrap: wrap;
+}

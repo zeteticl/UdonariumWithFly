@@ -1,143 +1,539 @@
-<div class="settings-ui jukebox">
-  <section class="card">
-    <header class="card-head"><h3>{{ 'jukebox.title' | i18n }}</h3></header>
-
-    <div class="audio-list" *ngIf="audios.length > 0">
-      <div *ngFor="let audio of audios" class="list-item">
-        <span class="btn-group">
-          <button
-            *ngIf="audio !== auditionPlayer?.audio || auditionPlayer?.paused"
-            type="button"
-            class="btn btn-sm"
-            (click)="play(audio)"
-            [disabled]="!audio.isReady"
-          >
-            <i class="material-icons">play_arrow</i>{{ 'jukebox.audition' | i18n }}<sup class="self-only">*</sup>
-          </button>
-          <button
-            *ngIf="audio === auditionPlayer?.audio && !auditionPlayer?.paused"
-            type="button"
-            class="btn btn-sm btn-primary"
-            (click)="stop()"
-            [disabled]="!audio.isReady"
-          >
-            <i class="material-icons">stop</i>{{ 'jukebox.audition' | i18n }}<sup class="self-only">*</sup>
-          </button>
-          <button
-            *ngIf="audio !== jukebox?.audio"
-            type="button"
-            class="btn btn-sm"
-            (click)="playBGM(audio)"
-            [disabled]="!audio.isReady"
-          >
-            <i class="material-icons">loop</i>{{ 'jukebox.bgm' | i18n }}
-          </button>
-          <button
-            *ngIf="audio === jukebox?.audio"
-            type="button"
-            class="btn btn-sm btn-primary"
-            (click)="stopBGM(audio)"
-            [disabled]="!audio.isReady"
-          >
-            <i class="material-icons">stop</i>{{ 'jukebox.bgm' | i18n }}
-          </button>
-        </span>
-        <span class="list-status" *ngIf="audio === auditionPlayer?.audio && !auditionPlayer?.paused && audio != jukebox?.audio">
-          {{ 'jukebox.auditionPlaying' | i18n }}
-        </span>
-        <ng-container *ngIf="audio === jukebox?.audio">
-          <span class="list-status" *ngIf="audio != auditionPlayer?.audio || (audio == auditionPlayer?.audio && auditionPlayer?.paused)">
-            <i class="material-icons">volume_up</i>
-          </span>
-          <span class="list-status" *ngIf="audio === auditionPlayer?.audio && !auditionPlayer?.paused">
-            <i class="material-icons">volume_up</i>{{ 'jukebox.auditionPlaying' | i18n }}
-          </span>
-        </ng-container>
-        <span class="list-item-name" [class.is-active]="audio === jukebox?.audio">{{ audio.name }}</span>
+<div class="settings-ui dense jukebox">
+  <section class="jb-block jb-mixer">
+    <button type="button" class="jb-fold" (click)="showMixer = !showMixer" [attr.aria-expanded]="showMixer">
+      <i class="material-icons">{{ showMixer ? 'expand_more' : 'chevron_right' }}</i>
+      <span>{{ 'jukebox.playbackVolume' | i18n }}</span>
+      <span class="jb-fold-hint">{{ 'jukebox.volumeSaved' | i18n }}</span>
+    </button>
+    <div class="jb-mixer-list" *ngIf="showMixer">
+      <div class="jb-vol">
+        <button type="button" class="btn-mute" (click)="isMute = !isMute"
+          [title]="(isMute ? ('jukebox.unmute' | i18n) : ('jukebox.mute' | i18n)) + ' · ' + ('jukebox.musicMasterVolume' | i18n)">
+          <i class="material-icons">{{ isMute ? 'volume_off' : musicMasterVolume == 0 ? 'volume_mute' : musicMasterVolume <= 0.5 ? 'volume_down' : 'volume_up' }}</i>
+        </button>
+        <span class="jb-vol-label">{{ 'jukebox.musicMasterVolume' | i18n }}<sup class="self-only">*</sup></span>
+        <input [(ngModel)]="musicMasterVolume" (change)="previewLocalVolume('music')" type="range" min="0" max="1" step="0.01"
+          [title]="isMute ? '' : percentMusicMasterVolume + '%'" />
+      </div>
+      <div class="jb-vol">
+        <button type="button" class="btn-mute" (click)="isAuditionMute = !isAuditionMute"
+          [title]="(isAuditionMute ? ('jukebox.unmute' | i18n) : ('jukebox.mute' | i18n)) + ' · ' + ('jukebox.auditionVolume' | i18n)">
+          <i class="material-icons">{{ isAuditionMute ? 'volume_off' : auditionVolume == 0 ? 'volume_mute' : auditionVolume <= 0.5 ? 'volume_down' : 'volume_up' }}</i>
+        </button>
+        <span class="jb-vol-label">{{ 'jukebox.auditionVolume' | i18n }}<sup class="self-only">*</sup></span>
+        <input [(ngModel)]="auditionVolume" (change)="previewLocalVolume('audition')" type="range" min="0" max="1" step="0.01"
+          [title]="isAuditionMute ? '' : percentAuditionVolume + '%'" />
+      </div>
+      <div class="jb-vol">
+        <button type="button" class="btn-mute" (click)="isNoticeMute = !isNoticeMute"
+          [title]="(isNoticeMute ? ('jukebox.unmute' | i18n) : ('jukebox.mute' | i18n)) + ' · ' + ('jukebox.noticeVolume' | i18n)">
+          <i class="material-icons">{{ isNoticeMute ? 'volume_off' : noticeVolume == 0 ? 'volume_mute' : noticeVolume <= 0.5 ? 'volume_down' : 'volume_up' }}</i>
+        </button>
+        <span class="jb-vol-label">{{ 'jukebox.noticeVolume' | i18n }}<sup class="self-only">*</sup></span>
+        <input [(ngModel)]="noticeVolume" (change)="previewLocalVolume('notice')" type="range" min="0" max="1" step="0.01"
+          [title]="isNoticeMute ? '' : percentNoticeVolume + '%'" />
+      </div>
+      <div class="jb-vol">
+        <button type="button" class="btn-mute" (click)="isSoundEffectMute = !isSoundEffectMute"
+          [title]="(isSoundEffectMute ? ('jukebox.unmute' | i18n) : ('jukebox.mute' | i18n)) + ' · ' + ('jukebox.sfxVolume' | i18n)">
+          <i class="material-icons">{{ isSoundEffectMute ? 'volume_off' : soundEffectVolume == 0 ? 'volume_mute' : soundEffectVolume <= 0.5 ? 'volume_down' : 'volume_up' }}</i>
+        </button>
+        <span class="jb-vol-label">{{ 'jukebox.sfxVolume' | i18n }}<sup class="self-only">*</sup></span>
+        <input [(ngModel)]="soundEffectVolume" (change)="previewLocalVolume('se')" type="range" min="0" max="1" step="0.01"
+          [title]="isSoundEffectMute ? '' : percentSoundEffectVolume + '%'" />
+      </div>
+      <div class="jb-vol">
+        <button type="button" class="btn-mute" (click)="isSoundboardMute = !isSoundboardMute"
+          [title]="(isSoundboardMute ? ('jukebox.unmute' | i18n) : ('jukebox.mute' | i18n)) + ' · ' + ('jukebox.soundboardVolume' | i18n)">
+          <i class="material-icons">{{ isSoundboardMute ? 'volume_off' : soundboardVolume == 0 ? 'volume_mute' : soundboardVolume <= 0.5 ? 'volume_down' : 'volume_up' }}</i>
+        </button>
+        <span class="jb-vol-label">{{ 'jukebox.soundboardVolume' | i18n }}<sup class="self-only">*</sup></span>
+        <input [(ngModel)]="soundboardVolume" (change)="previewLocalVolume('soundboard')" type="range" min="0" max="1" step="0.01"
+          [title]="isSoundboardMute ? '' : percentSoundboardVolume + '%'" />
       </div>
     </div>
-    <p class="empty-hint" *ngIf="audios.length < 1">{{ 'jukebox.empty' | i18n }}</p>
-
-    <label *ngIf="!GuestMode()" class="drop-zone-wrap">
-      <span class="drop-zone">
-        <i class="material-icons">playlist_add</i>
-        <span class="drop-zone-title">{{ 'jukebox.dropMusic' | i18n }}</span>
-        <span class="drop-zone-sub">{{ 'jukebox.orClick' | i18n }}</span>
-        <span class="drop-zone-sub">{{ 'jukebox.maxFileSize' | i18n }}</span>
-        <input type="file" hidden (change)="handleFileSelect($event)" multiple accept="audio/*" />
-      </span>
-    </label>
-
-    <p class="hint" [innerHTML]="'jukebox.hintAudition' | i18n"></p>
-    <p class="hint" [innerHTML]="'jukebox.hintBgm' | i18n"></p>
-    <p class="hint">{{ 'jukebox.hintZip' | i18n }}</p>
   </section>
 
-  <section class="card volume-card">
-    <header class="card-head"><h3>{{ 'jukebox.playbackVolume' | i18n }}</h3></header>
-    <div class="volume-row">
-      <span class="slider-label">{{ 'jukebox.auditionVolume' | i18n }}<sup class="self-only">*</sup></span>
-      <button
-        type="button"
-        class="btn-mute"
-        (click)="isAuditionMute = !isAuditionMute"
-        [title]="isAuditionMute ? ('jukebox.unmute' | i18n) : ('jukebox.mute' | i18n)"
-      >
-        <i class="material-icons">{{ isAuditionMute ? 'volume_off' : auditionVolume == 0 ? 'volume_mute' : auditionVolume <= 0.5 ? 'volume_down' : 'volume_up' }}</i>
-      </button>
-      <input [(ngModel)]="auditionVolume" type="range" [title]="isAuditionMute ? '' : percentAuditionVolume + '%'" min="0" max="1" step="0.01" />
-      <input type="number" class="num" min="0" max="100" step="1" [(ngModel)]="percentAuditionVolume" />
-      <span class="val">%</span>
-    </div>
-    <div class="volume-row">
-      <span class="slider-label">{{ 'jukebox.playbackVolume' | i18n }}<sup class="self-only">*</sup></span>
-      <button
-        type="button"
-        class="btn-mute"
-        (click)="isMute = !isMute"
-        [title]="isMute ? ('jukebox.unmute' | i18n) : ('jukebox.mute' | i18n)"
-      >
-        <i class="material-icons">{{ isMute ? 'volume_off' : volume == 0 ? 'volume_mute' : volume <= 0.5 ? 'volume_down' : 'volume_up' }}</i>
-      </button>
-      <input [(ngModel)]="volume" type="range" min="0" [title]="isMute ? '' : percentVolume + '%'" max="1" step="0.01" />
-      <input type="number" class="num" min="0" max="100" step="1" [(ngModel)]="percentVolume" />
-      <span class="val">%</span>
-    </div>
-    <div class="volume-row">
-      <span class="slider-label">{{ 'jukebox.noticeVolume' | i18n }}<sup class="self-only">*</sup></span>
-      <button
-        type="button"
-        class="btn-mute"
-        (click)="isNoticeMute = !isNoticeMute"
-        [title]="isNoticeMute ? ('jukebox.unmute' | i18n) : ('jukebox.mute' | i18n)"
-      >
-        <i class="material-icons">{{ isNoticeMute ? 'volume_off' : noticeVolume == 0 ? 'volume_mute' : noticeVolume <= 0.5 ? 'volume_down' : 'volume_up' }}</i>
-      </button>
-      <input [(ngModel)]="noticeVolume" (change)="noticeTest()" type="range" min="0" [title]="isNoticeMute ? '' : percentNoticeVolume + '%'" max="1" step="0.01" />
-      <input (change)="noticeTest()" type="number" class="num" min="0" max="100" step="1" [(ngModel)]="percentNoticeVolume" />
-      <span class="val">%</span>
-    </div>
-    <div class="volume-row">
-      <span class="slider-label">{{ 'jukebox.sfxVolume' | i18n }}<sup class="self-only">*</sup></span>
-      <button
-        type="button"
-        class="btn-mute"
-        (click)="isSoundEffectMute = !isSoundEffectMute"
-        [title]="isSoundEffectMute ? ('jukebox.unmute' | i18n) : ('jukebox.mute' | i18n)"
-      >
-        <i class="material-icons">{{ isSoundEffectMute ? 'volume_off' : soundEffectVolume == 0 ? 'volume_mute' : soundEffectVolume <= 0.5 ? 'volume_down' : 'volume_up' }}</i>
-      </button>
-      <input [(ngModel)]="soundEffectVolume" type="range" min="0" [title]="isSoundEffectMute ? '' : percentSoundEffectVolume + '%'" max="1" step="0.01" />
-      <input type="number" class="num" min="0" max="100" step="1" [(ngModel)]="percentSoundEffectVolume" />
-      <span class="val">%</span>
-    </div>
-    <footer class="actions">
-      <span class="hint" style="margin:0">{{ 'jukebox.volumeSaved' | i18n }}</span>
-      <span class="actions-spacer">
-        <button type="button" class="btn btn-sm" (click)="soundTest($event)">
-          {{ 'jukebox.sfxTest' | i18n }}<sup class="self-only">*</sup>
+  <section class="jb-block jb-deck">
+    <header class="jb-row-head">
+      <span class="jb-row-title">{{ 'jukebox.tracks' | i18n }}</span>
+      <ng-container *ngIf="!GuestMode()">
+        <button type="button" class="jb-icon-act" (click)="stopAllTracks()" [disabled]="!jukebox"
+          [title]="'jukebox.stopAll' | i18n">
+          <i class="material-icons">stop</i>
         </button>
+      </ng-container>
+    </header>
+    <div class="jb-track-list">
+      <div
+        class="jb-track"
+        *ngFor="let i of trackIndexes"
+        [class.is-playing]="(tracks[i]?.isPlaying && !tracks[i]?.isPaused) || (i === weatherTrackIndex && weatherSePlaying)"
+        [class.is-paused]="tracks[i]?.isPlaying && tracks[i]?.isPaused"
+        [class.is-guest]="GuestMode()"
+        [class.is-weather]="i === weatherTrackIndex"
+        [class.is-transport]="i !== weatherTrackIndex"
+        [class.is-armed]="i !== weatherTrackIndex && !!tracks[i]?.audioIdentifier"
+        [class.is-drop-target]="dropTrackIndex === i"
+        (dragover)="onTrackDragOver($event, i)"
+        (dragleave)="onTrackDragLeave($event, i)"
+        (drop)="onTrackDrop($event, i)"
+        [attr.title]="i === weatherTrackIndex
+          ? ('jukebox.weatherLoopHint' | i18n)
+          : (GuestMode() ? null : ('jukebox.dropOnTrack' | i18n))"
+      >
+        <span class="jb-track-badge">{{ trackName(i) }}</span>
+        <ng-container *ngIf="i === weatherTrackIndex">
+          <span class="jb-track-status-icon" [class.is-quiet]="!weatherSePlaying" aria-hidden="true">
+            <i class="material-icons">{{ weatherSePlaying ? 'volume_up' : 'cloud' }}</i>
+          </span>
+          <span class="jb-track-name">
+            <span class="jb-track-title" [title]="'jukebox.weatherLoopHint' | i18n">{{ 'jukebox.weatherLoopLocal' | i18n }}</span>
+            <ng-container *ngTemplateOutlet="fadePanel; context: { $implicit: i }"></ng-container>
+          </span>
+          <input
+            *ngIf="!GuestMode()"
+            class="jb-track-gain"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            [ngModel]="trackRoomGainPercent(i)"
+            (ngModelChange)="setTrackRoomGainPercent(i, $event)"
+            [title]="('jukebox.roomGain' | i18n) + ' ' + trackRoomGainPercent(i) + '%'"
+          />
+        </ng-container>
+        <ng-container *ngIf="i !== weatherTrackIndex && tracks[i]?.audioIdentifier">
+          <ng-container *ngIf="!GuestMode()">
+            <button
+              type="button"
+              class="jb-icon-act"
+              [class.is-on]="tracks[i]?.isPlaying && !tracks[i]?.isPaused"
+              [disabled]="!trackAudio(i)"
+              (click)="onPlayTrackClick(i)"
+              [title]="tracks[i]?.isPlaying && tracks[i]?.isPaused ? ('jukebox.resume' | i18n) : ('jukebox.play' | i18n)"
+            >
+              <i class="material-icons">play_arrow</i>
+            </button>
+            <button
+              type="button"
+              class="jb-icon-act"
+              [disabled]="!tracks[i]?.isPlaying || tracks[i]?.isPaused"
+              (click)="pauseTrack(i)"
+              [title]="'jukebox.pause' | i18n"
+            >
+              <i class="material-icons">pause</i>
+            </button>
+            <button
+              type="button"
+              class="jb-icon-act"
+              [disabled]="!tracks[i]?.isPlaying"
+              (click)="stopTrack(i)"
+              [title]="'jukebox.stopAll' | i18n"
+            >
+              <i class="material-icons">stop</i>
+            </button>
+          </ng-container>
+          <span class="jb-track-status-icon" *ngIf="GuestMode() && tracks[i]?.isPlaying" aria-hidden="true">
+            <i class="material-icons">{{ tracks[i]?.isPaused ? 'pause' : 'volume_up' }}</i>
+          </span>
+          <span class="jb-track-name">
+            <span class="jb-track-title" [title]="trackDisplayName(i)">{{ trackDisplayName(i) }}</span>
+            <ng-container *ngTemplateOutlet="fadePanel; context: { $implicit: i }"></ng-container>
+          </span>
+        </ng-container>
+        <span class="jb-track-name" *ngIf="i !== weatherTrackIndex && !tracks[i]?.audioIdentifier">
+          <span class="jb-track-idle">{{ 'jukebox.dropTrackHint' | i18n }}</span>
+          <ng-container *ngTemplateOutlet="fadePanel; context: { $implicit: i }"></ng-container>
+        </span>
+        <!-- Room gain stays visible for every transport track, even when idle / not playing. -->
+        <input
+          *ngIf="i !== weatherTrackIndex && !GuestMode()"
+          class="jb-track-gain"
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          [ngModel]="trackRoomGainPercent(i)"
+          (ngModelChange)="setTrackRoomGainPercent(i, $event)"
+          [title]="('jukebox.roomGain' | i18n) + ' ' + trackRoomGainPercent(i) + '%'"
+        />
+        <div
+          class="jb-track-progress"
+          *ngIf="i !== weatherTrackIndex && tracks[i]?.audioIdentifier && trackAudio(i)"
+          (pointerdown)="$event.stopPropagation()"
+        >
+          <span class="jb-track-time">{{ formatTime(trackProgress(i)) }}</span>
+          <input
+            class="jb-track-scrub"
+            type="range"
+            min="0"
+            [max]="trackDuration(i) || 1"
+            step="0.1"
+            [ngModel]="trackProgress(i)"
+            (ngModelChange)="seekTrack(i, $event)"
+            [disabled]="GuestMode() || !tracks[i]?.isPlaying"
+            [title]="formatTime(trackProgress(i)) + ' / ' + formatTime(trackDuration(i))"
+          />
+          <span class="jb-track-time">{{ formatTime(trackDuration(i)) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #fadePanel let-ti>
+      <span *ngIf="!GuestMode()" class="jb-fade-wrap">
+        <button
+          type="button"
+          class="jb-fade-tri"
+          [attr.aria-label]="('jukebox.weatherOverlap' | i18n) + ' / ' + ('jukebox.trackFade' | i18n)"
+          [title]="fadePanelHint(ti)"
+        >
+          <i class="material-icons" aria-hidden="true">play_arrow</i>
+        </button>
+        <div class="jb-fade-box" (pointerdown)="$event.stopPropagation()">
+          <label class="jb-fade-box-row">
+            <span class="jb-fade-box-label">{{ 'jukebox.weatherOverlap' | i18n }}</span>
+            <input
+              class="jb-fade-box-range"
+              type="range"
+              min="0"
+              max="30"
+              step="0.5"
+              [ngModel]="overlapSecOf(ti)"
+              (ngModelChange)="setOverlapSecOf(ti, $event)"
+              [title]="formatFadeSec(overlapSecOf(ti))"
+            />
+            <span class="jb-fade-box-val">{{ formatFadeSec(overlapSecOf(ti)) }}</span>
+          </label>
+          <label class="jb-fade-box-row">
+            <span class="jb-fade-box-label">{{ 'jukebox.trackFade' | i18n }}</span>
+            <input
+              class="jb-fade-box-range"
+              type="range"
+              min="0"
+              max="15"
+              step="0.5"
+              [ngModel]="fadeSecOf(ti)"
+              (ngModelChange)="setFadeSecOf(ti, $event)"
+              [title]="formatFadeSec(fadeSecOf(ti))"
+            />
+            <span class="jb-fade-box-val">{{ formatFadeSec(fadeSecOf(ti)) }}</span>
+          </label>
+        </div>
       </span>
-    </footer>
+    </ng-template>
+  </section>
+
+  <section
+    class="jb-block jb-soundboard"
+    [class.is-file-drop]="dropPadIndex !== null || dropSoundboardSurface"
+    (dragover)="onSoundboardDragOver($event)"
+    (dragleave)="onSoundboardDragLeave($event)"
+    (drop)="onSoundboardDrop($event)"
+  >
+    <header class="jb-row-head">
+      <span class="jb-row-title">{{ 'jukebox.soundboard' | i18n }}</span>
+      <button
+        type="button"
+        class="jb-icon-act"
+        (click)="stopSoundboardPads($event)"
+        [attr.aria-label]="'jukebox.soundboardStop' | i18n"
+        [title]="'jukebox.soundboardStop' | i18n"
+      >
+        <i class="material-icons" aria-hidden="true">stop_circle</i>
+      </button>
+      <span
+        class="jb-icon-act jb-sb-guide"
+        [attr.aria-label]="'jukebox.soundboardMaxDuration' | i18n"
+        [title]="'jukebox.soundboardMaxDurationHint' | i18n"
+      >
+        <i class="material-icons" aria-hidden="true">timer</i>
+      </span>
+      <span class="jb-fold-hint">{{ 'jukebox.soundboardHint' | i18n }}</span>
+    </header>
+    <div class="jb-pad-grid">
+      <div
+        class="jb-pad"
+        *ngFor="let slot of soundboardSlots; let pi = index; trackBy: trackPadIndex"
+        [class.is-filled]="!!slot.audioIdentifier"
+        [class.is-drop-target]="dropPadIndex === pi"
+      >
+        <button
+          type="button"
+          class="jb-pad-hit"
+          draggable="false"
+          [class.is-disabled]="!slot.audioIdentifier"
+          [attr.aria-disabled]="!slot.audioIdentifier"
+          (click)="onPadClick($event, pi)"
+          (dragstart)="$event.preventDefault()"
+          [title]="padTitle(pi)"
+        >
+          <span class="jb-pad-name">{{ padDisplayName(pi) }}</span>
+          <span
+            class="jb-pad-dur"
+            *ngIf="slot.audioIdentifier"
+            [class.is-over]="padDurationSec(pi) > soundboardMaxDurationSec"
+          >{{ padDurationLabel(pi) }}</span>
+        </button>
+        <button
+          *ngIf="!GuestMode() && slot.audioIdentifier"
+          type="button"
+          class="jb-icon-act jb-pad-clear"
+          (click)="clearPad(pi, $event)"
+          [title]="'jukebox.soundboardClear' | i18n"
+        >
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="jb-block jb-library">
+    <header class="jb-row-head">
+      <i class="material-icons jb-row-ico">folder</i>
+      <span class="jb-row-title">{{ 'jukebox.library' | i18n }}</span>
+      <button *ngIf="!GuestMode()" type="button" class="jb-icon-act" (click)="createFolder()"
+        [title]="'jukebox.addFolder' | i18n">
+        <i class="material-icons">create_new_folder</i>
+      </button>
+      <button type="button" class="jb-icon-act" (click)="showHelp = !showHelp"
+        [attr.aria-expanded]="showHelp"
+        [title]="showHelp ? ('jukebox.hideHelp' | i18n) : ('jukebox.showHelp' | i18n)">
+        <i class="material-icons">{{ showHelp ? 'expand_less' : 'info_outline' }}</i>
+      </button>
+    </header>
+    <div class="jb-reject-toast" *ngIf="rejectToastLines.length"
+      role="status" aria-live="polite" aria-atomic="true">
+      <div class="jb-reject-toast-title">{{ 'jukebox.reject.title' | i18n }}</div>
+      <div class="jb-reject-toast-line" *ngFor="let line of rejectToastLines">{{ line }}</div>
+    </div>
+    <div class="jb-help" *ngIf="showHelp">
+      <p [innerHTML]="'jukebox.hintAudition' | i18n"></p>
+      <p [innerHTML]="'jukebox.hintBgm' | i18n"></p>
+      <p>{{ 'jukebox.hintDrag' | i18n }}</p>
+      <p>{{ 'jukebox.hintSelect' | i18n }}</p>
+      <p>{{ 'jukebox.hintLink' | i18n }}</p>
+      <p>{{ 'jukebox.hintZip' | i18n }}</p>
+    </div>
+
+    <div #libraryScroll class="jb-library-scroll"
+      [class.is-file-drop]="dropFileFolderId !== null"
+      (pointerdown)="onLibraryBackgroundPointerDown($event)"
+      (dragover)="onLibraryScrollDragOver($event)"
+      (dragleave)="onLibraryFilesDragLeave($event)"
+      (drop)="onLibraryScrollDrop($event)">
+      <!-- Root -->
+      <div class="jb-folder-block jb-folder-root"
+        [class.is-drop-target]="isDropFolder('')"
+        [class.is-file-drop]="isFileDropFolder('')"
+        (dragover)="onFolderDragOver($event, '')"
+        (drop)="onFolderDrop($event, '')">
+        <div class="jb-folder-head">
+          <button type="button" class="jb-folder-toggle" (click)="toggleFolder('')">
+            <i class="material-icons">{{ isFolderExpanded('') ? 'expand_more' : 'chevron_right' }}</i>
+            <span>{{ 'jukebox.rootFolder' | i18n }}</span>
+          </button>
+          <div
+            class="jb-folder-acts"
+            *ngIf="!GuestMode()"
+            (pointerdown)="$event.stopPropagation()"
+          >
+            <button
+              type="button"
+              class="jb-icon-act jb-track-pick"
+              (click)="cycleFolderTrackType('', $event)"
+              [title]="('jukebox.playToTrack' | i18n) + ': ' + trackName(folderTrackType(''))"
+            >
+              <span class="jb-track-pick-label">{{ trackShortName(folderTrackType('')) }}</span>
+            </button>
+            <button
+              type="button"
+              class="jb-icon-act"
+              (click)="promptFolderLink('', $event)"
+              [title]="'jukebox.addLink' | i18n"
+            >
+              <i class="material-icons" aria-hidden="true">add</i>
+            </button>
+            <label class="jb-icon-act jb-file-btn" [title]="('jukebox.dropMusic' | i18n) + ' · ' + ('jukebox.maxFileSize' | i18n)">
+              <i class="material-icons" aria-hidden="true">upload_file</i>
+              <input type="file" hidden (change)="handleFolderFileSelect($event, '')" multiple accept="audio/*" />
+            </label>
+            <button
+              type="button"
+              class="jb-icon-act"
+              [class.is-on]="folderShuffle('')"
+              (click)="toggleFolderShuffleMode('', $event)"
+              [title]="folderShuffle('') ? ('jukebox.modeShuffle' | i18n) : ('jukebox.modeSequential' | i18n)"
+            >
+              <i class="material-icons" aria-hidden="true">{{ folderShuffle('') ? 'shuffle' : 'reorder' }}</i>
+            </button>
+            <button
+              type="button"
+              class="jb-icon-act"
+              [class.is-on]="isFolderActivelyPlaying('')"
+              (click)="playFolderQueue('', $event)"
+              [title]="folderPlayTitle('')"
+            >
+              <i class="material-icons" aria-hidden="true">{{ folderPlayIcon('') }}</i>
+            </button>
+          </div>
+        </div>
+        <div class="jb-folder-body" *ngIf="isFolderExpanded('')">
+          <ng-container *ngTemplateOutlet="audioList; context: { folderId: '' }"></ng-container>
+          <div class="jb-folder-drop-pad"
+            [class.is-drop-end]="isDropAtFolderEnd('')"
+            (dragover)="onFolderEndDragOver($event, '')"
+            (drop)="onFolderEndDrop($event, '')"
+            aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <!-- Folders -->
+      <div *ngFor="let folder of folders; trackBy: trackFolderId" class="jb-folder-block"
+        [class.is-drop-target]="isDropFolder(folder.id)"
+        [class.is-file-drop]="isFileDropFolder(folder.id)"
+        (dragover)="onFolderDragOver($event, folder.id)"
+        (drop)="onFolderDrop($event, folder.id)">
+        <div class="jb-folder-head"
+          (contextmenu)="onFolderContextMenu($event, folder)">
+          <button type="button" class="jb-folder-toggle" (click)="toggleFolder(folder.id)">
+            <i class="material-icons">{{ isFolderExpanded(folder.id) ? 'expand_more' : 'chevron_right' }}</i>
+            <i class="material-icons jb-folder-ico">folder</i>
+            <span class="jb-folder-name">{{ folder.name }}</span>
+          </button>
+          <div
+            class="jb-folder-acts"
+            *ngIf="!GuestMode()"
+            (pointerdown)="$event.stopPropagation()"
+          >
+            <button
+              type="button"
+              class="jb-icon-act jb-track-pick"
+              (click)="cycleFolderTrackType(folder.id, $event)"
+              [title]="('jukebox.playToTrack' | i18n) + ': ' + trackName(folderTrackType(folder.id))"
+            >
+              <span class="jb-track-pick-label">{{ trackShortName(folderTrackType(folder.id)) }}</span>
+            </button>
+            <button
+              type="button"
+              class="jb-icon-act"
+              (click)="promptFolderLink(folder.id, $event)"
+              [title]="'jukebox.addLink' | i18n"
+            >
+              <i class="material-icons" aria-hidden="true">add</i>
+            </button>
+            <label class="jb-icon-act jb-file-btn" [title]="('jukebox.dropMusic' | i18n) + ' · ' + ('jukebox.maxFileSize' | i18n)">
+              <i class="material-icons" aria-hidden="true">upload_file</i>
+              <input type="file" hidden (change)="handleFolderFileSelect($event, folder.id)" multiple accept="audio/*" />
+            </label>
+            <button
+              type="button"
+              class="jb-icon-act"
+              [class.is-on]="folderShuffle(folder.id)"
+              (click)="toggleFolderShuffleMode(folder.id, $event)"
+              [title]="folderShuffle(folder.id) ? ('jukebox.modeShuffle' | i18n) : ('jukebox.modeSequential' | i18n)"
+            >
+              <i class="material-icons" aria-hidden="true">{{ folderShuffle(folder.id) ? 'shuffle' : 'reorder' }}</i>
+            </button>
+            <button
+              type="button"
+              class="jb-icon-act"
+              [class.is-on]="isFolderActivelyPlaying(folder.id)"
+              (click)="playFolderQueue(folder.id, $event)"
+              [title]="folderPlayTitle(folder.id)"
+            >
+              <i class="material-icons" aria-hidden="true">{{ folderPlayIcon(folder.id) }}</i>
+            </button>
+          </div>
+        </div>
+        <div class="jb-folder-body" *ngIf="isFolderExpanded(folder.id)">
+          <ng-container *ngTemplateOutlet="audioList; context: { folderId: folder.id }"></ng-container>
+          <div class="jb-folder-drop-pad"
+            [class.is-drop-end]="isDropAtFolderEnd(folder.id)"
+            (dragover)="onFolderEndDragOver($event, folder.id)"
+            (drop)="onFolderEndDrop($event, folder.id)"
+            aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <p class="jb-empty" *ngIf="audios.length < 1">{{ 'jukebox.empty' | i18n }}</p>
+      <p class="jb-drag-hint" *ngIf="!GuestMode() && audios.length > 0">{{ 'jukebox.dragHint' | i18n }}</p>
+      <p class="jb-drag-hint" *ngIf="!GuestMode() && audios.length > 0">{{ 'jukebox.selectHint' | i18n }}</p>
+    </div>
   </section>
 </div>
+
+<ng-template #audioList let-folderId="folderId">
+  <div *ngFor="let audio of audiosIn(folderId); trackBy: trackAudioId" class="jb-lib-row"
+    [attr.data-audio-id]="audio.identifier"
+    [attr.draggable]="GuestMode() ? null : true"
+    [class.is-selected]="isAudioSelected(audio.identifier)"
+    [class.is-bgm]="jukebox?.isAnyTrackPlayingAudio(audio)"
+    [class.is-audition]="isAuditionPlaying(audio)"
+    [class.is-dragging]="isDragRow(audio.identifier)"
+    [class.is-drop-before]="isDropBefore(audio.identifier, folderId)"
+    (pointerdown)="onAudioRowPointerDown($event, audio, folderId)"
+    (click)="onAudioRowClick($event, audio, folderId)"
+    (dragstart)="onAudioDragStart($event, audio)"
+    (dragend)="onAudioDragEnd()"
+    (dragover)="onLibRowDragOver($event, folderId, audio)"
+    (drop)="onLibRowDrop($event, folderId, audio)"
+    (contextmenu)="onAudioContextMenu($event, audio, folderId)">
+    <i
+      *ngIf="!GuestMode()"
+      class="material-icons jb-drag-handle"
+      aria-hidden="true"
+      [attr.title]="'jukebox.dragHandle' | i18n"
+    >drag_indicator</i>
+    <span
+      class="jb-lib-name"
+      [title]="isUrlAudio(audio) ? audio.url : displayName(audio)"
+    >
+      <i *ngIf="isUrlAudio(audio)" class="material-icons jb-lib-link-icon" [attr.title]="'jukebox.linkBadge' | i18n">link</i>
+      {{ displayName(audio) }}
+    </span>
+    <span class="jb-lib-actions" *ngIf="!GuestMode()"
+      (pointerdown)="$event.stopPropagation()"
+      (click)="$event.stopPropagation()">
+      <button
+        type="button"
+        class="jb-icon-act"
+        [class.is-on]="isAuditionPlaying(audio)"
+        (click)="toggleAudition(audio, $event)"
+        [disabled]="!audio.isReady"
+        [title]="('jukebox.audition' | i18n) + '*'"
+      >
+        <i class="material-icons" aria-hidden="true">{{ isAuditionPlaying(audio) ? 'stop' : 'headphones' }}</i>
+      </button>
+      <button
+        type="button"
+        class="jb-icon-act jb-track-pick"
+        [class.is-on]="hasOwnTrackType(audio, folderId)"
+        (click)="cycleTrackType(audio, folderId, $event)"
+        [disabled]="!audio.isReady"
+        [title]="('jukebox.playToTrack' | i18n) + ': ' + trackName(trackTypeOf(audio, folderId))"
+      >
+        <span class="jb-track-pick-label">{{ trackShortName(trackTypeOf(audio, folderId)) }}</span>
+      </button>
+      <button
+        type="button"
+        class="jb-icon-act"
+        [class.is-on]="isPlayLoop(audio, folderId)"
+        (click)="togglePlayMode(audio, folderId, $event)"
+        [title]="isPlayLoop(audio, folderId) ? ('jukebox.modeLoop' | i18n) : ('jukebox.modeOnce' | i18n)"
+      >
+        <i class="material-icons" aria-hidden="true">{{ isPlayLoop(audio, folderId) ? 'repeat' : 'looks_one' }}</i>
+      </button>
+      <button
+        type="button"
+        class="jb-icon-act"
+        [class.is-on]="isActivelyPlayingOnTrack(audio)"
+        (click)="toggleLibraryPlay(audio, folderId, $event)"
+        [disabled]="!audio.isReady"
+        [title]="libraryPlayTitle(audio)"
+      >
+        <i class="material-icons" aria-hidden="true">{{ libraryPlayIcon(audio) }}</i>
+      </button>
+    </span>
+  </div>
+</ng-template>

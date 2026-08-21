@@ -132,7 +132,7 @@ export class StandImageComponent implements OnInit, OnDestroy {
 
   // TODO: 應共用化；暫定複製貼上兩次以內可接受
   set dialog(dialog) {
-    if (!this.gameCharacter || (this.gameCharacter.location.name === 'table' && !this.gameCharacter.isHideIn) || this.gameCharacter.location.name === 'graveyard') return;
+    if (!this.gameCharacter || (this.gameCharacter.isVisibleOnTable && !this.gameCharacter.isHideIn) || this.gameCharacter.location.name === 'graveyard') return;
     clearTimeout(this._dialogTimeoutId);
     let text = StringUtil.cr(dialog.text);
     const isEmote = StringUtil.isEmote(text);
@@ -358,7 +358,7 @@ export class StandImageComponent implements OnInit, OnDestroy {
   get position(): number {
     if (!this.gameCharacter) return 0;
     let elm = this.standElement.getFirstElementByName('position');
-    return elm && elm.currentValue ? +elm.value :this.gameCharacter.standList.position;
+    return elm && elm.currentValue ? +elm.value : (this.gameCharacter.standList?.position ?? 0);
   }
 
   get adjustY(): number {

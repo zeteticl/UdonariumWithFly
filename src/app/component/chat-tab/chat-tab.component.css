@@ -12,7 +12,451 @@
   height: 100%;
 }
 
+.log.tutorial-mode {
+  justify-content: flex-start;
+  align-items: stretch;
+}
+
 .virtual-scroll-container {
   flex-shrink: 0;
   width: 100%;
+  /* Keep the last line clear of the sticky composer edge / panel padding. */
+  padding-bottom: 6px;
+  box-sizing: border-box;
+}
+
+.tutorial-cards {
+  --tut-ink: #2f261c;
+  --tut-muted: #6b5640;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 6px 12px;
+}
+
+.tutorial-welcome {
+  border-radius: 10px;
+  border: 1px solid #c9a66b;
+  background:
+    linear-gradient(135deg, rgba(255, 248, 235, 0.95), rgba(255, 236, 205, 0.88)),
+    #fff8eb;
+  box-shadow: 0 2px 8px rgba(120, 78, 24, 0.08);
+  overflow: hidden;
+}
+
+.tutorial-welcome-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: linear-gradient(90deg, #8b5a2b, #c4893a);
+  color: #fff8eb;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.tutorial-welcome-label .material-icons {
+  font-size: 16px;
+}
+
+.tutorial-welcome-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--tut-ink);
+  padding: 10px 12px 12px;
+}
+
+.tutorial-card {
+  --card-accent: #5c7a6a;
+  --card-accent-deep: #3d5a4c;
+  --card-soft: #e8f1ec;
+  --card-head: linear-gradient(90deg, #4f7462, #6f9982);
+  --card-border: #9bb5a8;
+  --card-block-border: #c5d7cd;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: rgba(255, 253, 248, 0.92);
+  box-shadow: 0 2px 8px rgba(60, 40, 20, 0.07);
+  overflow: hidden;
+}
+
+.tutorial-card[data-card="ops"] {
+  --card-accent: #3d7ea6;
+  --card-accent-deep: #245d82;
+  --card-soft: #e7f3fa;
+  --card-head: linear-gradient(90deg, #2f6f98, #4f96bc);
+  --card-border: #8eb4cc;
+  --card-block-border: #c5dce8;
+}
+
+.tutorial-card[data-card="scene"] {
+  --card-accent: #b56b2c;
+  --card-accent-deep: #8a4a16;
+  --card-soft: #fff0e0;
+  --card-head: linear-gradient(90deg, #a35a1e, #d0893c);
+  --card-border: #d4a56a;
+  --card-block-border: #ecd2ad;
+}
+
+.tutorial-card[data-card="changelog"] {
+  --card-accent: #6b5b95;
+  --card-accent-deep: #4a3d6d;
+  --card-soft: #f1ecf8;
+  --card-head: linear-gradient(90deg, #5a4a82, #7d6bad);
+  --card-border: #b0a3cf;
+  --card-block-border: #d8d0e8;
+}
+
+.tutorial-card.open {
+  border-color: var(--card-accent);
+  box-shadow: 0 3px 12px rgba(60, 40, 20, 0.12);
+}
+
+.tutorial-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  background: var(--card-head);
+  color: #fffaf3;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.tutorial-card-head:hover {
+  filter: brightness(1.06);
+}
+
+.tutorial-card-icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.tutorial-card-icon .material-icons {
+  font-size: 18px;
+}
+
+.tutorial-card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tutorial-card-title {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+}
+
+.tutorial-card-hint {
+  font-size: 11px;
+  line-height: 1.3;
+  opacity: 0.88;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tutorial-card-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.tutorial-card-toggle .material-icons {
+  font-size: 16px;
+}
+
+.tutorial-card-body {
+  padding: 10px 10px 12px;
+  max-height: min(52vh, 420px);
+  overflow: auto;
+  cursor: text;
+  background:
+    linear-gradient(180deg, var(--card-soft), rgba(255, 253, 248, 0.96) 48px);
+}
+
+.tutorial-block {
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.tutorial-block:last-child {
+  margin-bottom: 0;
+}
+
+.tutorial-block-title {
+  margin: 0 0 6px;
+  padding: 2px 2px 4px;
+  border-bottom: 2px solid var(--card-accent);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--card-accent-deep);
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.tutorial-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--card-block-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.tutorial-lines li {
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--tut-ink);
+  word-break: break-word;
+  border-bottom: 1px solid color-mix(in srgb, var(--card-block-border) 70%, transparent);
+}
+
+.tutorial-lines li:last-child {
+  border-bottom: 0;
+}
+
+.tutorial-lines li.is-bullet {
+  position: relative;
+  padding: 5px 8px 5px 18px;
+  color: #3a2f24;
+}
+
+.tutorial-lines li.is-bullet::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 0.75em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--card-accent);
+}
+
+.tutorial-lines li.is-control {
+  padding: 0;
+}
+
+.tutorial-lines li.is-control:nth-child(odd) {
+  background: color-mix(in srgb, var(--card-soft) 55%, #fff);
+}
+
+.tutorial-lines li.is-control:hover {
+  background: color-mix(in srgb, var(--card-soft) 85%, #fff);
+}
+
+/* Foundry-style: label left, keybinds right
+   @see https://foundryvtt.com/article/controls/ */
+.tut-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.tut-plain {
+  padding: 5px 8px;
+}
+
+.tutorial-lines li.is-control .tut-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(5.5em, max-content);
+  column-gap: 12px;
+  align-items: center;
+  padding: 6px 8px;
+  min-height: 1.9em;
+}
+
+.tut-label {
+  min-width: 0;
+  font-weight: 600;
+  color: #3a2f24;
+  letter-spacing: 0.01em;
+}
+
+.tut-keys {
+  min-width: 0;
+  text-align: right;
+  justify-self: end;
+  line-height: 1.7;
+}
+
+.tut-keys .tut-link {
+  display: inline-block;
+  max-width: min(46vw, 260px);
+  text-align: left;
+  word-break: break-all;
+}
+
+@media (max-width: 420px) {
+  .tutorial-lines li.is-control .tut-row {
+    grid-template-columns: 1fr;
+    row-gap: 4px;
+    padding: 7px 8px;
+  }
+
+  .tut-keys {
+    text-align: left;
+    justify-self: start;
+    padding-top: 1px;
+  }
+}
+
+/* Foundry-style keycaps: gray badge + separate chords
+   @see https://foundryvtt.com/article/controls/ */
+.tut-kbd {
+  display: inline-block;
+  margin: 0 1px;
+  padding: 1px 6px;
+  border: 1px solid #b8b0a4;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #f7f4ef 0%, #e8e2d8 100%);
+  color: #2a241c;
+  font-family: Consolas, "SF Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.45;
+  white-space: nowrap;
+  vertical-align: baseline;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.tut-kbd-sep {
+  display: inline-block;
+  margin: 0 1px;
+  color: var(--tut-muted);
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: baseline;
+}
+
+/* Soft version chip — not a gray keycap */
+.tut-ver {
+  display: inline-block;
+  margin: 0 2px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid #c9b08a;
+  background: #fff4e4;
+  color: #6b4a1e;
+  font-family: Consolas, "SF Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.45;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+.tutorial-card .tut-ver {
+  border-color: color-mix(in srgb, var(--card-accent) 45%, #d8c8b0);
+  background: color-mix(in srgb, var(--card-soft) 80%, #fff);
+  color: var(--card-accent-deep);
+}
+
+.tutorial-welcome .tut-ver {
+  border-color: #c9a66b;
+  background: #fff1d8;
+  color: #7a4e16;
+}
+
+.tut-link {
+  color: #1a5f8a;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+  cursor: pointer;
+}
+
+.tut-link:hover {
+  color: #0d3d5c;
+}
+
+.tutorial-card[data-card="changelog"] .tut-link {
+  color: #4a3d6d;
+}
+
+.tutorial-card[data-card="changelog"] .tut-link:hover {
+  color: #2f2648;
+}
+
+.tutorial-cards.compact .tut-kbd,
+.tutorial-cards.compact .tut-ver {
+  padding: 0 5px;
+  font-size: 10.5px;
+}
+
+.tutorial-cards.compact .tutorial-lines li.is-control .tut-row {
+  column-gap: 8px;
+  padding: 5px 7px;
+}
+
+.tutorial-cards.compact {
+  gap: 8px;
+  padding: 6px 4px 8px;
+}
+
+.tutorial-cards.compact .tutorial-welcome-text,
+.tutorial-cards.compact .tutorial-lines li {
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.tutorial-cards.compact .tutorial-card-head {
+  padding: 8px 10px;
+  gap: 8px;
+}
+
+.tutorial-cards.compact .tutorial-card-title {
+  font-size: 13px;
+}
+
+.tutorial-cards.compact .tutorial-card-icon {
+  width: 26px;
+  height: 26px;
+}
+
+.tutorial-cards.compact .tutorial-card-icon .material-icons {
+  font-size: 16px;
+}
+
+.tutorial-cards.compact .tutorial-block {
+  margin-bottom: 10px;
 }

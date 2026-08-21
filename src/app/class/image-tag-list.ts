@@ -1,7 +1,7 @@
 import { ImageTag } from './image-tag';
 import { SyncObject } from './core/synchronize-object/decorator';
 import { ObjectNode } from './core/synchronize-object/object-node';
-import { InnerXml } from './core/synchronize-object/object-serializer';
+import { InnerXml, ObjectSerializer } from './core/synchronize-object/object-serializer';
 import { ObjectStore } from './core/synchronize-object/object-store';
 import { ImageFile } from './core/file-storage/image-file';
 import { ImageStorage } from './core/file-storage/image-storage';
@@ -137,9 +137,25 @@ export class ImageTagList extends ObjectNode implements InnerXml {
       .join('');
   }
 
+  parseInnerXml(element: Element) {
+    // Tags live in ObjectStore by imagetag_<imageId>, not as children of this
+    // throwaway list (onStoreAdded removes the list from the store).
+    const children = element.children;
+    for (let i = 0; i < children.length; i++) {
+      ObjectSerializer.instance.parseXml(children[i]);
+    }
+  }
+
   static create(images: ImageFile[]): ImageTagList {
     const imageTagList = new ImageTagList();
-    imageTagList.identifiers = images.map(image => image.identifier);
+    const ids: string[] = [];
+    for (const image of images) {
+      if (image?.identifier) ids.push(image.identifier);
+    }
+    for (const tag of ObjectStore.instance.getObjects(ImageTag)) {
+      if (tag.imageIdentifier) ids.push(tag.imageIdentifier);
+    }
+    imageTagList.identifiers = ids;
     return imageTagList;
   }
 }

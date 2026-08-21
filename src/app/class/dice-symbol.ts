@@ -49,16 +49,14 @@ export class DiceSymbol extends TabletopObject {
   get nothingFaces(): string[] { return this.imageDataElement.children.filter(element => (element as DataElement).currentValue == 'nothing').map(element => (element as DataElement).name); }
 
   get ownerName(): string {
-    let object = PeerCursor.findByUserId(this.owner);
-    return object ? object.name : '';
+    return PeerCursor.findByUserId(this.owner)?.name || '';
   }
 
   get ownerColor(): string {
-    let object = PeerCursor.findByUserId(this.owner);
-    return object ? object.color : '#444444';
+    return PeerCursor.findByUserId(this.owner)?.color || '#444444';
   }
   
-  get hasOwner(): boolean { return 0 < this.owner.length; }
+  get hasOwner(): boolean { return !!(this.owner && this.owner.length); }
   get ownerIsOnline(): boolean { return this.hasOwner && Network.peers.some(peer => peer.userId === this.owner && peer.isOpen); }
   get isMine(): boolean { return Network.peer.userId === this.owner; }
   get isVisible(): boolean { return !this.hasOwner || this.isMine || this.isGMMode; }
@@ -66,7 +64,8 @@ export class DiceSymbol extends TabletopObject {
 
   diceRoll(): string {
     let faces = this.faces;
-    this.face = 0 < faces.length ? faces[Math.floor(Math.random() * faces.length)] : '';
+    const next = 0 < faces.length ? faces[Math.floor(Math.random() * faces.length)] : '';
+    this.mutateAppearance(() => { this.face = next; });
     return this.face;
   }
 

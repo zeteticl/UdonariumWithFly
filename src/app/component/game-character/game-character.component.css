@@ -1,5 +1,7 @@
 :host {
   display: block;
+  /* Stack among notes/cards via z-index + shared DOM order (not host preserve-3d). */
+  position: relative;
 }
 
 .is-grab {
@@ -17,6 +19,13 @@
 .is-3d {
   -webkit-transform-style: preserve-3d;
   transform-style: preserve-3d;
+}
+
+.slope-align {
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+  width: 100%;
+  height: 100%;
 }
 /*
 .is-transition {
@@ -97,6 +106,11 @@
   border-color: #80CCEE;
 }
 
+/* Temp copies: violet — distinct from selection cyan (hsla 200°) and normal orange. */
+.pedestal-inner.is-temporary {
+  border-color: #B388FF;
+}
+
 .pedestal-outer {
   backface-visibility: hidden;
   position: absolute;
@@ -122,12 +136,75 @@
   background-color: hsla(60, 100%, 75%, 0.6);
 }
 
+/* Keep temp identity when selected: violet wash + leave purple ring visible. */
+.selected-highlight.is-temporary {
+  background-color: hsla(270, 85%, 72%, 0.5);
+  top: 6px;
+  left: 6px;
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+}
+
+.selected-highlight.is-temporary.is-magnetic {
+  background-color: hsla(280, 70%, 70%, 0.45);
+}
+
 .upright-transform {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   transform: rotateX(-90deg) translateY(-50%);
+}
+
+/* 2D: fill the pedestal; sprite is centered inside the base (not tip-hinged above it). */
+.upright-transform.is-flat-2d {
+  top: 0;
+  bottom: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.upright-transform.is-flat-2d .rotate-frame,
+.upright-transform.is-flat-2d .rotate-inner {
+  width: 100%;
+  height: 100%;
+}
+
+.upright-transform.is-flat-2d .image-box {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Framed tokens: content box = cell footprint; padding/margin grow chrome outward (no recenter). */
+.upright-transform.is-flat-2d .image-box.is-framed-2d {
+  inset: auto;
+  top: 0;
+  left: 0;
+  transform: none;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  overflow: visible;
+}
+
+/* Unframed + pin: pin sits at top:-20px — must not clip under .image-box overflow:hidden. */
+.upright-transform.is-flat-2d .image-box.has-push-pin {
+  overflow: visible;
+}
+
+/* Caption is absolutely in the bottom matte — do not grow the footprint box. */
+.upright-transform.is-flat-2d .image-box.token-frame.polaroid.has-caption {
+  display: block;
+}
+
+.upright-transform.is-flat-2d .image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  vertical-align: middle;
 }
 
 .is-fit-width {
@@ -223,37 +300,67 @@
   bottom: 100%;
   margin-bottom: 2px;
   transform-origin: center bottom;
+  /* Default: one line — do not wrap ordinary names. */
+  white-space: nowrap;
+  z-index: 5;
+}
+/* 2D flat tokens: name sits just above the sprite without 3D billboard pitch. */
+.upright-transform.is-flat-2d .name-tag {
+  bottom: calc(100% + 2px);
+  margin-bottom: 0;
+}
+/* Photo/card frames grow outside the cell — keep the name above the chrome, not on the art. */
+.upright-transform.is-flat-2d .name-tag.is-above-frame {
+  bottom: calc(100% + 28px);
+}
+/* Status icon grid may use multiple rows; name text still inherits nowrap unless wrap class. */
+.name-tag.has-status-icons {
   white-space: normal;
 }
-.name-tag:not(.has-status-icons) {
+.name-tag.has-status-icons .name-text {
   white-space: nowrap;
 }
-.name-tag-row {
+/* Only very long names (see nameTagWrap) wrap under a max-width ceiling. */
+.name-tag.is-name-wrap {
+  white-space: normal;
+  text-align: center;
+  overflow-wrap: break-word;
+}
+.name-tag.is-name-wrap .name-text {
+  white-space: normal;
+}
+.name-tag-stack {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px 4px;
+  gap: 2px;
   max-width: 100%;
+  width: max-content;
+}
+.name-tag.is-name-wrap .name-tag-stack {
+  width: auto;
 }
 .name-tag .name-text {
   display: inline-block;
   vertical-align: middle;
   max-width: 100%;
+  overflow: visible;
+  text-overflow: clip;
 }
+/* At least two status badges per row above the name. */
 .status-icons-inline {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, auto);
   align-items: center;
   justify-content: center;
   gap: 2px;
-  max-width: 100%;
+  pointer-events: auto;
 }
 .status-icons-inline .status-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 auto;
   min-width: 18px;
   height: 18px;
   padding: 0 2px;
@@ -262,6 +369,8 @@
   color: #111;
   box-shadow: 0 0 0 1px rgba(0,0,0,0.35);
   line-height: 1;
+  pointer-events: auto;
+  cursor: context-menu;
 }
 /* Always visible — override component-wide hover-only material-icons rule. */
 .status-icons-inline .status-badge .material-icons.status-icon {
@@ -629,4 +738,106 @@ p.is-wisper .face-icon {
 @keyframes floor-ring-spin {
   from { transform: translateZ(0.05px) rotate(0deg); }
   to { transform: translateZ(0.05px) rotate(360deg); }
+}
+
+/* Combat turn marks — high-contrast underfoot rings (readable on wood / cork / dark maps). */
+.combat-turn-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 148%;
+  height: 148%;
+  margin-left: -74%;
+  margin-top: -74%;
+  border-radius: 50%;
+  box-sizing: border-box;
+  pointer-events: none;
+  background: transparent;
+  transform: translateZ(0.03px);
+  z-index: 2;
+}
+
+/* Current turn: warm gold band + white rim + glow (pulse brightness, not opacity fade). */
+.combat-turn-ring.is-current {
+  border: 5px solid #ffc14a;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.95),
+    0 0 0 5px rgba(20, 12, 0, 0.55),
+    0 0 16px 4px rgba(255, 180, 40, 0.85),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+  animation: combat-turn-glow 1.5s ease-in-out infinite;
+}
+
+/* Next turn: cool cyan dashed preview — still solid enough to spot at a glance. */
+.combat-turn-ring.is-next {
+  border: 4px dashed #4ec3ff;
+  opacity: 0.92;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.7),
+    0 0 0 4px rgba(0, 40, 70, 0.35),
+    0 0 10px 2px rgba(78, 195, 255, 0.55);
+  animation: combat-next-spin 6s linear infinite;
+}
+
+.combat-turn-ring.is-flat-2d {
+  /* Peek past photo/polaroid chrome. */
+  width: 168%;
+  height: 168%;
+  margin-left: -84%;
+  margin-top: -84%;
+  /* Above upright-transform (Z=0) and push-pin (Z=4). */
+  transform: translateZ(6px);
+  z-index: 12;
+}
+
+.combat-turn-ring.is-flat-2d.is-over-frame {
+  /* Framed tokens: ring must sit clearly above matte / border chrome. */
+  transform: translateZ(8px);
+  z-index: 14;
+}
+
+.combat-turn-ring.is-flat-2d.is-current {
+  border-width: 6px;
+}
+
+.combat-turn-ring.is-flat-2d.is-next {
+  animation-name: combat-next-spin-2d;
+}
+
+.combat-turn-ring.is-flat-2d.is-over-frame.is-next {
+  animation-name: combat-next-spin-2d-frame;
+}
+
+@keyframes combat-turn-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 0 2px rgba(255, 255, 255, 0.95),
+      0 0 0 5px rgba(20, 12, 0, 0.55),
+      0 0 14px 3px rgba(255, 180, 40, 0.7),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(255, 255, 255, 1),
+      0 0 0 6px rgba(20, 12, 0, 0.45),
+      0 0 22px 7px rgba(255, 200, 60, 1),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+    filter: brightness(1.12);
+  }
+}
+
+@keyframes combat-next-spin {
+  from { transform: translateZ(0.03px) rotate(0deg); }
+  to { transform: translateZ(0.03px) rotate(360deg); }
+}
+
+@keyframes combat-next-spin-2d {
+  from { transform: translateZ(6px) rotate(0deg); }
+  to { transform: translateZ(6px) rotate(360deg); }
+}
+
+@keyframes combat-next-spin-2d-frame {
+  from { transform: translateZ(8px) rotate(0deg); }
+  to { transform: translateZ(8px) rotate(360deg); }
 }

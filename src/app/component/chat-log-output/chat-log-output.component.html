@@ -1,4 +1,4 @@
-<div class="settings-ui settings-layout" *ngIf="!GuestMode()">
+<div class="settings-ui dense settings-layout" *ngIf="!GuestMode()" appFitPanel [fitMinHeight]="220" [fitMaxHeight]="480">
   <aside class="settings-aside">
     <select
       #select
@@ -8,7 +8,7 @@
       (change)="onChangeSelectTabs()"
       [disabled]="isAllTabs"
     >
-      <option *ngFor="let chatTab of chatTabs" [value]="chatTab.identifier">{{ chatTab.name }}</option>
+      <option *ngFor="let chatTab of chatTabs" [value]="chatTab.identifier">{{ tabLabel(chatTab) }}</option>
     </select>
   </aside>
 

@@ -1,0 +1,68 @@
+:host { display: block; height: 100%; }
+
+.scenario-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 100%;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-bottom: 1px solid #e2d3bf;
+  cursor: pointer;
+}
+
+.list-item:hover {
+  background: rgba(92, 70, 48, 0.06);
+}
+
+.list-item.is-selected {
+  background: rgba(92, 70, 48, 0.08);
+  box-shadow: inset 0 -2px 0 #5c4630;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--udon-control-border, #c4b29a);
+  border-radius: var(--udon-control-radius, 4px);
+  padding: 4px 6px;
+  background: var(--udon-control-bg, #fff);
+}
+
+.sender-character {
+  margin-top: 4px;
+}
+
+.body-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.body-row textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.send-selection {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  align-self: flex-start;
+}
+
+.hint.warn { color: #a94442; }

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Card } from '@udonarium/card';
 import { CardStack } from '@udonarium/card-stack';
-import { ImageContext, ImageFile } from '@udonarium/core/file-storage/image-file';
+import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { DiceSymbol, DiceType } from '@udonarium/dice-symbol';
@@ -12,23 +12,108 @@ import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { TableSelecter } from '@udonarium/table-selecter';
 import { Terrain } from '@udonarium/terrain';
 import { TextNote } from '@udonarium/text-note';
+import { reconcileLayerStack } from '@udonarium/tabletop-object-util';
 
-import { ContextMenuAction } from './context-menu.service';
+import { ContextMenuAction, ContextMenuSeparator } from './context-menu.service';
+import {
+  ensureClueBoardBackground as ensureClueBoardBackgroundSeed,
+  makeDefaultTables,
+  seedDefaultRoomObjects,
+} from './default-room/default-room.seed';
 import { I18nService } from './i18n.service';
 import { PointerCoordinate } from './pointer-device.service';
+import { TabletopKeyboardService } from './tabletop-keyboard.service';
+import { TabletopSelectionService } from './tabletop-selection.service';
 
 import { ImageTag } from '@udonarium/image-tag';
 import { RangeArea } from '@udonarium/range';
+import { TabletopObject } from '@udonarium/tabletop-object';
+
+export {
+  DEFAULT_BG_2D_IMAGE_ID,
+  DEFAULT_BG_3D_IMAGE_ID,
+  DEFAULT_TABLE_2D_ID,
+  DEFAULT_TABLE_3D_ID,
+} from './default-room/default-room.ids';
 
 @Injectable({
   providedIn: 'root'
 })
 export class TabletopActionService {
 
-  constructor(private i18n: I18nService) { }
+  constructor(
+    private i18n: I18nService,
+    private keyboard: TabletopKeyboardService,
+    private selectionService: TabletopSelectionService,
+  ) { }
 
   GuestMode() {
     return Network.GuestMode();
+  }
+
+  /** Right-click: select the target when it was not already in the selection. */
+  ensureObjectSelected(object: TabletopObject): void {
+    this.keyboard.ensureObjectSelected(object);
+  }
+
+  /** Windows-style Copy / Cut for object context menus (requires a selection). */
+  makeClipboardMenuActions(): ContextMenuAction[] {
+    if (this.GuestMode()) return [];
+    const hasSelection = () => this.selectionService.size > 0 || this.keyboard.hasSceneSelection;
+    return [
+      {
+        name: this.i18n.t('edit.copy'),
+        hotkey: 'C',
+        disabled: !hasSelection(),
+        action: () => { this.keyboard.copySelection(); },
+      },
+      {
+        name: this.i18n.t('edit.cut'),
+        hotkey: 'X',
+        disabled: !hasSelection(),
+        action: () => { this.keyboard.cutSelection(); },
+      },
+    ];
+  }
+
+  /** Windows-style Paste for empty-table (and similar) context menus. */
+  makePasteMenuAction(): ContextMenuAction | null {
+    if (this.GuestMode()) return null;
+    return {
+      name: this.i18n.t('edit.paste'),
+      hotkey: 'V',
+      disabled: !this.keyboard.hasClipboard,
+      action: () => { this.keyboard.pasteAtPointer(); },
+    };
+  }
+
+  /** Paste as temporary Token (Ctrl+Shift+V); only when clipboard has a character/Token. */
+  makePasteTemporaryMenuAction(): ContextMenuAction | null {
+    if (this.GuestMode()) return null;
+    if (!this.keyboard.hasCharacterClipboard) return null;
+    return {
+      name: this.i18n.t('edit.pasteTemporary'),
+      hotkey: '⇧V',
+      disabled: !this.keyboard.hasClipboard,
+      action: () => { this.keyboard.pasteTemporaryAtPointer(); },
+    };
+  }
+
+  /** Paste + paste-temporary actions for empty-table menus. */
+  makePasteMenuActions(): ContextMenuAction[] {
+    const actions: ContextMenuAction[] = [];
+    const paste = this.makePasteMenuAction();
+    const pasteTemp = this.makePasteTemporaryMenuAction();
+    if (paste) actions.push(paste);
+    if (pasteTemp) actions.push(pasteTemp);
+    return actions;
+  }
+
+  /** Prepend Copy / Cut (+ separator) for object context menus. */
+  withClipboardMenuPrefix(actions: ContextMenuAction[]): ContextMenuAction[] {
+    const clip = this.makeClipboardMenuActions();
+    if (!clip.length) return actions;
+    return [...clip, ContextMenuSeparator, ...actions];
   }
 
   createGameCharacter(position: PointerCoordinate): GameCharacter {
@@ -37,6 +122,8 @@ export class TabletopActionService {
     character.location.x = position.x - 25;
     character.location.y = position.y - 25;
     character.posZ = position.z;
+    character.setLocation('table');
+    reconcileLayerStack();
     return character;
   }
 
@@ -51,6 +138,7 @@ export class TabletopActionService {
     tableMask.posZ = position.z;
 
     viewTable.appendChild(tableMask);
+    reconcileLayerStack();
     return tableMask;
   }
 
@@ -82,8 +170,13 @@ export class TabletopActionService {
     textNote.location.x = position.x;
     textNote.location.y = position.y;
     textNote.posZ = position.z;
+    // 2D boards: notes are always face-up on the table (never billboard upright).
+    if (TableSelecter.instance.viewTable?.is2DMode) textNote.isUpright = false;
+    textNote.setLocation('table');
+    reconcileLayerStack();
     return textNote;
   }
+
 
   createDiceSymbol(position: PointerCoordinate, name: string, diceType: DiceType, imagePathPrefix: string): DiceSymbol {
     if (this.GuestMode()) return;
@@ -115,6 +208,7 @@ export class TabletopActionService {
     diceSymbol.location.x = position.x - 25;
     diceSymbol.location.y = position.y - 25;
     diceSymbol.posZ = position.z;
+    diceSymbol.setLocation('table');
     return diceSymbol;
   }
 
@@ -139,6 +233,8 @@ export class TabletopActionService {
     card.location.x = position.x - 25;
     card.location.y = position.y - 25;
     card.posZ = position.z;
+    card.setLocation('table');
+    reconcileLayerStack();
     return card;
   }
 
@@ -178,6 +274,7 @@ export class TabletopActionService {
     cardStack.location.x = position.x - 25;
     cardStack.location.y = position.y - 25;
     cardStack.posZ = position.z;
+    cardStack.setLocation('table');
 
     let back: string = './assets/images/trump/z02.gif';
     if (!ImageStorage.instance.get(back)) {
@@ -209,6 +306,7 @@ export class TabletopActionService {
       //let card = Card.create('卡牌', url, back);
       cardStack.putOnBottom(card);
     }
+    reconcileLayerStack();
     return cardStack;
   }
 
@@ -237,95 +335,29 @@ export class TabletopActionService {
     range.location.y = position.y;
     range.posZ = position.z;
     range.type = typeName;
+    range.setLocation('table');
     let data = range.commonDataElement.getFirstElementByName('opacity');
     //console.log( '射程範圍TEST' + data);
     data.currentValue = 60;
     return range;
   }
 
-  makeDefaultTable() {
-    let gameTable = new GameTable('gameTable');
-    let testBgFile: ImageFile = null;
-    let bgFileContext = ImageFile.createEmpty('testTableBackgroundImage_image').toContext();
-    bgFileContext.url = './assets/images/BG10a_80.jpg';
-    testBgFile = ImageStorage.instance.add(bgFileContext);
-    ImageTag.create(testBgFile.identifier).tag = '*default ' + this.i18n.t('char.table');
-    gameTable.name = this.i18n.t('action.firstTable');
-    gameTable.imageIdentifier = testBgFile.identifier;
-    gameTable.width = 20;
-    gameTable.height = 15;
-    gameTable.initialize();
+  /** @see service/default-room/default-room.seed.ts */
+  ensureClueBoardBackground() {
+    ensureClueBoardBackgroundSeed(key => this.i18n.t(key));
+  }
 
-    TableSelecter.instance.viewTableIdentifier = gameTable.identifier;
+  makeDefaultTable() {
+    makeDefaultTables(key => this.i18n.t(key));
   }
 
   makeDefaultTabletopObjects() {
-    let testCharacter: GameCharacter = null;
-    let testFile: ImageFile = null;
-    let fileContext: ImageContext = null;
-
-    testCharacter = new GameCharacter('testCharacter_1');
-    fileContext = ImageFile.createEmpty('testCharacter_1_image').toContext();
-    fileContext.url = './assets/images/mon_052.gif';
-    testFile = ImageStorage.instance.add(fileContext);
-    ImageTag.create(testFile.identifier).tag = '*default ' + this.i18n.t('action.newCharacter');
-    testCharacter.location.x = 5 * 50;
-    testCharacter.location.y = 9 * 50;
-    testCharacter.initialize();
-    testCharacter.createTestGameDataElement(this.i18n.t('sample.monsterA'), 1, testFile.identifier);
-
-    testCharacter = new GameCharacter('testCharacter_2');
-    testCharacter.location.x = 8 * 50;
-    testCharacter.location.y = 8 * 50;
-    testCharacter.initialize();
-    testCharacter.createTestGameDataElement(this.i18n.t('sample.monsterB'), 1, testFile.identifier);
-
-    testCharacter = new GameCharacter('testCharacter_3');
-    fileContext = ImageFile.createEmpty('testCharacter_3_image').toContext();
-    fileContext.url = './assets/images/mon_128.gif';
-    testFile = ImageStorage.instance.add(fileContext);
-    ImageTag.create(testFile.identifier).tag = '*default ' + this.i18n.t('action.newCharacter');
-    testCharacter.location.x = 4 * 50;
-    testCharacter.location.y = 2 * 50;
-    testCharacter.initialize();
-    testCharacter.createTestGameDataElement(this.i18n.t('sample.monsterC'), 3, testFile.identifier);
-
-    testCharacter = new GameCharacter('testCharacter_4');
-    fileContext = ImageFile.createEmpty('testCharacter_4_image').toContext();
-    fileContext.url = './assets/images/mon_150.gif';
-    testFile = ImageStorage.instance.add(fileContext);
-    ImageTag.create(testFile.identifier).tag = '*default ' + this.i18n.t('action.newCharacter');
-    testCharacter.location.x = 6 * 50;
-    testCharacter.location.y = 11 * 50;
-    testCharacter.initialize();
-    testCharacter.createTestGameDataElement(this.i18n.t('sample.characterA'), 1, testFile.identifier);
-
-    testCharacter = new GameCharacter('testCharacter_5');
-    fileContext = ImageFile.createEmpty('testCharacter_5_image').toContext();
-    fileContext.url = './assets/images/mon_211.gif';
-    testFile = ImageStorage.instance.add(fileContext);
-    ImageTag.create(testFile.identifier).tag = '*default ' + this.i18n.t('action.newCharacter');
-    testCharacter.location.x = 12 * 50;
-    testCharacter.location.y = 12 * 50;
-    testCharacter.initialize();
-    testCharacter.createTestGameDataElement(this.i18n.t('sample.characterB'), 1, testFile.identifier);
-
-    testCharacter = new GameCharacter('testCharacter_6');
-    fileContext = ImageFile.createEmpty('testCharacter_6_image').toContext();
-    fileContext.url = './assets/images/mon_135.gif';
-    testFile = ImageStorage.instance.add(fileContext);
-
-    ImageTag.create(testFile.identifier).tag = '*default ' + this.i18n.t('action.newCharacter');
-    testCharacter.initialize();
-    testCharacter.location.x = 5 * 50;
-    testCharacter.location.y = 13 * 50;
-    testCharacter.initialize();
-    testCharacter.createTestGameDataElement(this.i18n.t('sample.characterC'), 1, testFile.identifier);
+    seedDefaultRoomObjects(key => this.i18n.t(key));
   }
 
   makeDefaultContextMenuActions(position: PointerCoordinate): ContextMenuAction[] {
     if (this.GuestMode()) return [];
-    return [
+    const actions: ContextMenuAction[] = [
       this.getCreateCharacterMenu(position),
       this.getCreateTableMaskMenu(position),
       this.getCreateTerrainMenu(position),
@@ -335,6 +367,7 @@ export class TabletopActionService {
       this.getCreateDiceSymbolMenu(position),
       this.getCreateRangeMenu(position),
     ];
+    return actions;
   }
 
   private getCreateCharacterMenu(position: PointerCoordinate): ContextMenuAction {
@@ -373,6 +406,7 @@ export class TabletopActionService {
       }
     }
   }
+
 
   private getCreateBlankCardMenu(position: PointerCoordinate): ContextMenuAction {
     return {

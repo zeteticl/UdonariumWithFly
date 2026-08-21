@@ -1,23 +1,29 @@
-import { Component, ElementRef, EventEmitter, Input, NgZone, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, NgZone, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { ChatMessage } from '@udonarium/chat-message';
-import { ImageFile } from '@udonarium/core/file-storage/image-file';
+import { ImageFile, ImageState } from '@udonarium/core/file-storage/image-file';
+import { IMAGE_SOURCE_MAX_BYTES } from '@udonarium/core/file-storage/image-normalize';
+import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { PeerContext } from '@udonarium/core/system/network/peer-context';
 import { ResettableTimeout } from '@udonarium/core/system/util/resettable-timeout';
 import { DiceBot } from '@udonarium/dice-bot';
+import { popupCharacterChatBalloon } from '@udonarium/chat-balloon';
+import { CharacterToken } from '@udonarium/character-token';
 import { GameCharacter } from '@udonarium/game-character';
 import { GuestSession } from '@udonarium/guest-session';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { TextViewComponent } from 'component/text-view/text-view.component';
+import { FileSelecterComponent } from 'component/file-selecter/file-selecter.component';
 import { BatchService } from 'service/batch.service';
 import { ChatMessageService } from 'service/chat-message.service';
 import { I18nService } from 'service/i18n.service';
+import { ModalService } from 'service/modal.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 
 import { ContextMenuSeparator, ContextMenuService, ContextMenuAction, contextMenuToggleCheck } from 'service/context-menu.service';
-import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
+import { CharacterSettingsComponent } from 'component/character-settings/character-settings.component';
 import { ChatPaletteComponent } from 'component/chat-palette/chat-palette.component';
 
 import { StringUtil } from '@udonarium/core/system/util/string-util';
@@ -32,6 +38,8 @@ import { DiceRollTableList } from '@udonarium/dice-roll-table-list';
 import { DataElement } from '@udonarium/data-element';
 import { CharacterFxMenuService } from 'service/character-fx-menu.service';
 import { anyImageEffect, clearImageEffects, imageEffectFilter, imageEffectOpacity, imageEffectTransform, packImageFx } from '@udonarium/table-fx/image-effect';
+
+import * as localForage from 'localforage';
 
 interface StandGroup {
   name: string,
@@ -52,6 +60,18 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
 
   @Input() onlyCharacters: boolean = false;
   @Input() chatTabidentifier: string = '';
+  /**
+   * Mobile chat-window: when false, hide dicebot (follows the tune panel).
+   * null = always show (palette / unbound).
+   */
+  @Input() mobileExtrasOpen: boolean | null = null;
+
+  /** Collapse dicebot only under mobile layout when extras panel is closed. */
+  get isDiceBotCollapsed(): boolean {
+    if (this.mobileExtrasOpen !== false) return false;
+    return typeof document !== 'undefined'
+      && document.documentElement.classList.contains('udon-mobile-layout');
+  }
   get isUseStandImageOnChatTab(): boolean {
     const chatTab = <ChatTab>ObjectStore.instance.get(this.chatTabidentifier);
     return chatTab && chatTab.isUseStandImage;
@@ -109,7 +129,15 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
     characterIdentifier?: string, 
     standIdentifier?: string, 
     standName?: string,
-    isUseStandImage?: boolean }>();
+    isUseStandImage?: boolean,
+    attachedImageIdentifiers?: string[] }>();
+
+  /** Pending chat attachments (not yet sent). */
+  pendingAttachedImages: ImageFile[] = [];
+  isDragOverAttach = false;
+  isAttachingImages = false;
+  private static readonly MAX_CHAT_IMAGE_BYTES = IMAGE_SOURCE_MAX_BYTES;
+  private static readonly MAX_PENDING_ATTACHMENTS = 8;
 
   get isDirect(): boolean { return this.sendTo != null && this.sendTo.length ? true : false }
   gameHelp: string|string[] = '';
@@ -129,6 +157,11 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
       return object;
     }
     return null;
+  }
+
+  /** Map Token cosmetics when the speaker is on the table; else sheet seed. */
+  get appearanceHost(): GameCharacter | CharacterToken | null {
+    return CharacterToken.appearanceHostFor(this.character);
   }
 
   get isGMMode(): boolean { return !!PeerCursor.myCursor?.isGMMode; }
@@ -168,6 +201,13 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
   get hasStand(): boolean {
     if (!this.character || !this.character.standList) return false;
     return this.character.standList.standElements.length > 0;
+  }
+
+  get standPosition(): number {
+    return this.character?.standList?.position ?? 0;
+  }
+  set standPosition(position: number) {
+    if (this.character?.standList) this.character.standList.position = position;
   }
 
   get standNameList(): string[] {
@@ -226,7 +266,11 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   set paletteColor(color: string) {
-    this.character.chatPalette.color = color ? color : PeerCursor.CHAT_TRANSPARENT_COLOR;
+    if (!this.character) return;
+    // Do not create an empty palette just to set color (sync race).
+    const palette = this.character.findChatPalette();
+    if (!palette) return;
+    palette.color = color ? color : PeerCursor.CHAT_TRANSPARENT_COLOR;
   }
 
   get myColor(): string {
@@ -260,7 +304,10 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
       this.shouldUpdateCharacterList = false;
       this._gameCharacters = ObjectStore.instance
         .getObjects<GameCharacter>(GameCharacter)
-        .filter(character => (this.allowsChat(character) || (this.character && this.character.identifier === character.identifier)));
+        .filter(character =>
+          !character.isTemporaryCopy
+          && (this.allowsChat(character) || (this.character && this.character.identifier === character.identifier))
+        );
     }
     return this._gameCharacters;
   }
@@ -284,23 +331,28 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   get charImageFilter(): string | null {
-    return this.character ? imageEffectFilter(this.character) : null;
+    const host = this.appearanceHost;
+    return host ? imageEffectFilter(host) : null;
   }
   get charImageOpacity(): number | null {
-    return this.character ? imageEffectOpacity(this.character) : null;
+    const host = this.appearanceHost;
+    return host ? imageEffectOpacity(host) : null;
   }
   get charImageTransform(): string | null {
-    return this.character ? imageEffectTransform(this.character) : null;
+    const host = this.appearanceHost;
+    return host ? imageEffectTransform(host) : null;
   }
 
   constructor(
     private ngZone: NgZone,
+    private changeDetector: ChangeDetectorRef,
     public chatMessageService: ChatMessageService,
     private batchService: BatchService,
     private panelService: PanelService,
     private pointerDeviceService: PointerDeviceService,
     private contextMenuService: ContextMenuService,
     private characterFxMenu: CharacterFxMenuService,
+    private modalService: ModalService,
     private i18n: I18nService,
   ) { }
 
@@ -309,6 +361,7 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
       .on('MESSAGE_ADDED', event => {
         if (event.data.tabIdentifier !== this.chatTabidentifier) return;
         let message = ObjectStore.instance.get<ChatMessage>(event.data.messageIdentifier);
+        if (!message) return;
         let peerCursor = ObjectStore.instance.getObjects<PeerCursor>(PeerCursor).find(obj => obj.userId === message.from);
         let sendFrom = peerCursor ? peerCursor.peerId : '?';
         if (this.writingPeers.has(sendFrom)) {
@@ -524,7 +577,11 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
     //if (!this.text.length) return;
     if (event && event.keyCode !== 13) return;
     if (!this.isAllowsChat) return;
+    if (this.isAttachingImages) return;
     if (!this.sendFrom.length) this.sendFrom = this.myPeer.identifier;
+
+    const attachedImageIdentifiers = this.pendingAttachedImages.map(img => img.identifier);
+    if (!StringUtil.cr(this.text).trim() && attachedImageIdentifiers.length === 0) return;
     
     let text = this.text;
     let targetCharacter = this.character;
@@ -548,6 +605,7 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     this.text = '';
+    this.pendingAttachedImages = [];
     this.previousWritingLength = this.text.length;
     const textArea: HTMLTextAreaElement = this.textAreaElementRef.nativeElement;
     if (textArea) textArea.value = '';
@@ -566,7 +624,7 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
       } else if (text != '' && StringUtil.toHalfWidth(text).startsWith(':')) {
         if (!targetCharacter) {
           this.chatMessageService.sendOperationLog(this.i18n.t('chat.op.notCharacter'));
-        } else {
+        } else if (targetCharacter.chatPalette) {
           const commandsInfo = StringUtil.parseCommands(targetCharacter.chatPalette.evaluate(text.substring(1), targetCharacter.rootDataElement));
           text = commandsInfo.endString;
           if (commandsInfo.commands.length) {
@@ -772,8 +830,10 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
           }
         }
       }
-      if (targetCharacter) {
+      if (targetCharacter?.chatPalette) {
         text = targetCharacter.chatPalette.evaluate(text, targetCharacter.rootDataElement, delayRefs);
+      }
+      if (targetCharacter) {
         // 立繪（stand）
         // 曾考慮空字串也觸發立繪較方便，但送出訊息後再按 Enter 易誤觸，故僅在有指定時觸發
         if (StringUtil.cr(text).trim() || standName) {
@@ -847,68 +907,11 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
       text = text.slice(0, text.length - matchMostLongText.length);
       // 💭
       if (this.isUseChatBalloon && isUseStandImageOnChatTab && targetCharacter && StringUtil.cr(text).trim()) {
-        // CHOICE 指令的引數不當作 💭
-        const regArray = /^(([sＳｓ][rＲｒ][eＥｅ][pＰｐ][eＥｅ][aＡａ][tＴｔ]|[rＲｒ][eＥｅ][pＰｐ][eＥｅ][aＡａ][tＴｔ]|[sＳｓ][rＲｒ][eＥｅ][pＰｐ]|[rＲｒ][eＥｅ][pＰｐ]|[sＳｓ][xＸｘ]|[xＸｘ])?([\d０-９]+)?[ 　]+)?([\s\S]*)?/igm.exec(text);
-        let dialogText = (regArray[4] != null) ? regArray[4].trim() : text.trim();
-        let choiceMatch;
-        if (/^([sＳｓ]?[cＣｃ][hＨｈ][oＯｏ][iＩｉ][cＣｃ][eＥｅ][\d０-９]*)[ 　]+([^ 　]*)/ig.test(dialogText)) {
-          dialogText = '';
-        } else if ((choiceMatch = /^([sＳｓ]?[cＣｃ][hＨｈ][oＯｏ][iＩｉ][cＣｃ][eＥｅ][\d０-９]*[\[［][^\]］]+[\]］])/ig.exec(dialogText)) 
-                || (choiceMatch = /^([sＳｓ]?[cＣｃ][hＨｈ][oＯｏ][iＩｉ][cＣｃ][eＥｅ][\d０-９]*[\(（][^\)）]+[\)）])/ig.exec(dialogText))) {
-          dialogText = dialogText.slice(choiceMatch[1].length)
-        }
-        //console.log(dialogText)
-        //💭 改為使用 Event 功能
-        const dialogRegExp = /「+([\s\S]+?)」/gm;
-        // const dialogRegExp = /(?:^|[^\￥])「([\s\S]+?[^\￥])」/gm; 
-        // TODO: 應正確解析
-        let match;
-        let dialog = [];
-        if ((match = dialogRegExp.exec(dialogText)) !== null) {
-          dialog.push(match[1]);
-        }
-        if (dialog.length === 0) {
-          const emoteTest = dialogText.split(/[\s　]/).slice(-1)[0];
-          if (StringUtil.isEmote(emoteTest)) {
-            dialog.push(emoteTest);
-          }
-        }
-        if (dialog.length > 0) {
-          // 連續 💭 暫時停用（能否同時顯示多個？）
-          //const dialogs = [...dialog, null];
-          //const gameCharacter = this.character;
-          //const color = this.color;
-          
-          const stamp = Date.now();
-          const dialogObj = {
-            characterIdentifier: targetCharacter.identifier, 
-            text: dialog.join("\n\n"),
-            faceIconIdentifier: (isUseFaceIcon && targetCharacter.faceIcon) ? targetCharacter.faceIcon.identifier : null,
-            color: color,
-            secret: sendTo ? true : false,
-            stamp,
-          };
-          if (dialogObj.secret) {
-            const targetPeer = ObjectStore.instance.get<PeerCursor>(sendTo);
-            if (targetPeer) {
-              if (targetPeer.peerId != PeerCursor.myCursor.peerId) EventSystem.call('POPUP_CHAT_BALLOON', dialogObj, targetPeer.peerId);
-              EventSystem.call('POPUP_CHAT_BALLOON', dialogObj, PeerCursor.myCursor.peerId);
-            }
-          } else {
-            // SyncVar reaches all peers reliably (same path as HP / position).
-            targetCharacter.openChatDialog({
-              text: dialogObj.text,
-              color: dialogObj.color,
-              faceIconIdentifier: dialogObj.faceIconIdentifier || '',
-              isEmote: StringUtil.isEmote(dialogObj.text),
-              stamp,
-            });
-            EventSystem.call('POPUP_CHAT_BALLOON', dialogObj);
-          }
-        } else if (StringUtil.cr(text).trim() && (targetCharacter.text || targetCharacter.chatDialogStamp)) {
-          targetCharacter.clearChatDialog();
-          EventSystem.call('FAREWELL_CHAT_BALLOON', { characterIdentifier: targetCharacter.identifier });
-        }
+        popupCharacterChatBalloon(targetCharacter, text, {
+          color,
+          faceIconIdentifier: (isUseFaceIcon && targetCharacter.faceIcon) ? targetCharacter.faceIcon.identifier : null,
+          sendTo: sendTo || undefined,
+        });
       }
 
       if (PeerCursor.isGMHold && !sendTo && !PeerCursor.myCursor.isGMMode && /GM(?:モード)?にな(?:ります|る)/i.test(StringUtil.toHalfWidth(text))) {
@@ -917,7 +920,7 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
         EventSystem.trigger('CHANGE_GM_MODE', null);
       }
 
-      if (StringUtil.cr(text).trim()) {
+      if (StringUtil.cr(text).trim() || attachedImageIdentifiers.length > 0) {
         this.chat.emit({
           text: text,
           gameType: gameType,
@@ -933,17 +936,124 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
           characterIdentifier: targetCharacter ? targetCharacter.identifier : null,
           standIdentifier: standIdentifier,
           standName: standName,
-          isUseStandImage: (isUseStandImage && isUseStandImageOnChatTab)
+          isUseStandImage: (isUseStandImage && isUseStandImageOnChatTab),
+          attachedImageIdentifiers
         });
       }
     })();
+  }
+
+  async onPaste(e: ClipboardEvent) {
+    if (!this.isAllowsChat || !e.clipboardData) return;
+    const files = this.imageFilesFromDataTransfer(e.clipboardData);
+    if (!files.length) return;
+    e.preventDefault();
+    await this.attachImageFiles(files);
+  }
+
+  onDragOverAttach(e: DragEvent) {
+    if (!this.isAllowsChat || !this.hasImageInDataTransfer(e.dataTransfer)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    this.isDragOverAttach = true;
+  }
+
+  onDragLeaveAttach(e: DragEvent) {
+    e.preventDefault();
+    this.isDragOverAttach = false;
+  }
+
+  async onDropAttach(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.isDragOverAttach = false;
+    if (!this.isAllowsChat || !e.dataTransfer) return;
+    const files = this.imageFilesFromDataTransfer(e.dataTransfer);
+    if (!files.length) return;
+    await this.attachImageFiles(files);
+  }
+
+  removePendingAttachment(identifier: string) {
+    this.pendingAttachedImages = this.pendingAttachedImages.filter(img => img.identifier !== identifier);
+  }
+
+  private hasImageInDataTransfer(dt: DataTransfer | null): boolean {
+    if (!dt) return false;
+    if (dt.items) {
+      for (let i = 0; i < dt.items.length; i++) {
+        if (dt.items[i].kind === 'file' && (dt.items[i].type || '').startsWith('image/')) return true;
+      }
+    }
+    if (dt.files) {
+      for (let i = 0; i < dt.files.length; i++) {
+        if ((dt.files[i].type || '').startsWith('image/')) return true;
+      }
+    }
+    return false;
+  }
+
+  private imageFilesFromDataTransfer(dt: DataTransfer): File[] {
+    const out: File[] = [];
+    const seen = new Set<string>();
+    if (dt.items) {
+      for (let i = 0; i < dt.items.length; i++) {
+        const item = dt.items[i];
+        if (item.kind !== 'file' || !(item.type || '').startsWith('image/')) continue;
+        const file = item.getAsFile();
+        if (!file) continue;
+        const key = `${file.name}:${file.size}:${file.lastModified}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(file);
+      }
+    }
+    if (!out.length && dt.files) {
+      for (let i = 0; i < dt.files.length; i++) {
+        const file = dt.files[i];
+        if ((file.type || '').startsWith('image/')) out.push(file);
+      }
+    }
+    return out;
+  }
+
+  private async attachImageFiles(files: File[]) {
+    if (!files.length) return;
+    this.isAttachingImages = true;
+    try {
+      for (const file of files) {
+        if (this.pendingAttachedImages.length >= ChatInputComponent.MAX_PENDING_ATTACHMENTS) {
+          console.warn(this.i18n.t('chat.attachLimit', { count: ChatInputComponent.MAX_PENDING_ATTACHMENTS }));
+          break;
+        }
+        if (file.size > ChatInputComponent.MAX_CHAT_IMAGE_BYTES) {
+          console.warn(this.i18n.t('file.maxSize'), file.name);
+          continue;
+        }
+        try {
+          const image = await ImageStorage.instance.addAsync(file);
+          if (!this.pendingAttachedImages.some(img => img.identifier === image.identifier)) {
+            this.pendingAttachedImages = [...this.pendingAttachedImages, image];
+          }
+        } catch (err) {
+          console.warn('chat image attach failed', err);
+        }
+      }
+    } finally {
+      this.isAttachingImages = false;
+      this.ngZone.run(() => this.changeDetector.markForCheck());
+    }
   }
 
   calcFitHeight() {
     let textArea: HTMLTextAreaElement = this.textAreaElementRef.nativeElement;
     textArea.style.height = '';
     if (textArea.scrollHeight >= textArea.offsetHeight) {
-      textArea.style.height = textArea.scrollHeight + 'px';
+      let next = textArea.scrollHeight;
+      if (this.ClarifyMode()) {
+        const maxPx = parseFloat(getComputedStyle(textArea).maxHeight);
+        if (Number.isFinite(maxPx) && maxPx > 0) next = Math.min(next, maxPx);
+      }
+      textArea.style.height = next + 'px';
     }
   }
 
@@ -973,6 +1083,53 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
 
+  /** Left-click avatar: cycle face (character) or open peer icon picker (player). */
+  onImageboxClick(e: Event) {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!this.isAllowsChat) return;
+
+    if (!this.character) {
+      this.changePeerIcon();
+      return;
+    }
+
+    if (this.isUseFaceIcon && this.character.faceIcons?.length > 1) {
+      const next = (this.character.currntIconIndex + 1) % this.character.faceIcons.length;
+      this.character.currntIconIndex = next;
+      return;
+    }
+
+    if ((!this.isUseFaceIcon || !this.character.faceIcon) && this.character.imageFiles?.length > 1) {
+      const next = (this.character.currntImageIndex + 1) % this.character.imageFiles.length;
+      this.character.currntImageIndex = next;
+      if (!this.character.isHideIn && this.character.isVisibleOnTable) SoundEffect.play(PresetSound.surprise);
+      EventSystem.trigger('UPDATE_INVENTORY', null);
+    }
+  }
+
+  /** Same persistence path as PeerMenuComponent.changeIcon. */
+  private changePeerIcon() {
+    const myPeer = this.myPeer;
+    if (!myPeer) return;
+    let currentImageIdentifires: string[] = [];
+    if (myPeer.imageIdentifier) currentImageIdentifires = [myPeer.imageIdentifier];
+    this.modalService.open<string>(FileSelecterComponent, { currentImageIdentifires: currentImageIdentifires }).then(value => {
+      if (!myPeer || !value) return;
+      myPeer.imageIdentifier = value;
+      const file: ImageFile = ImageStorage.instance.get(value);
+      if (file) {
+        if (file.state === ImageState.COMPLETE) {
+          localForage.setItem(PeerCursor.CHAT_MY_ICON_LOCAL_STORAGE_KEY, file.blob).catch(err => console.log(err));
+        } else if (value === 'none_icon') {
+          localForage.removeItem(PeerCursor.CHAT_MY_ICON_LOCAL_STORAGE_KEY).catch(err => console.log(err));
+        } else {
+          localForage.setItem(PeerCursor.CHAT_MY_ICON_LOCAL_STORAGE_KEY, value).catch(err => console.log(err));
+        }
+      }
+    });
+  }
+
   onContextMenu(e: Event) {
     e.stopPropagation();
     e.preventDefault();
@@ -985,7 +1142,11 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
         position, 
         [
           { name: this.i18n.t('chat.ctx.connection'), action: () => {
-            this.panelService.open(PeerMenuComponent, { width: 520, height: 600, top: position.y - 100, left: position.x - 100 });
+            this.panelService.open(PeerMenuComponent, {
+              width: 520, height: 450, top: position.y - 100, left: position.x - 100,
+              tourPanelId: 'menu.connection',
+              mobileSheet: 'half',
+            });
           } }
         ],
         PeerCursor.myCursor.name, 
@@ -1023,7 +1184,7 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
                 name: `${this.character.currntImageIndex == i ? '◉' : '○'}`, 
                 action: () => { 
                   this.character.currntImageIndex = i;
-                  if (!this.character.isHideIn && this.character.location.name === 'table') SoundEffect.play(PresetSound.surprise);
+                  if (!this.character.isHideIn && this.character.isVisibleOnTable) SoundEffect.play(PresetSound.surprise);
                   EventSystem.trigger('UPDATE_INVENTORY', null);
                 }, 
                 default: this.character.currntImageIndex == i,
@@ -1034,26 +1195,29 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
           });
         }
         contextMenuActions.push(ContextMenuSeparator);
-        const fxSubs = this.characterFxMenu.makeImageEffectMenu(this.character).subActions || [];
+        const fxHost = this.appearanceHost || this.character;
+        const fxSubs = this.characterFxMenu.makeImageEffectMenu(fxHost).subActions || [];
         const fxWithoutReset = fxSubs.slice(0, -1);
         contextMenuActions.push({
           name: this.i18n.t('chat.ctx.imageEffect'),
           action: null,
           subActions: [
             ...fxWithoutReset,
-            { name: this.i18n.t('chat.ctx.aura'), action: null, subActions: [{ name: `${this.character.aura == -1 ? '◉' : '○'} ${this.i18n.t('chat.ctx.auraNone')}`, action: () => { this.character.aura = -1; EventSystem.trigger('UPDATE_INVENTORY', null) }, checkBox: 'radio' }, ContextMenuSeparator].concat(['black', 'blue', 'green', 'cyan', 'red', 'magenta', 'yellow', 'white'].map((color, i) => {
+            { name: this.i18n.t('chat.ctx.aura'), action: null, subActions: [{ name: `${fxHost.aura == -1 ? '◉' : '○'} ${this.i18n.t('chat.ctx.auraNone')}`, action: () => { fxHost.mutateAppearance(() => { fxHost.aura = -1; }); EventSystem.trigger('UPDATE_INVENTORY', null) }, checkBox: 'radio' }, ContextMenuSeparator].concat(['black', 'blue', 'green', 'cyan', 'red', 'magenta', 'yellow', 'white'].map((color, i) => {
               const sampleColors = ['#000', '#00f', '#0f0', '#0ff', '#f00', '#f0f', '#ff0', '#fff'];
-              return { name: `${this.character.aura == i ? '◉' : '○'} ${this.i18n.t(`chat.aura.${color}`)}`, action: () => { this.character.aura = i; EventSystem.trigger('UPDATE_INVENTORY', null) }, colorSample: true, sampleColor: sampleColors[i], checkBox: 'radio' };
+              return { name: `${fxHost.aura == i ? '◉' : '○'} ${this.i18n.t(`chat.aura.${color}`)}`, action: () => { fxHost.mutateAppearance(() => { fxHost.aura = i; }); EventSystem.trigger('UPDATE_INVENTORY', null) }, colorSample: true, sampleColor: sampleColors[i], checkBox: 'radio' };
             })) },
             ContextMenuSeparator,
             {
               name: this.i18n.t('chat.ctx.reset'),
               action: () => {
-                clearImageEffects(this.character);
-                this.character.aura = -1;
+                fxHost.mutateAppearance(() => {
+                  clearImageEffects(fxHost);
+                  fxHost.aura = -1;
+                });
                 EventSystem.trigger('UPDATE_INVENTORY', null);
               },
-              disabled: !anyImageEffect(this.character) && this.character.aura == -1
+              disabled: !anyImageEffect(fxHost) && fxHost.aura == -1
             }
           ]
         });
@@ -1109,24 +1273,34 @@ export class ChatInputComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   private showDetail(gameObject: GameCharacter) {
-    let coordinate = this.pointerDeviceService.pointers[0];
     let title = this.i18n.t('chat.characterSheet');
     if (gameObject.name.length) title += ' - ' + gameObject.name;
-    let option: PanelOption = { title: title, left: coordinate.x - 400, top: coordinate.y - 300, width: 800, height: 600 };
-    let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
-    component.tabletopObject = gameObject;
+    const tourId = PanelService.tourIdObjectDetail(gameObject.identifier);
+    if (PanelService.bringTourPanelToFront(tourId, { title })) return;
+    let coordinate = this.pointerDeviceService.pointers[0];
+    let option: PanelOption = {
+      title: title, left: coordinate.x - 270, top: coordinate.y - 240, width: 540, height: 480,
+      tourPanelId: tourId,
+      geometryKey: PanelService.sheetGeometryKey(gameObject.aliasName),
+    };
+    let component = this.panelService.open<CharacterSettingsComponent>(CharacterSettingsComponent, option);
+    component.character = gameObject;
   }
 
   private showChatPalette(gameObject: GameCharacter) {
+    const tourId = PanelService.tourIdChatPalette(gameObject.identifier);
+    if (PanelService.bringTourPanelToFront(tourId)) return;
     let coordinate = this.pointerDeviceService.pointers[0];
-    let option: PanelOption = { left: coordinate.x - 250, top: coordinate.y - 175, width: 620, height: 350 };
+    let option: PanelOption = { left: coordinate.x - 250, top: coordinate.y - 175, width: 620, height: 350, tourPanelId: tourId };
     let component = this.panelService.open<ChatPaletteComponent>(ChatPaletteComponent, option);
     component.character = gameObject;
   }
 
   private showStandSetting(gameObject: GameCharacter) {
+    const tourId = PanelService.tourIdStandSetting(gameObject.identifier);
+    if (PanelService.bringTourPanelToFront(tourId)) return;
     let coordinate = this.pointerDeviceService.pointers[0];
-    let option: PanelOption = { left: coordinate.x - 400, top: coordinate.y - 175, width: 730, height: 572 };
+    let option: PanelOption = { left: coordinate.x - 400, top: coordinate.y - 175, width: 690, height: 540, tourPanelId: tourId };
     let component = this.panelService.open<StandSettingComponent>(StandSettingComponent, option);
     component.character = gameObject;
   }

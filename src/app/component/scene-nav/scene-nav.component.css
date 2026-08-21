@@ -1,0 +1,251 @@
+.scene-nav {
+  /*
+   * Desktop main menu is a 100px ui-panel. Do NOT use --udon-left-chrome here:
+   * that var is 0px on desktop (mobile rail only), so fallback never applies and
+   * the HUD would sit at 8px and cover the menu (also z-index must stay below panels).
+   */
+  position: fixed;
+  top: 8px;
+  left: 108px;
+  transform: none;
+  z-index: 45;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px;
+  width: auto;
+  max-width: calc(100vw - 100px - 24px);
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Phone / tablet portrait: no left menu panel. */
+:host-context(html.udon-mobile-layout) .scene-nav {
+  left: 8px;
+  max-width: calc(100vw - 16px);
+}
+
+/* Tablet landscape: clear the left rail. */
+:host-context(html.udon-tablet-landscape) .scene-nav {
+  left: calc(var(--udon-left-chrome, 72px) + 8px);
+  max-width: calc(100vw - var(--udon-left-chrome, 72px) - 24px);
+}
+
+:host {
+  display: contents;
+}
+
+.scene-nav-toggle,
+.scene-chip-wrap {
+  pointer-events: auto;
+}
+
+.scene-nav-toggle {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  background: rgba(18, 20, 24, 0.72);
+  color: #e8eaed;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.scene-nav-toggle .material-icons {
+  font-size: 18px;
+}
+
+.scene-nav-track {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px;
+  justify-content: flex-start;
+  padding: 4px;
+  border-radius: 8px;
+  background: rgba(18, 20, 24, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  overflow: visible;
+  max-width: 100%;
+}
+
+.scene-chip-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 160px;
+  /* Room for absolute presence + flyout; keep hit-testing continuous. */
+  padding-bottom: 0;
+  margin-bottom: 0;
+  overflow: visible;
+  z-index: 1;
+}
+
+.scene-chip-wrap.is-menu-open {
+  z-index: 60;
+}
+
+.scene-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  max-width: 160px;
+  box-sizing: border-box;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(40, 44, 52, 0.9);
+  color: #e8eaed;
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+  text-align: left;
+  z-index: 2;
+}
+
+.scene-chip:disabled,
+.scene-chip.is-locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Room Active: green fill — only when NOT also the local viewed chip. */
+.scene-chip.is-active:not(.is-viewed) {
+  background: rgba(55, 70, 42, 0.95);
+  border-color: rgba(180, 220, 120, 0.55);
+}
+
+/* Local Viewed: blue frame/fill wins (what you are looking at). */
+.scene-chip.is-viewed {
+  background: rgba(40, 55, 80, 0.95);
+  border-color: rgba(120, 180, 255, 0.85);
+  box-shadow: inset 0 0 0 1px rgba(120, 180, 255, 0.35);
+}
+
+.scene-chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.scene-chip-dot.is-active-dot {
+  background: #b6e07a;
+}
+
+.scene-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 120px;
+}
+
+/* Absolute so it does not push the menu away / break the hover path. */
+.scene-presence {
+  position: absolute;
+  top: calc(100% + 1px);
+  left: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  max-width: 152px;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.presence-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+  flex: 0 0 auto;
+}
+
+/* Solid hover bridge between chip and menu (pseudo-elements are flaky). */
+.scene-menu-bridge {
+  position: absolute;
+  left: 0;
+  width: max(100%, 120px);
+  top: 100%;
+  height: 8px;
+  z-index: 55;
+}
+
+.scene-chip-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  transform: none;
+  min-width: 108px;
+  padding: 2px;
+  margin-top: 0;
+  border-radius: 6px;
+  background: rgba(18, 20, 24, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  z-index: 56;
+  pointer-events: auto;
+}
+
+.scene-chip-menu button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #e8eaed;
+  text-align: left;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.scene-chip-menu button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.scene-chip-menu button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .scene-nav {
+    top: 4px;
+  }
+
+  .scene-chip {
+    padding: 4px 8px;
+    font-size: 11px;
+    max-width: 120px;
+  }
+
+  .scene-chip-wrap,
+  .scene-presence {
+    max-width: 120px;
+  }
+
+  .scene-chip-name {
+    max-width: 88px;
+  }
+}

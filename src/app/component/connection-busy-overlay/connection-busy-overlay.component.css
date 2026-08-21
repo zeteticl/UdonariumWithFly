@@ -1,0 +1,79 @@
+.connection-busy {
+  position: fixed;
+  inset: 0;
+  /* Above modal (2500000) so create-room dialog is covered while connecting. */
+  z-index: 2600000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.connection-busy-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-width: 200px;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 28px 32px 24px;
+  box-sizing: border-box;
+  background: #1f1f1f;
+  color: #e8e8e8;
+  border: 1px solid #555;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.connection-busy-spinner {
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  box-sizing: border-box;
+}
+
+.ring-a {
+  border-top-color: #c9a66b;
+  border-right-color: rgba(201, 166, 107, 0.35);
+  animation: connection-busy-spin 0.9s linear infinite;
+}
+
+.ring-b {
+  inset: 8px;
+  border-bottom-color: #8ab4f8;
+  border-left-color: rgba(138, 180, 248, 0.35);
+  animation: connection-busy-spin 1.25s linear infinite reverse;
+}
+
+.connection-busy-message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: center;
+  color: #ccc;
+  white-space: pre-line;
+  font-family: "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+
+@keyframes connection-busy-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring-a,
+  .ring-b {
+    animation: none;
+    border-color: #666;
+    border-top-color: #c9a66b;
+  }
+}

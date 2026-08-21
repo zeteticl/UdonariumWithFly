@@ -1,6 +1,8 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, NgZone, OnDestroy } from '@angular/core';
 
-import { EventSystem, Network } from '@udonarium/core/system';
+import { Network } from '@udonarium/core/system';
+
+const SHOW_THRESHOLD = 3 * 1024;
 
 @Component({
     selector: 'network-indicator',
@@ -9,35 +11,47 @@ import { EventSystem, Network } from '@udonarium/core/system';
     standalone: false
 })
 export class NetworkIndicatorComponent implements AfterViewInit, OnDestroy {
-  private timer: NodeJS.Timeout = null;
-  private needRepeat = false;
+  private hideTimer: ReturnType<typeof setTimeout> = null;
+  private pollTimer: ReturnType<typeof setInterval> = null;
 
-  constructor(private elementRef: ElementRef) { }
+  constructor(
+    private elementRef: ElementRef,
+    private ngZone: NgZone,
+  ) { }
 
   ngAfterViewInit() {
-    let repeatFunc = () => {
-      if (this.needRepeat) {
-        this.timer = setTimeout(repeatFunc, 650);
-        this.needRepeat = false;
-      } else {
-        this.timer = null;
-        this.elementRef.nativeElement.style.display = 'none';
-      }
+    const el = this.elementRef.nativeElement as HTMLElement;
+    el.style.display = 'none';
+
+    const isBusy = () =>
+      Network.bandwidthPeak >= SHOW_THRESHOLD || Network.bandwidthUsage >= SHOW_THRESHOLD;
+
+    const scheduleHide = () => {
+      if (this.hideTimer) clearTimeout(this.hideTimer);
+      this.hideTimer = setTimeout(() => {
+        this.hideTimer = null;
+        if (isBusy()) {
+          Network.clearBandwidthPeak();
+          scheduleHide();
+          return;
+        }
+        el.style.display = 'none';
+      }, 650);
     };
 
-    EventSystem.register(this)
-      .on('*', event => {
-        if (this.needRepeat || Network.bandwidthUsage < 3 * 1024) return;
-        if (this.timer === null) {
-          this.elementRef.nativeElement.style.display = 'block';
-          this.timer = setTimeout(repeatFunc, 650);
-        } else {
-          this.needRepeat = true;
-        }
-      });
+    // Poll sticky bandwidthPeak (survives brief send/receive queue windows).
+    this.ngZone.runOutsideAngular(() => {
+      this.pollTimer = setInterval(() => {
+        if (!isBusy()) return;
+        Network.clearBandwidthPeak();
+        el.style.display = 'block';
+        scheduleHide();
+      }, 250);
+    });
   }
 
   ngOnDestroy() {
-    EventSystem.unregister(this);
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    if (this.hideTimer) clearTimeout(this.hideTimer);
   }
 }

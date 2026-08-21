@@ -1,5 +1,7 @@
 :host {
   display: block;
+  width: 100%;
+  height: 100%;
 }
 
 nav ul {
@@ -24,6 +26,10 @@ nav ul > li {
   cursor: -webkit-pointer;
   cursor: pointer;
   white-space: nowrap;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 nav ul > li:hover {
@@ -52,11 +58,53 @@ nav ul a, nav ul a:hover, nav ul a:active, nav ul a:visited {
   font-size: 40px;
 }
 
+.menu-chat-icon {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  vertical-align: top;
+}
+
+.menu-chat-badge {
+  position: absolute;
+  /* Stay inside the icon — negative offsets expand side-menu scroll and show ◀▶. */
+  top: 0;
+  right: 0;
+  z-index: 1;
+  pointer-events: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: #fff;
+  background: #e53935;
+  border: 1px solid #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  transform: none;
+}
+
+.mobile-bottom-nav .menu-chat-badge,
+.mobile-side-rail .menu-chat-badge {
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  font-size: 8px;
+}
+
 .side-menu {
   top: 0px;
   left: 0px;
   box-sizing: border-box;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   position: absolute;
   color: #CCC;
   background-color: rgba(30, 30, 30, 0.8);
@@ -64,6 +112,10 @@ nav ul a, nav ul a:hover, nav ul a:active, nav ul a:visited {
   padding: 0px;
   height: 100%;
   width: 300px;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .networkIndicator {
@@ -151,3 +203,188 @@ nav ul a, nav ul a:hover, nav ul a:active, nav ul a:visited {
   box-sizing: border-box;
   object-fit: contain;
 }
+
+/* —— Phone / tablet bottom nav (desktop left panel is separate) —— */
+.mobile-bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Above mobile sheets (12000) so menu stays tappable while a panel is open. */
+  z-index: 12500;
+  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: border-box;
+  background: var(--udon-chrome-bg, rgba(36, 36, 36, 0.96));
+  border-top: 1px solid var(--udon-chrome-border, #555);
+  overflow-x: auto;
+  -webkit-touch-callout: none;
+  user-select: none;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.mobile-bottom-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 4px;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  height: 56px;
+  width: max-content;
+  min-width: 100%;
+}
+
+.mobile-bottom-nav ul > li {
+  flex: 0 0 auto;
+  width: 64px;
+  text-align: center;
+  padding: 4px 2px;
+  color: var(--udon-chrome-text, #e8e8e8);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.mobile-bottom-nav ul > li.is-active {
+  color: #8ab4f8;
+  background-color: rgba(138, 180, 248, 0.12);
+}
+
+.mobile-bottom-nav ul > li:active {
+  background-color: var(--udon-chrome-active, rgba(255, 255, 255, 0.1));
+}
+
+.mobile-side-rail ul > li.is-active {
+  color: #8ab4f8;
+  background-color: rgba(138, 180, 248, 0.12);
+}
+
+.mobile-bottom-nav ul > li > a,
+.mobile-bottom-nav ul > li > a:hover,
+.mobile-bottom-nav ul > li > a:active,
+.mobile-bottom-nav ul > li > a:visited {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  font-size: 9px;
+  line-height: 1.15;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.mobile-bottom-nav ul > li > a > label {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mobile-bottom-nav .icon-size,
+.mobile-bottom-nav .material-icons {
+  font-size: 22px !important;
+  line-height: 1;
+}
+
+.mobile-bottom-nav .self-only {
+  color: #f66;
+}
+
+/* Tablet landscape: left icon rail */
+.mobile-side-rail {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 72px;
+  z-index: 12500;
+  box-sizing: border-box;
+  padding: 8px 0 env(safe-area-inset-bottom, 0px);
+  background: var(--udon-chrome-bg, rgba(36, 36, 36, 0.96));
+  border-right: 1px solid var(--udon-chrome-border, #555);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-side-rail ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.mobile-side-rail ul > li {
+  text-align: center;
+  padding: 8px 2px;
+  color: var(--udon-chrome-text, #e8e8e8);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.mobile-side-rail ul > li:active {
+  background-color: var(--udon-chrome-active, rgba(255, 255, 255, 0.1));
+}
+
+.mobile-side-rail ul > li > a,
+.mobile-side-rail ul > li > a:hover,
+.mobile-side-rail ul > li > a:active,
+.mobile-side-rail ul > li > a:visited {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 9px;
+  line-height: 1.15;
+  user-select: none;
+}
+
+.mobile-side-rail .material-icons {
+  font-size: 22px !important;
+}
+
+/* Non-modal import reject toast — no focus, auto-dismiss (app.component). */
+.ephemeral-notice {
+  position: fixed;
+  z-index: 2500000;
+  right: 16px;
+  bottom: 16px;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border-radius: 4px;
+  border: 1px solid #c9a882;
+  background: rgba(58, 47, 36, 0.94);
+  color: #fff8ee;
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+}
+
+.ephemeral-notice-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.ephemeral-notice-line + .ephemeral-notice-line {
+  margin-top: 2px;
+}
+

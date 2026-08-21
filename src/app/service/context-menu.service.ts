@@ -49,20 +49,40 @@ export interface ContextMenuAction {
   nameUpdate?: () => string,
 }
 
-/** Checkbox that toggles live state (safe to click repeatedly while menu stays open). */
+/**
+ * Checkbox that toggles live state (safe to click repeatedly while menu stays open).
+ *
+ * Modern label style (preferred):
+ *   { label: '僅自己可見' } → "☑ 僅自己可見" / "☐ 僅自己可見"
+ *   Checkbox shows current state; label names the feature (not the action / opposite).
+ *
+ * Legacy:
+ *   { on: '☑ …', off: '☐ …' } still supported.
+ */
 export function contextMenuToggleCheck(options: {
   get: () => boolean;
   set: (value: boolean) => void;
-  on: string;
-  off: string;
+  /** Feature name; ☑/☐ prefix is applied from get(). */
+  label?: string;
+  /** Legacy on-state text (may already include ☑). */
+  on?: string;
+  /** Legacy off-state text (may already include ☐). */
+  off?: string;
   after?: () => void;
   disabled?: boolean;
   error?: string;
   tip?: string;
   level?: number;
   selfOnly?: boolean;
+  hotkey?: string;
 }): ContextMenuAction {
-  const nameUpdate = () => (options.get() ? options.on : options.off);
+  const nameUpdate = () => {
+    if (options.label != null && options.label !== '') {
+      const body = String(options.label).replace(/^[☑☐]\s*/, '');
+      return `${options.get() ? '☑' : '☐'} ${body}`;
+    }
+    return options.get() ? (options.on ?? '') : (options.off ?? '');
+  };
   return {
     name: nameUpdate(),
     nameUpdate,
@@ -76,6 +96,7 @@ export function contextMenuToggleCheck(options: {
     tip: options.tip,
     level: options.level,
     selfOnly: options.selfOnly,
+    hotkey: options.hotkey,
   };
 }
 
@@ -86,6 +107,8 @@ export class ContextMenuService {
   static ContextMenuComponentClass: { new(...args: any[]): any } = null;
 
   private panelComponentRef: ComponentRef<any>
+  /** Bumped on each open(); actions that replace the menu must not close the successor. */
+  private openSerial = 0;
 
   title: string = '';
   actions: ContextMenuAction[] = [];
@@ -97,8 +120,14 @@ export class ContextMenuService {
     return this.panelComponentRef ? true : false;
   }
 
+  /** Monotonic id for the currently opening / open menu. */
+  get serial(): number {
+    return this.openSerial;
+  }
+
   open(position: ContextMenuPoint, actions: ContextMenuAction[], title?: string, parentViewContainerRef?: ViewContainerRef, titleColor?: string, titleBold?: boolean) {
     this.close();
+    this.openSerial++;
     if (!parentViewContainerRef) {
       parentViewContainerRef = ContextMenuService.defaultParentViewContainerRef;
     }

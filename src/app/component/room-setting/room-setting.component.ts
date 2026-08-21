@@ -10,6 +10,7 @@ import { ModalService } from 'service/modal.service';
 import { I18nService } from 'service/i18n.service';
 import { PanelService } from 'service/panel.service';
 import { RoomInviteService } from 'service/room-invite.service';
+import { ConnectionBusyService } from 'service/connection-busy.service';
 
 @Component({
     selector: 'room-setting',
@@ -30,10 +31,12 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
   guestPassword: string = '';
   /** Allow player (user) role to join. */
   allowUser = true;
-  /** Allow guest role to join. */
-  allowGuest = true;
+  /** Allow guest role to join. Off by default for new rooms. */
+  allowGuest = false;
   isSaving = false;
   help: string = '';
+  /** Permission panel is collapsed until the user opens it. */
+  showPermissions = false;
 
   get peerId(): string { return Network.peerId; }
   get isConnected(): boolean { return 0 < Network.peerIds.length; }
@@ -49,12 +52,16 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
     }
   }
   validateLength: boolean = false;
+  /** Pending Network.open for createRoom; cleared on settle / destroy. */
+  private createRoomKey: { createRoom: true } | null = null;
+  private createRoomTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private panelService: PanelService,
     private modalService: ModalService,
     private i18n: I18nService,
     private roomInvite: RoomInviteService,
+    public connectionBusy: ConnectionBusyService,
   ) {
     this.editMode = !!modalService.option?.editMode;
     const preferred = String(modalService.option?.preferredRoomId || '').trim();
@@ -78,9 +85,9 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
       this.guestPassword = this.allowGuest ? this.roomInvite.getRolePassword('guest') : '';
     } else {
       const preferredName = String(this.modalService.option?.preferredRoomName || '').trim();
-      this.roomName = preferredName || this.i18n.t('room.defaultName');
+      this.roomName = preferredName || this.makeDefaultRoomName();
       this.allowUser = true;
-      this.allowGuest = true;
+      this.allowGuest = false;
       this.applyPreferredAuth(this.modalService.option?.preferredAuth);
     }
     Promise.resolve().then(() => this.refreshPanelTitle());
@@ -102,7 +109,15 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Default display name: localized base + random 0000–9999. */
+  private makeDefaultRoomName(): string {
+    const n = Math.floor(Math.random() * 10000);
+    const suffix = ('0000' + n).slice(-4);
+    return this.i18n.t('room.defaultName') + suffix;
+  }
+
   ngOnDestroy() {
+    this.abortCreateRoom();
     EventSystem.unregister(this);
   }
 
@@ -151,32 +166,71 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
 
   recalcPeerId() {
     const roomId = this.resolveCreateRoomId();
-    const encoded = RoomAuth.encode(this.roomName, roomId, this.buildRoleAuthInputs());
+    const { roomName, meshPassword } = RoomAuth.encode(this.roomName, roomId, this.buildRoleAuthInputs());
     const userId = Network.peer.userId;
-    const peer = PeerContext.create(userId, roomId, encoded, '');
-    this.validateLength = peer.peerId.length < 64;
+    const peer = PeerContext.create(userId, roomId, roomName, meshPassword);
+    this.validateLength = peer.peerId.length <= 64;
+  }
+
+  onPrimaryAction() {
+    if (!this.canSubmit) return;
+    if (this.editMode) {
+      void this.saveRoomPasswords();
+      return;
+    }
+    if (!this.connectionBusy.busy) this.createRoom();
   }
 
   createRoom() {
+    const suppressBusy = !!this.modalService.option?.suppressConnectionBusy;
+    if (this.createRoomKey) return;
+    // Allow create while parent (folder backup) already holds the busy overlay.
+    if (this.connectionBusy.busy && !suppressBusy) return;
     const userId = Network.peer.userId;
     const roomId = this.resolveCreateRoomId();
     const roles = this.buildRoleAuthInputs();
-    const encodedName = RoomAuth.encode(this.roomName, roomId, roles);
-    // Role-auth rooms use empty skyway password; roles are gated by RoomAuth digests.
-    Network.open(userId, roomId, encodedName, '');
-    PeerCursor.myCursor.peerId = Network.peerId;
-    // Host joins as GM. Pass roomId explicitly — Network.open is async so peer.roomId may lag.
-    RoomAuth.applyIdentity('gm', roomId);
-    // Keep plaintext role passwords in-session for invite-link generation.
-    this.roomInvite.setRolePasswords({
-      gm: this.gmPassword,
-      user: this.allowUser ? this.userPassword : '',
-      guest: this.allowGuest ? this.guestPassword : '',
-    });
+    const { roomName: encodedName, meshPassword } = RoomAuth.encode(this.roomName, roomId, roles);
 
+    if (!suppressBusy) this.connectionBusy.show('peer.creatingRoom');
     const afterCreate = this.modalService.option?.afterCreate;
-    this.modalService.resolve(true);
-    if (typeof afterCreate === 'function') afterCreate();
+    this.createRoomKey = { createRoom: true };
+    this.createRoomTimer = setTimeout(() => this.abortCreateRoom(), 30000);
+    EventSystem.register(this.createRoomKey)
+      .on('OPEN_NETWORK', () => {
+        this.clearCreateRoomWait();
+        PeerCursor.myCursor.peerId = Network.peerId;
+        RoomAuth.applyIdentity('gm', roomId);
+        RoomAuth.rememberSession('gm', this.gmPassword, meshPassword);
+        this.roomInvite.setRolePasswords({
+          gm: this.gmPassword,
+          user: this.allowUser ? this.userPassword : '',
+          guest: this.allowGuest ? this.guestPassword : '',
+        });
+        if (!suppressBusy) this.connectionBusy.hide();
+        this.modalService.resolve(true);
+        if (typeof afterCreate === 'function') afterCreate();
+      })
+      .on('NETWORK_ERROR', () => this.abortCreateRoom());
+
+    Network.open(userId, roomId, encodedName, meshPassword);
+  }
+
+  private clearCreateRoomWait() {
+    if (this.createRoomTimer != null) {
+      clearTimeout(this.createRoomTimer);
+      this.createRoomTimer = null;
+    }
+    if (this.createRoomKey) {
+      EventSystem.unregister(this.createRoomKey);
+      this.createRoomKey = null;
+    }
+  }
+
+  /** Drop pending create wait and clear busy overlay (timeout / error / destroy). */
+  private abortCreateRoom() {
+    if (!this.createRoomKey) return;
+    this.clearCreateRoomWait();
+    this.connectionBusy.hide();
   }
 
   async saveRoomPasswords() {
@@ -187,21 +241,21 @@ export class RoomSettingComponent implements OnInit, OnDestroy {
     this.help = '';
     const roomId = Network.peer.roomId;
     const roles = this.buildRoleAuthInputs();
-    const encodedName = RoomAuth.encode(this.roomName, roomId, roles);
+    const { roomName: encodedName, meshPassword } = RoomAuth.encode(this.roomName, roomId, roles);
 
     this.roomInvite.setRolePasswords({
       gm: this.gmPassword,
       user: this.allowUser ? this.userPassword : '',
       guest: this.allowGuest ? this.guestPassword : '',
     });
+    RoomAuth.rememberSession('gm', this.gmPassword, meshPassword);
 
     try {
-      // Notify others before we leave the old SkyWay channel.
       if (Network.peers.length > 0) {
         EventSystem.call('ROOM_REKEY', { roomId, roomName: encodedName });
         await new Promise(r => setTimeout(r, 150));
       }
-      await RoomConnectHelper.rekeyRoom(roomId, encodedName);
+      await RoomConnectHelper.rekeyRoom(roomId, encodedName, meshPassword);
       RoomAuth.applyIdentity('gm', roomId);
       RoomAuth.noteAttained('gm', roomId);
       this.modalService.resolve(true);

@@ -25,7 +25,7 @@ export class ObjectStore {
   private garbageCollectionInterval: NodeJS.Timeout = null;
   private updateCallback = () => { this.updateQueue(); }
 
-  private constructor() { console.log('ObjectStore ready...'); };
+  private constructor() { };
 
   add(object: GameObject, shouldBroadcast: boolean = true): GameObject {
     if (this.get(object.identifier) != null || this.isDeleted(object.identifier)) return null;
@@ -142,6 +142,11 @@ export class ObjectStore {
 
   clearDeleteHistory() {
     this.garbageMap.clear();
+  }
+
+  /** Allow recreating an object with a previously deleted identifier (e.g. room reload). */
+  clearDeleted(identifier: string) {
+    if (identifier) this.garbageMap.delete(identifier);
   }
 
   private garbageCollection(garbage: ObjectContext)

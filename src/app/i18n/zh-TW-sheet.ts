@@ -5,7 +5,7 @@ export const zhTW_sheet: I18nDictionary = {
   'sheet.changeAllBackImages': '變更全部卡片的背面圖片', 'sheet.changeFloorImage': '變更地板圖片', 'sheet.changeWallImage': '變更牆壁圖片',
   'sheet.changeDiceImage': '變更骰子點數圖片', 'sheet.imageReplaceDelete': '圖片置換/刪除', 'sheet.imageSet': '圖片設定',
   'sheet.faceIconAdd': '大頭貼 icon新增', 'sheet.faceIconSet': '大頭貼 icon設定', 'sheet.changeImage': '變更圖片',
-  'sheet.createCopy': '建立副本', 'sheet.download': '下載', 'sheet.location.table': '桌面', 'sheet.location.common': '公用倉庫',
+  'sheet.createCopy': '建立副本', 'sheet.cloneCharacter': '複製角色', 'sheet.download': '匯出', 'sheet.import': '匯入', 'sheet.exportCcfoliaJson': '下載為 JSON', 'sheet.location.table': '桌面', 'sheet.location.common': '公用倉庫',
   'sheet.location.personal': '個人倉庫', 'sheet.location.graveyard': '回收區', 'sheet.changeShadow': '變更圖片陰影',
   'sheet.deleteFaceIcon': '刪除大頭貼', 'sheet.switchImageSettings': '切換圖片設定', 'sheet.showChatPalette': '顯示聊天面板',
   'sheet.standSettings': '立繪設定', 'sheet.addItem': '新增項目', 'sheet.data.title': '標題', 'sheet.data.tag': '標籤',
@@ -66,6 +66,7 @@ export const zhTW_sheet: I18nDictionary = {
 ・浮動式對話框
 　以角色傳送聊天時，「 與 」包住的內容會以浮動式對話框顯示在 Token 上方。`,
   'stand.sortNameList': '聊天輸入時排序名稱', 'stand.heightGlobal': '高度（0=維持原圖片）: ', 'stand.keepOriginalImage': '維持原圖片',
+  'stand.common': '共通設定', 'stand.list': '立繪清單', 'stand.listEmpty': '尚未新增立繪設定',
   'stand.noOverview': '總覽不使用立繪圖片', 'stand.add': '新增立繪設定', 'stand.restore': '還原剛刪除的立繪設定',
   'stand.title': '{{name}} 的立繪設定', 'stand.deleteTitle': '刪除立繪設定', 'stand.deleteText': '要刪除立繪設定嗎？',
   'stand.helpTitle': '立繪設定說明', 'stand.changeImage': '變更圖片', 'stand.namePlaceholder': '名稱', 'stand.condition': '條件: ',

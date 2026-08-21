@@ -24,8 +24,40 @@ import { setZeroTimeout } from '@udonarium/core/system/util/zero-timeout';
 
 import { PanelService } from 'service/panel.service';
 import { I18nService } from 'service/i18n.service';
+import {
+  TutorialLineView,
+  TutorialSeg,
+  buildTutorialLineView,
+  isBulletLine,
+  linkifyPlainText,
+  tokenizeTutorialLine,
+  expandPackedActionLines,
+} from '@udonarium/tutorial-format';
+import { StringUtil } from '@udonarium/core/system/util/string-util';
+import { OpenUrlComponent } from 'component/open-url/open-url.component';
+import { ModalService } from 'service/modal.service';
 
 type ScrollPosition = { top: number, bottom: number, clientHeight: number, scrollHeight: number, };
+type TutorialCardId = 'ops' | 'scene' | 'changelog';
+
+interface TutorialBlock {
+  titleSegs: TutorialSeg[];
+  lines: TutorialLineView[];
+}
+
+interface TutorialHelpCard {
+  id: TutorialCardId;
+  title: string;
+  hint: string;
+  icon: string;
+  blocks: TutorialBlock[];
+}
+
+const TUTORIAL_CARD_META: Record<TutorialCardId, { icon: string; hintKey: string }> = {
+  ops: { icon: 'touch_app', hintKey: 'tutorial.card.ops.hint' },
+  scene: { icon: 'map', hintKey: 'tutorial.card.scene.hint' },
+  changelog: { icon: 'history', hintKey: 'tutorial.card.changelog.hint' },
+};
 
 const ua = window.navigator.userAgent.toLowerCase();
 const isiOS = ua.indexOf('iphone') > -1 || ua.indexOf('ipad') > -1 || ua.indexOf('macintosh') > -1 && 'ontouchend' in document;
@@ -40,8 +72,14 @@ const isiOS = ua.indexOf('iphone') > -1 || ua.indexOf('ipad') > -1 || ua.indexOf
 export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges, AfterViewChecked {
   @Input() compact: boolean = false;
   @Input() leftOnly: boolean = false;
-  
-  sampleMessages: ChatMessage[] = [];
+
+  tutorialWelcome = '';
+  tutorialWelcomeTitle = '';
+  tutorialWelcomeSegs: TutorialSeg[] = [];
+  tutorialCards: TutorialHelpCard[] = [];
+  cardExpandLabel = '';
+  cardCollapseLabel = '';
+  private openTutorialCards = new Set<TutorialCardId>();
 
   private topTimestamp = 0;
   private botomTimestamp = 0;
@@ -60,10 +98,25 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
   private bottomIndex = 0;
 
   //private minMessageHeight: number = 26;
+  /** Floor for index stepping — keep ≤ real height so the virtual window over-renders. */
   private get minMessageHeight(): number {
-    if (this.compact) return 26; 
-    let chatMessage = this.chatTab.chatMessages[this.chatTab.chatMessages.length - 1]
-    return (chatMessage && chatMessage.isOperationLog) ? 26 : 61;
+    return this.compact ? 26 : 40;
+  }
+
+  /** Per-message height estimate for spacers / minHeight (op logs grow with wraps). */
+  private estimateMessageHeight(chatMessage: ChatMessage): number {
+    if (!chatMessage?.isDisplayable) return 0;
+    if (!chatMessage.isOperationLog) {
+      return this.compact ? 26 : 61;
+    }
+    // Stacked compact: title row + body lines (explicit newlines and soft wraps).
+    const text = String(chatMessage.text || '');
+    const parts = text.length ? text.split(/\n/) : [''];
+    let bodyLines = 0;
+    for (const part of parts) {
+      bodyLines += Math.max(1, Math.ceil(Math.max(part.length, 1) / 36));
+    }
+    return 10 + 18 + bodyLines * 18;
   }
 
   private preScrollTop = 0;
@@ -85,17 +138,21 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
   }
 
   get minScrollHeight(): number {
-    return this.chatTab.chatMessages.reduce((height, chatMessage) => { height += chatMessage.isDisplayable ? (this.compact || chatMessage.isOperationLog ? 26 : 61) : 0; return height }, 0);
-    //let length = this.chatTab ? this.chatTab.chatMessages.length : this.sampleMessages.length;
-    //return (length < 10000 ? length : 10000) * this.minMessageHeight;
+    if (!this.chatTab) return 0;
+    return this.chatTab.chatMessages.reduce(
+      (height, chatMessage) => height + this.estimateMessageHeight(chatMessage), 0);
   }
 
   get topSpace(): number { return this.minScrollHeight - this.bottomSpace; }
 
   get bottomSpace(): number {
-    return 0 < this.chatMessages.length
-      ? (this.chatTab.chatMessages.length - this.bottomIndex - 1) * this.minMessageHeight
-      : 0;
+    if (!this.chatTab || this.chatMessages.length < 1) return 0;
+    const messages = this.chatTab.chatMessages;
+    let space = 0;
+    for (let i = this.bottomIndex + 1; i < messages.length; i++) {
+      space += this.estimateMessageHeight(messages[i]);
+    }
+    return space;
   }
 
   get isEmpty(): boolean { return this.chatTab.chatMessages.every(chatMessage => !chatMessage.isDisplayable); }
@@ -120,6 +177,7 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
     private changeDetector: ChangeDetectorRef,
     private panelService: PanelService,
     private i18n: I18nService,
+    private modalService: ModalService,
   ) {
     this.rebuildSampleMessages();
   }
@@ -157,19 +215,42 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
       this.scrollEventShortTimer = new ResettableTimeout(() => this.lazyScrollUpdate(), 33);
       this.scrollEventLongTimer = new ResettableTimeout(() => this.lazyScrollUpdate(false), 66);
       this.onScroll();
-      this.panelService.scrollablePanel.addEventListener('scroll', this.callbackOnScroll, false);
-      this.panelService.scrollablePanel.addEventListener('scrolltobottom', this.callbackOnScrollToBottom, false);
+      this.bindScrollListeners();
     });
   }
 
   ngOnDestroy() {
     EventSystem.unregister(this);
-    this.panelService.scrollablePanel.removeEventListener('scroll', this.callbackOnScroll, false);
-    this.panelService.scrollablePanel.removeEventListener('scrolltobottom', this.callbackOnScrollToBottom, false);
-    this.scrollEventShortTimer.clear();
-    this.scrollEventLongTimer.clear();
+    this.unbindScrollListeners();
+    this.scrollEventShortTimer?.clear();
+    this.scrollEventLongTimer?.clear();
     if (this.addMessageEventTimer) clearTimeout(this.addMessageEventTimer);
     this.addMessageEventTimer = null;
+  }
+
+  private scrollListenersBound = false;
+  private scrollBindRetries = 0;
+
+  private bindScrollListeners() {
+    const panel = this.panelService.scrollablePanel;
+    if (panel && !this.scrollListenersBound) {
+      panel.addEventListener('scroll', this.callbackOnScroll, false);
+      panel.addEventListener('scrolltobottom', this.callbackOnScrollToBottom, false);
+      this.scrollListenersBound = true;
+      return;
+    }
+    if (!panel && this.scrollBindRetries < 10) {
+      this.scrollBindRetries++;
+      queueMicrotask(() => this.bindScrollListeners());
+    }
+  }
+
+  private unbindScrollListeners() {
+    const panel = this.panelService.scrollablePanel;
+    if (!panel || !this.scrollListenersBound) return;
+    panel.removeEventListener('scroll', this.callbackOnScroll, false);
+    panel.removeEventListener('scrolltobottom', this.callbackOnScrollToBottom, false);
+    this.scrollListenersBound = false;
   }
 
   ngOnChanges() {
@@ -195,7 +276,8 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
 
   resetMessages() {
     let lastIndex = this.chatTab.chatMessages.length - 1;
-    this.topIndex = lastIndex - Math.floor(this.panelService.scrollablePanel.clientHeight / this.minMessageHeight);
+    const panelHeight = this.panelService.scrollablePanel?.clientHeight ?? 300;
+    this.topIndex = lastIndex - Math.floor(panelHeight / this.minMessageHeight);
     this.bottomIndex = lastIndex;
     this.needUpdate = true;
     this.preScrollTop = -1;
@@ -232,9 +314,11 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
   }
 
   private getScrollPosition(): ScrollPosition {
-    let top = this.panelService.scrollablePanel.scrollTop;
-    let clientHeight = this.panelService.scrollablePanel.clientHeight;
-    let scrollHeight = this.panelService.scrollablePanel.scrollHeight;
+    const panel = this.panelService.scrollablePanel;
+    if (!panel) return { top: 0, bottom: 0, clientHeight: 0, scrollHeight: 0 };
+    let top = panel.scrollTop;
+    let clientHeight = panel.clientHeight;
+    let scrollHeight = panel.scrollHeight;
     if (top < 0) top = 0;
     if (scrollHeight - clientHeight < top)
       top = scrollHeight - clientHeight;
@@ -277,7 +361,8 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
     currentBox = elm.getBoundingClientRect();
     diff = prevBox.top - currentBox.top - this.scrollSpeed;
     if ((!hasTopBlank || !hasBotomBlank) && 0.5 ** 2 < diff ** 2) {
-      this.panelService.scrollablePanel.scrollTop -= diff;
+      const panel = this.panelService.scrollablePanel;
+      if (panel) panel.scrollTop -= diff;
     }
 
     let logBox: DOMRect = this.logContainerRef.nativeElement.getBoundingClientRect();
@@ -404,36 +489,130 @@ export class ChatTabComponent implements OnInit, AfterViewInit, OnDestroy, OnCha
 
   private rebuildSampleMessages() {
     const t = (key: string) => this.i18n.t(key);
-    const tutorial = t('tutorial.name');
-    const link = t('tutorial.linkName');
-    this.sampleMessages = [
-      this.makeSampleMessage(t('tutorial.systemFrom'), null, tutorial, null, t('tutorial.welcome'), 'mine', 0),
-      this.makeSampleMessage(t('tutorial.systemFrom'), null, tutorial, null, t('tutorial.view'), 'mine', 0),
-      this.makeSampleMessage(t('tutorial.systemFrom'), null, tutorial, null, t('tutorial.keyboard'), 'mine', 0),
-      this.makeSampleMessage(t('tutorial.systemFrom'), null, tutorial, null, t('tutorial.chat'), 'mine', 0),
-      this.makeSampleMessage(t('tutorial.systemFrom'), null, tutorial, null, t('tutorial.scene'), 'mine', 0),
-      this.makeSampleMessage(t('tutorial.systemFrom'), null, link, null, t('changelog.v1132'), 'mine', 1615253220000),
-      this.makeSampleMessage(t('tutorial.systemFrom'), null, link, null, t('changelog.v1133b'), 'mine', 1615253220000),
-      this.makeSampleMessage(t('tutorial.systemFrom'), null, link, null, t('changelog.vF'), 'mine', 1635253220000),
-      this.makeSampleMessage(t('tutorial.systemFrom'), null, link, null, t('changelog.2026base'), 'mine', Date.UTC(2026, 7, 3, 0, 0, 0)),
-      this.makeSampleMessage(t('tutorial.systemFrom'), null, link, null, t('changelog.2026ops'), 'mine', Date.UTC(2026, 7, 3, 1, 0, 0)),
-      this.makeSampleMessage(t('tutorial.systemFrom'), null, link, null, t('changelog.2026scene'), 'mine', Date.UTC(2026, 7, 3, 1, 30, 0)),
-      this.makeSampleMessage(t('tutorial.systemFrom'), null, link, null, t('changelog.2026fx'), 'mine', Date.UTC(2026, 7, 3, 1, 45, 0)),
-      this.makeSampleMessage(t('tutorial.systemFrom'), null, link, null, t('changelog.links'), 'mine', Date.UTC(2026, 7, 3, 2, 0, 0)),
+    this.tutorialWelcome = t('tutorial.welcome');
+    this.tutorialWelcomeTitle = t('tutorial.name');
+    this.tutorialWelcomeSegs = linkifyPlainText(this.tutorialWelcome);
+    this.cardExpandLabel = t('tutorial.card.expand');
+    this.cardCollapseLabel = t('tutorial.card.collapse');
+    this.tutorialCards = [
+      this.buildTutorialCard('ops', [
+        t('tutorial.view'),
+        t('tutorial.keyboard'),
+        t('tutorial.chat'),
+      ]),
+      this.buildTutorialCard('scene', [t('tutorial.scene')]),
+      this.buildTutorialCard('changelog', [
+        t('changelog.v1132'),
+        t('changelog.v1133b'),
+        t('changelog.vF'),
+        t('changelog.2026base'),
+        t('changelog.2026ops'),
+        t('changelog.2026scene'),
+        t('changelog.2026fx'),
+        t('changelog.2026chat'),
+        t('changelog.2026map'),
+        t('changelog.2026audio'),
+        t('changelog.2026json'),
+        t('changelog.2026note'),
+        t('changelog.2026ux'),
+        t('changelog.2026sync'),
+        t('changelog.2026menu'),
+        t('changelog.2026terrain'),
+        t('changelog.2026net'),
+        t('changelog.links'),
+      ], true),
     ];
   }
 
-  private makeSampleMessage(from: string, to: string, name: string, toName: string, text: string, tag = 'mine', timestamp = 0): ChatMessage {
-    let message = new ChatMessage();
-    message.from = from;
-    message.to = to;
-    message.name = name;
-    message.toName = toName;
-    message.color = '#444444';
-    message.toColor = toName ? '#444444' : null;
-    message.tag = tag;
-    message.value = text;
-    message.setAttribute('timestamp', timestamp);
-    return message;
+  private buildTutorialCard(id: TutorialCardId, texts: string[], changelogStyle = false): TutorialHelpCard {
+    const t = (key: string) => this.i18n.t(key);
+    const meta = TUTORIAL_CARD_META[id];
+    const blocks: TutorialBlock[] = [];
+    for (const text of texts) {
+      if (changelogStyle) {
+        blocks.push(...this.parseChangelogBlocks(text));
+      } else {
+        blocks.push(...this.parseMarkedBlocks(text));
+      }
+    }
+    return {
+      id,
+      title: t(`tutorial.card.${id}`),
+      hint: t(meta.hintKey),
+      icon: meta.icon,
+      blocks,
+    };
+  }
+
+  /** Split ＜Title＞… sections into titled blocks. */
+  private parseMarkedBlocks(text: string): TutorialBlock[] {
+    const normalized = (text || '').replace(/\r\n/g, '\n').trim();
+    if (!normalized) return [];
+    const parts = normalized.split(/(?=＜[^＞\n]+＞|<[^>\n]+>)/);
+    const blocks: TutorialBlock[] = [];
+    for (const part of parts) {
+      const trimmed = part.trim();
+      if (!trimmed) continue;
+      const match = trimmed.match(/^[＜<]([^＞>]+)[＞>]\s*([\s\S]*)$/);
+      if (match) {
+        blocks.push(this.toBlock(match[1].trim(), match[2]));
+      } else {
+        blocks.push(this.toBlock('', trimmed));
+      }
+    }
+    return blocks;
+  }
+
+  /** First line = title; remaining lines = body (changelog entries). */
+  private parseChangelogBlocks(text: string): TutorialBlock[] {
+    const normalized = (text || '').replace(/\r\n/g, '\n').trim();
+    if (!normalized) return [];
+    const nl = normalized.indexOf('\n');
+    if (nl < 0) {
+      return [this.toBlock(normalized, '')];
+    }
+    return [this.toBlock(normalized.slice(0, nl).trim(), normalized.slice(nl + 1))];
+  }
+
+  private toBlock(title: string, body: string): TutorialBlock {
+    const rawLines = this.splitContentLines(body);
+    return {
+      titleSegs: title ? tokenizeTutorialLine(title) : [],
+      lines: rawLines.map(line => buildTutorialLineView(line, isBulletLine(line))),
+    };
+  }
+
+  private splitContentLines(text: string): string[] {
+    return (text || '')
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .map(line => line.replace(/^[　\s]+/, '').trimEnd())
+      .filter(line => line.length > 0)
+      .flatMap(line => expandPackedActionLines(line));
+  }
+
+  isCardOpen(id: TutorialCardId): boolean {
+    return this.openTutorialCards.has(id);
+  }
+
+  toggleTutorialCard(id: TutorialCardId) {
+    if (this.openTutorialCards.has(id)) {
+      this.openTutorialCards.delete(id);
+    } else {
+      this.openTutorialCards.add(id);
+    }
+    this.changeDetector.markForCheck();
+  }
+
+  onTutorialLinkClick(event: MouseEvent, href: string) {
+    event.stopPropagation();
+    if (!href || !StringUtil.validUrl(href)) {
+      event.preventDefault();
+      return;
+    }
+    if (!StringUtil.sameOrigin(href)) {
+      event.preventDefault();
+      this.modalService.open(OpenUrlComponent, { url: href });
+    }
   }
 }

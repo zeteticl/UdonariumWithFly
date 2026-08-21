@@ -31,6 +31,19 @@
   margin: 2px 0 0 1.4em;
   font-size: 12px;
 }
+.scene-perm-sub-flat {
+  margin-left: 0;
+  font-size: 13px;
+}
+
+.perm-icon {
+  font-size: 16px;
+  line-height: 1;
+  width: 16px;
+  height: 16px;
+  color: #475569;
+  flex-shrink: 0;
+}
 
 .hint {
   font-size: 12px;

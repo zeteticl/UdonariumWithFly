@@ -1,8 +1,8 @@
-import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewInit, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem, Network } from '@udonarium/core/system';
-import { PeerContext } from '@udonarium/core/system/network/peer-context';
+import { IPeerContext, PeerContext } from '@udonarium/core/system/network/peer-context';
 import { PeerSessionGrade } from '@udonarium/core/system/network/peer-session-state';
 import { FileArchiver } from '@udonarium/core/file-storage/file-archiver';
 import { GuestSession } from '@udonarium/guest-session';
@@ -11,7 +11,6 @@ import { RoomAuth } from '@udonarium/room-auth';
 
 import { FileSelecterComponent } from 'component/file-selecter/file-selecter.component';
 import { LobbyComponent } from 'component/lobby/lobby.component';
-import { PermissionSettingComponent } from 'component/permission-setting/permission-setting.component';
 import { RolePasswordPromptComponent } from 'component/role-password-prompt/role-password-prompt.component';
 import { RoomJoinComponent } from 'component/room-join/room-join.component';
 import { RoomSettingComponent } from 'component/room-setting/room-setting.component';
@@ -22,6 +21,7 @@ import { animate, style, transition, trigger } from '@angular/animations';
 import { ChatMessageService } from 'service/chat-message.service';
 import { ConfirmationComponent, ConfirmationType } from 'component/confirmation/confirmation.component';
 import { FolderBackupService } from 'service/folder-backup.service';
+import { AppUpdateService } from 'service/app-update.service';
 import { I18nService } from 'service/i18n.service';
 import { RoomInviteService } from 'service/room-invite.service';
 import { SaveDataService } from 'service/save-data.service';
@@ -31,13 +31,15 @@ import { ImageFile, ImageState } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { RoomInfo } from '@udonarium/core/system/network/room-info';
 import { RoomJoinResult, RoomRole } from '@udonarium/room-auth';
+import { SceneToolPermission } from '@udonarium/table-fx/scene-tool-permission';
+import { appVersion } from '../../../environments/version';
 
 import * as localForage from 'localforage';
 
 @Component({
     selector: 'peer-menu',
     templateUrl: './peer-menu.component.html',
-    styleUrls: ['./peer-menu.component.css'],
+    styleUrls: ['../shared/settings-ui.css', './peer-menu.component.css'],
     animations: [
         trigger('fadeInOut', [
             transition('false => true', [
@@ -48,7 +50,7 @@ import * as localForage from 'localforage';
     ],
     standalone: false
 })
-export class PeerMenuComponent implements OnInit, OnDestroy {
+export class PeerMenuComponent implements OnInit, OnDestroy, AfterViewInit {
   targetUserId: string = '';
   networkService = Network
   gameRoomService = ObjectStore.instance;
@@ -70,7 +72,7 @@ export class PeerMenuComponent implements OnInit, OnDestroy {
   private _timeOutId4: NodeJS.Timeout;
   private _timeOutIdInvite: NodeJS.Timeout;
 
-  private interval: NodeJS.Timeout;
+  private interval: NodeJS.Timeout = null;
   get myPeer(): PeerCursor { return PeerCursor.myCursor; }
 
   get myPeerName(): string {
@@ -78,13 +80,15 @@ export class PeerMenuComponent implements OnInit, OnDestroy {
     return PeerCursor.myCursor.name;
   }
   set myPeerName(name: string) {
-    if (PeerCursor.myCursor) {
-      PeerCursor.myCursor.name = name;
-      if (PeerCursor.myCursor.name === PeerCursor.CHAT_DEFAULT_NAME) {
-        localForage.removeItem(PeerCursor.CHAT_MY_NAME_LOCAL_STORAGE_KEY).catch(e => console.log(e));
-      } else {
-        localForage.setItem(PeerCursor.CHAT_MY_NAME_LOCAL_STORAGE_KEY, PeerCursor.myCursor.name).catch(e => console.log(e));
-      }
+    if (!PeerCursor.myCursor) return;
+    // Never auto-fill while editing. Default name is only assigned once at
+    // createMyCursor() when no saved nickname exists (first visit).
+    PeerCursor.myCursor.name = name ?? '';
+    const trimmed = PeerCursor.myCursor.name.trim();
+    if (!trimmed) {
+      localForage.removeItem(PeerCursor.CHAT_MY_NAME_LOCAL_STORAGE_KEY).catch(e => console.log(e));
+    } else {
+      localForage.setItem(PeerCursor.CHAT_MY_NAME_LOCAL_STORAGE_KEY, PeerCursor.myCursor.name).catch(e => console.log(e));
     }
   }
 
@@ -138,6 +142,17 @@ export class PeerMenuComponent implements OnInit, OnDestroy {
   get maskedPassword(): string { return '●●●●●●●●' }
   get config(): AppConfig { return AppConfigService.appConfig; }
   get canUsePrivateSession(): boolean { return this.config.backend.mode == 'skyway'; }
+  /** Build stamp: commit time in local TZ, short SHA, branch. */
+  get appVersionDisplay(): string {
+    const d = new Date(appVersion.committedAt);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const date = Number.isNaN(d.getTime())
+      ? appVersion.committedAt
+      : `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return `${date} ${appVersion.sha} ${appVersion.branch}`;
+  }
+  get canLoadZip(): boolean { return SceneToolPermission.instance.canLoadZip(); }
+  get canLoadRoom(): boolean { return SceneToolPermission.instance.canLoadRoom(); }
 
   constructor(
     private ngZone: NgZone,
@@ -148,6 +163,7 @@ export class PeerMenuComponent implements OnInit, OnDestroy {
     public appConfigService: AppConfigService,
     public i18n: I18nService,
     public folderBackup: FolderBackupService,
+    public appUpdate: AppUpdateService,
     private saveDataService: SaveDataService,
   ) { }
 
@@ -158,6 +174,26 @@ export class PeerMenuComponent implements OnInit, OnDestroy {
   onLocaleChange(locale: AppLocale) {
     this.i18n.setLocale(locale);
     this.refreshPanelTitle();
+  }
+
+  async confirmApplyUpdate(e?: Event) {
+    e?.preventDefault();
+    e?.stopPropagation();
+    if (!this.appUpdate.isUpdateReady) return;
+    const result = await this.modalService.open(ConfirmationComponent, {
+      title: this.i18n.t('update.title'),
+      text: this.i18n.t('update.text'),
+      // update.help contains HTML; Confirmation uses helpHtml + safe pipe.
+      helpHtml: this.i18n.t('update.help'),
+      type: ConfirmationType.OK_CANCEL,
+      materialIcon: 'system_update',
+      okLabel: this.i18n.t('update.restart'),
+    });
+    if (result === false || result == null) return;
+    if (this.folderBackup.isReady) {
+      await this.folderBackup.flush({ timeoutMs: 60000 });
+    }
+    document.location.reload();
   }
 
   private refreshPanelTitle() {
@@ -174,10 +210,29 @@ export class PeerMenuComponent implements OnInit, OnDestroy {
   ngAfterViewInit() {
     EventSystem.register(this)
       .on('OPEN_NETWORK', event => {
-        this.ngZone.run(() => { });
+        this.ngZone.run(() => this.syncPeerHealthPoll());
       })
-      .on('LOCALE_CHANGED', () => this.ngZone.run(() => this.refreshPanelTitle()));
-    this.interval = setInterval(() => { }, 1000);
+      .on('CONNECT_PEER', () => this.ngZone.run(() => this.syncPeerHealthPoll()))
+      .on('DISCONNECT_PEER', () => this.ngZone.run(() => this.syncPeerHealthPoll()))
+      .on('LOCALE_CHANGED', () => this.ngZone.run(() => this.refreshPanelTitle()))
+      .on('APP_UPDATE_READY', () => this.ngZone.run(() => this.syncPeerHealthPoll()));
+    this.syncPeerHealthPoll();
+  }
+
+  /** Peer health/ping stats need a 1s CD tick only while peers are present. */
+  private syncPeerHealthPoll() {
+    const need = (this.networkService.peers?.length || 0) > 0;
+    if (need) {
+      if (this.interval) return;
+      this.ngZone.runOutsideAngular(() => {
+        this.interval = setInterval(() => {
+          this.ngZone.run(() => { });
+        }, 1000);
+      });
+    } else if (this.interval) {
+      clearInterval(this.interval);
+      this.interval = null;
+    }
   }
 
   ngOnDestroy() {
@@ -187,7 +242,7 @@ export class PeerMenuComponent implements OnInit, OnDestroy {
     clearTimeout(this._timeOutId4);
     clearTimeout(this._timeOutIdInvite);
     EventSystem.unregister(this);
-    clearInterval(this.interval);
+    if (this.interval) clearInterval(this.interval);
   }
 
   isInviteRoleAvailable(role: RoomRole): boolean {
@@ -281,31 +336,29 @@ export class PeerMenuComponent implements OnInit, OnDestroy {
   }
 
   showLobby() {
-    this.modalService.open(LobbyComponent, { width: 700, height: 400, left: 0, top: 400 });
+    PanelService.closePanelsByTourId('menu.lobby');
+    this.panelService.open(LobbyComponent, LobbyComponent.centeredPanelOption({
+      title: this.i18n.t('lobby.title'),
+    }));
   }
 
   showCreateRoom() {
-    this.modalService.open(RoomSettingComponent, { width: 700, height: 420, left: 0, top: 400 });
+    this.modalService.open(RoomSettingComponent, { width: 690, height: 600, left: 0, top: 80 });
   }
 
   editRoomPasswords() {
     if (!this.isGMMode || !this.isRoleAuthRoom || !this.networkService.peer.isRoom) return;
     this.modalService.open(RoomSettingComponent, {
       editMode: true,
-      width: 700,
-      height: 460,
+      width: 690,
+      height: 600,
       left: 0,
-      top: 400,
+      top: 80,
     });
   }
 
-  openPermissionManage() {
-    if (!this.isGMMode) return;
-    this.panelService.open(PermissionSettingComponent, { width: 480, height: 420, left: 120, top: 80 });
-  }
-
   loadZip() {
-    if (this.GuestMode() || !this.networkService.peer.isRoom) return;
+    if (this.GuestMode() || !this.networkService.peer.isRoom || !this.canLoadZip) return;
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
@@ -326,16 +379,18 @@ export class PeerMenuComponent implements OnInit, OnDestroy {
   async saveFolderBackup() {
     if (this.GuestMode() || !this.networkService.peer?.isRoom) return;
     if (!(await this.folderBackup.ensureBound())) return;
-    await this.folderBackup.flush({ timeoutMs: 15000 });
+    await this.folderBackup.flush({ timeoutMs: 60000 });
   }
 
   loadFolderBackup() {
-    if (this.GuestMode()) return;
+    if (this.GuestMode() || !this.folderBackup.canLoadFromFolder || !this.canLoadRoom) return;
     void this.folderBackup.openLoadUi();
   }
 
   async downloadZip() {
     if (this.GuestMode() || !this.networkService.peer?.isRoom || this.isDownloadingZip) return;
+    const includeAudio = await this.saveDataService.askIncludeAudio('zip');
+    if (includeAudio == null) return;
     this.isDownloadingZip = true;
     this.downloadZipPercent = 0;
     const roomName = 0 < this.networkService.peer.roomName.length
@@ -344,7 +399,7 @@ export class PeerMenuComponent implements OnInit, OnDestroy {
     try {
       await this.saveDataService.saveRoomAsync(roomName, percent => {
         this.downloadZipPercent = percent;
-      });
+      }, includeAudio);
     } finally {
       setTimeout(() => {
         this.isDownloadingZip = false;
@@ -387,6 +442,29 @@ export class PeerMenuComponent implements OnInit, OnDestroy {
   findPeerIsGMMode(peerId: string): boolean {
     const peerCursor = PeerCursor.findByPeerId(peerId);
     return peerCursor ? peerCursor.isGMMode : false;
+  }
+
+  kickPeer(peer: IPeerContext) {
+    if (!this.isGMMode || !peer?.peerId || peer.peerId === this.networkService.peerId) return;
+    const name = this.findPeerName(peer.peerId) || peer.userId || peer.peerId;
+    this.modalService.open(ConfirmationComponent, {
+      title: this.i18n.t('peer.kick.confirmTitle'),
+      text: this.i18n.t('peer.kick.confirmText', { name }),
+      help: this.i18n.t('peer.kick.confirmHelp'),
+      type: ConfirmationType.OK_CANCEL,
+      materialIcon: 'person_remove',
+      action: () => {
+        EventSystem.call('KICK_PEER', {
+          byPeerId: this.networkService.peerId,
+          byName: this.myPeerName || this.networkService.peer.userId || '',
+        }, peer.peerId);
+        // Allow the kick message to flush before tearing down the link.
+        setTimeout(() => {
+          this.networkService.disconnect(peer);
+        }, 250);
+        this.chatMessageService.sendOperationLog(this.i18n.t('peer.kick.log', { name }));
+      },
+    });
   }
 
   copyPeerId() {
@@ -484,7 +562,7 @@ export class PeerMenuComponent implements OnInit, OnDestroy {
     const peer = this.networkService.peer;
     const room = peer.isRoom
       ? new RoomInfo(peer.roomId, peer.roomName, [peer as any])
-      : new RoomInfo('local', RoomAuth.encode(this.i18n.t('peer.localRoom'), 'local', { gm: '', user: '', guest: '' }), []);
+      : new RoomInfo('local', RoomAuth.encode(this.i18n.t('peer.localRoom'), 'local', { gm: '', user: '', guest: '' }).roomName, []);
 
     const result = await this.modalService.open<RoomJoinResult>(RoomJoinComponent, {
       room,
@@ -512,9 +590,15 @@ export class PeerMenuComponent implements OnInit, OnDestroy {
         void (async () => {
           const prev = this.currentRole;
           if (result.role === 'guest' && prev !== 'guest') {
-            await this.folderBackup.flush({ timeoutMs: 15000 });
+            await this.folderBackup.flush({ timeoutMs: 60000 });
           }
           RoomAuth.applyIdentity(result.role, peer.roomId || Network.peer?.roomId || '');
+          this.roomInvite.setRolePassword(result.role, result.password || '');
+          RoomAuth.rememberSession(
+            result.role,
+            result.password || RoomAuth.getSessionRolePassword(result.role),
+            RoomAuth.getSessionMeshPassword() || Network.peer?.password || undefined,
+          );
           // Clear legacy hold state.
           PeerCursor.isGMHold = false;
           this.chatMessageService.sendOperationLog(this.i18n.t('peer.roleSwitchLog', {

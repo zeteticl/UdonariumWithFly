@@ -17,15 +17,20 @@ export interface Connection {
   readonly peers: IPeerContext[];
   readonly callback: ConnectionCallback;
   readonly bandwidthUsage: number;
+  /** Sticky high-water mark; survives brief queue windows so UI can poll reliably. */
+  readonly bandwidthPeak: number;
+  clearBandwidthPeak(): void;
 
   configure(config: any)
   open(userId?: string)
   open(userId: string, roomId: string, roomName: string, password: string)
-  close()
+  close(): void | Promise<void>
   connect(peer: IPeerContext): boolean
   disconnect(peer: IPeerContext): boolean
   disconnectAll()
   send(data: any, sendTo?: string)
-  listAllPeers(): Promise<string[]>
-  listAllRooms(): Promise<IRoomInfo[]>
+  listAllPeers(force?: boolean): Promise<string[]>
+  listAllRooms(force?: boolean): Promise<IRoomInfo[]>
+  /** PeerIds currently in the SkyWay room channel (empty if not in a room). */
+  listRoomMemberPeerIds(): string[]
 }

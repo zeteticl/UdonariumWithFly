@@ -8,7 +8,11 @@ import { TeachingTipService } from 'service/teaching-tip.service';
 export class TeachingTipDirective implements OnInit, OnDestroy {
   @Input('appTeachingTip') tipKey = '';
 
-  private readonly onEnter = () => this.service.show(this.tipKey, this.el.nativeElement);
+  private readonly onEnter = () => {
+    // Coarse / touch pointers synthesize sticky mouseenter after tap — never show tips then.
+    if (!this.service.isAvailable) return;
+    this.service.show(this.tipKey, this.el.nativeElement);
+  };
   private readonly onLeave = () => this.service.hide(this.el.nativeElement);
   private readonly onDown = () => this.service.hideAll();
 

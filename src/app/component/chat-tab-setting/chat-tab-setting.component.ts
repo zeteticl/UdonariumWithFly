@@ -5,6 +5,7 @@ import { ChatTabList } from '@udonarium/chat-tab-list';
 import { ObjectSerializer } from '@udonarium/core/synchronize-object/object-serializer';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem, Network } from '@udonarium/core/system';
+import { PeerCursor } from '@udonarium/peer-cursor';
 import { ChatLogOutputComponent } from 'component/chat-log-output/chat-log-output.component';
 
 import { ChatMessageService } from 'service/chat-message.service';
@@ -33,7 +34,36 @@ export class ChatTabSettingComponent implements OnInit, OnDestroy {
   get recieveOperationLogLevel(): number { return this.selectedTab.recieveOperationLogLevel; }
   set recieveOperationLogLevel(recieveOperationLogLevel: number) { if (this.isEditable) this.selectedTab.recieveOperationLogLevel = recieveOperationLogLevel; }
 
+  get isPrivate(): boolean { return !!this.selectedTab?.isPrivate; }
+  set isPrivate(v: boolean) {
+    if (!this.isEditable || this.GuestMode()) return;
+    this.selectedTab.isPrivate = !!v;
+    if (v && !this.selectedTab.creatorUserId) {
+      this.selectedTab.creatorUserId = Network.peer?.userId || '';
+    }
+  }
+
+  get peerCandidates(): PeerCursor[] {
+    return ObjectStore.instance.getObjects(PeerCursor).filter(p => !!p.userId);
+  }
+
+  isMemberChecked(userId: string): boolean {
+    return !!this.selectedTab && this.selectedTab.isMember(userId);
+  }
+
+  toggleMember(userId: string, checked: boolean) {
+    if (!this.isEditable || this.GuestMode() || !this.selectedTab) return;
+    const set = new Set(this.selectedTab.memberIds);
+    if (checked) set.add(userId); else set.delete(userId);
+    this.selectedTab.setMembers(Array.from(set));
+  }
+
   get chatTabs(): ChatTab[] { return this.chatMessageService.chatTabs; }
+  /** Local display label — edit field still uses synced `tabName`. */
+  tabLabel(tab: ChatTab): string {
+    if (!tab || tab.name === '') return this.i18n.t('chatTab.untitled');
+    return ChatTabList.localizedName(tab);
+  }
   get isEmpty(): boolean { return this.chatMessageService.chatTabs.length < 1 }
   get isDeleted(): boolean { return this.selectedTab ? ObjectStore.instance.get(this.selectedTab.identifier) == null : false; }
   get isEditable(): boolean { return !this.isEmpty && !this.isDeleted; }
@@ -86,7 +116,17 @@ export class ChatTabSettingComponent implements OnInit, OnDestroy {
 
   create() {
     if (this.GuestMode()) return;
-    ChatTabList.instance.addChatTab(this.i18n.t('chatTab.defaultName'));
+    const tab = ChatTabList.instance.addChatTab(this.i18n.t('chatTab.defaultName'));
+    tab.creatorUserId = Network.peer?.userId || '';
+  }
+
+  createPrivate() {
+    if (this.GuestMode()) return;
+    const tab = ChatTabList.instance.addChatTab(this.i18n.t('chatTab.privateDefaultName'));
+    tab.isPrivate = true;
+    tab.creatorUserId = Network.peer?.userId || '';
+    tab.setMembers([tab.creatorUserId].filter(Boolean));
+    this.selectedTab = tab;
   }
 
   async save() {
@@ -105,6 +145,11 @@ export class ChatTabSettingComponent implements OnInit, OnDestroy {
       this.isSaveing = false;
       this.progresPercent = 0;
     }, 500);
+  }
+
+  importXml() {
+    if (this.GuestMode()) return;
+    this.saveDataService.pickAndLoadXmlOrZip();
   }
 
   delete() {

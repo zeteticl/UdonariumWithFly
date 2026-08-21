@@ -22,6 +22,16 @@ export class TabletopSelectionService {
   get objects(): TabletopObject[] { return Array.from(this.selectionMap.keys()); }
   excludeElement: Element = null;
 
+  /** Foundry-style Alt hold: outline all canvas objects (game-table draws overlay). */
+  private _canvasHighlight = false;
+  get canvasHighlight(): boolean { return this._canvasHighlight; }
+
+  setCanvasHighlight(active: boolean) {
+    if (this._canvasHighlight === active) return;
+    this._canvasHighlight = active;
+    EventSystem.trigger('CANVAS_HIGHLIGHT', { active });
+  }
+
   private isUdpateCssBatching = false;
 
   constructor() { }

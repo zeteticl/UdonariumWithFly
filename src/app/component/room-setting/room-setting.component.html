@@ -1,6 +1,7 @@
-<div class="settings-ui" *ngIf="editMode || !isConnected; else other_content">
+<div class="settings-ui dense" *ngIf="editMode || !isConnected; else other_content">
   <section class="card">
     <header class="card-head"><h3>{{ (editMode ? 'room.editTitle' : (isResume ? 'room.resumeTitle' : 'room.title')) | i18n }}</h3></header>
+    <form (ngSubmit)="onPrimaryAction()">
     <p class="hint" *ngIf="isResume">{{ 'room.resumeHint' | i18n:{ id: preferredRoomId } }}</p>
     <p class="hint hint-auth" *ngIf="isResume && resumeAuthHintKey" [ngClass]="{
       'hint-ok': preferredAuthStatus === 'ready',
@@ -80,6 +81,22 @@
     <p class="hint">{{ (editMode ? 'room.editPasswordHint' : 'room.passwordHint') | i18n }}</p>
     <p class="hint" *ngIf="editMode && isConnected">{{ 'room.editReconnectHint' | i18n }}</p>
 
+    <div class="perm-embed">
+      <button
+        type="button"
+        class="btn perm-toggle"
+        [attr.aria-expanded]="showPermissions"
+        (click)="showPermissions = !showPermissions"
+      >
+        <i class="material-icons">admin_panel_settings</i>
+        <span>{{ 'peer.permissionManage' | i18n }}</span>
+        <i class="material-icons perm-chevron">{{ showPermissions ? 'expand_less' : 'expand_more' }}</i>
+      </button>
+      <div class="perm-embed-body" *ngIf="showPermissions">
+        <permission-setting [embedMode]="true"></permission-setting>
+      </div>
+    </div>
+
     <div class="error-text" *ngIf="roomNameValidation.errors && (roomNameValidation.dirty || roomNameValidation.touched)">
       <div [hidden]="!roomNameValidation.errors.required && !roomNameValidation.errors.minlength">
         {{ 'room.errorNameRequired' | i18n }}
@@ -96,20 +113,18 @@
     <footer class="actions">
       <ng-container *ngIf="!editMode">
         <button
-          type="button"
+          type="submit"
           class="btn btn-primary"
-          [disabled]="!canSubmit"
-          (click)="createRoom()"
+          [disabled]="!canSubmit || connectionBusy.busy"
         >
           {{ (isResume ? 'room.resume' : 'room.create') | i18n }}
         </button>
       </ng-container>
       <ng-container *ngIf="editMode">
         <button
-          type="button"
+          type="submit"
           class="btn btn-primary"
           [disabled]="isSaving || !canSubmit"
-          (click)="saveRoomPasswords()"
         >
           {{ 'room.savePasswords' | i18n }}
         </button>
@@ -118,6 +133,7 @@
         </button>
       </ng-container>
     </footer>
+    </form>
   </section>
   <p class="empty-hint" *ngIf="!editMode">{{ 'room.emptyRoomHint' | i18n }}</p>
 </div>

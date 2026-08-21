@@ -200,6 +200,7 @@ export class ResizableDirective implements AfterViewInit, OnDestroy {
   private onResizeEnd(e: MouseEvent | TouchEvent, handle: ResizeHandler) {
     if (handle.input.isDragging && e.cancelable) e.preventDefault();
     e.stopPropagation();
+    this.ngZone.run(() => this.onend.emit(e));
   }
 
   private onContextMenu(e: MouseEvent | TouchEvent, handle: ResizeHandler) {

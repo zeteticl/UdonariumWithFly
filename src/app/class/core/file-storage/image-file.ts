@@ -1,5 +1,6 @@
 import { CanvasUtil } from './canvas-util';
 import { FileReaderUtil } from './file-reader-util';
+import { normalizeImageBlob } from './image-normalize';
 
 export enum ImageState {
   NULL = 0,
@@ -40,7 +41,8 @@ export class ImageFile {
   get identifier(): string { return this.context.identifier };
   get name(): string { return this.context.name };
   get blob(): Blob { return this.context.blob ? this.context.blob : this.context.thumbnail.blob; };
-  get url(): string { return this.context.url ? this.context.url : this.context.thumbnail.url; };
+  /** Always a string — templates frequently read url.length during sync/remount. */
+  get url(): string { return this.context.url || this.context.thumbnail?.url || ''; };
   get thumbnail(): ThumbnailContext { return this.context.thumbnail };
 
   get state(): ImageState {
@@ -88,12 +90,15 @@ export class ImageFile {
   }
 
   private static async _createAsync(blob: Blob, name?: string): Promise<ImageFile> {
-    let arrayBuffer = await FileReaderUtil.readAsArrayBufferAsync(blob);
+    // Normalize before hash so identifiers match stored/synced bytes.
+    const { blob: stored } = await normalizeImageBlob(blob);
+    let arrayBuffer = await FileReaderUtil.readAsArrayBufferAsync(stored);
 
     let imageFile = new ImageFile();
     imageFile.context.identifier = await FileReaderUtil.calcSHA256Async(arrayBuffer);
     imageFile.context.name = name;
-    imageFile.context.blob = new Blob([arrayBuffer], { type: blob.type });
+    imageFile.context.type = stored.type || blob.type || '';
+    imageFile.context.blob = new Blob([arrayBuffer], { type: imageFile.context.type });
     imageFile.context.url = window.URL.createObjectURL(imageFile.context.blob);
 
     try {

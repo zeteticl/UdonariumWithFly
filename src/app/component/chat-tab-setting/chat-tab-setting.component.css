@@ -1,4 +1,19 @@
 /* Chat-tab-specific overrides; shared UI lives in ../shared/settings-ui.css */
+
 .settings-list {
-  min-height: 200px;
+  min-height: 160px;
+}
+
+:host-context(html.udon-mobile-layout) .settings-list {
+  min-height: 88px;
+}
+
+.field-row {
+  margin-top: 0;
+}
+
+.check-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
 }

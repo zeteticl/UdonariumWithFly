@@ -34,6 +34,41 @@
   pointer-events: none;
 }
 
+/* Layer peers: host must not steal hits; only content with pointer-events:auto does. */
+.layer-peer-host {
+  pointer-events: none;
+}
+
+/*
+ * 2D corkboard peers: keep preserve-3d (do NOT flatten).
+ * Flattening made CSS z-index win, but also collapsed .push-pin translateZ(4px),
+ * so yarn could not sit between the photo and the pin head.
+ * Shared [ ] paint/hit order uses movable micro translateZ (capped under yarn Z).
+ * Corkboard visuals ignore SyncVar altitude so pieces stay under clueStringsZ.
+ */
+.layer-peer-host.layer-flat-2d {
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+}
+
+/* Alt hold: Foundry-style canvas object outlines (screen AABB above peers). */
+.canvas-highlight-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 100000;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.canvas-highlight-box {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid hsla(200, 100%, 70%, 0.95);
+  box-shadow: 0 0 0 1px hsla(0, 0%, 0%, 0.4);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
 .component {
   -moz-user-select: none;
   -webkit-user-select: none;
@@ -424,4 +459,191 @@
   font-size: 12px;
   line-height: 1.4;
   text-align: center;
+}
+
+.debug-pose {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 12000;
+  min-width: 220px;
+  max-width: min(360px, calc(100vw - 20px));
+  max-height: min(70vh, 520px);
+  display: flex;
+  flex-direction: column;
+  color: #d7ffd9;
+  background: rgba(12, 18, 14, 0.92);
+  border: 1px solid #3d6b4f;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+}
+
+.debug-pose-hd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  font: 600 11px/1.2 ui-monospace, Consolas, monospace;
+  border-bottom: 1px solid #2f513c;
+  user-select: none;
+}
+
+.debug-pose-hint {
+  margin-left: auto;
+  opacity: 0.55;
+  font-weight: 400;
+  font-size: 10px;
+}
+
+.debug-pose-close {
+  margin: 0;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: #a5d6a7;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.debug-pose-body {
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  font: 11px/1.45 ui-monospace, Consolas, monospace;
+  white-space: pre;
+  user-select: text;
+}
+
+/* Mobile zoom slider — top-right (desktop unchanged; *ngIf gated) */
+.view-zoom-control {
+  position: fixed;
+  top: 48px;
+  right: 8px;
+  z-index: 11040;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px 8px;
+  box-sizing: border-box;
+  background: var(--udon-chrome-bg, rgba(36, 36, 36, 0.96));
+  border: 1px solid var(--udon-chrome-border, #555);
+  border-radius: 8px;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.view-zoom-reset {
+  min-width: 36px;
+  margin: 0;
+  padding: 2px 4px;
+  border: 1px solid #777;
+  border-radius: 4px;
+  background: #333;
+  color: #eee;
+  font-size: 11px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.view-zoom-icon {
+  font-size: 16px !important;
+  color: #ccc;
+  line-height: 1;
+}
+
+.view-zoom-range {
+  appearance: none;
+  -webkit-appearance: none;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 28px;
+  height: 132px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  accent-color: #8ab4f8;
+  cursor: pointer;
+}
+
+.view-zoom-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #8ab4f8;
+  border: 1px solid #555;
+}
+
+.view-zoom-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #8ab4f8;
+  border: 1px solid #555;
+}
+
+/* Fixed top-right zoom column (mobile). */
+.map-zoom-hud {
+  position: fixed;
+  right: 10px;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  bottom: auto;
+  z-index: 2000010;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px;
+  box-sizing: border-box;
+  background: var(--udon-chrome-bg, rgba(36, 36, 36, 0.96));
+  border: 1px solid var(--udon-chrome-border, #555);
+  border-radius: 14px;
+  pointer-events: auto;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+}
+
+html.udon-tablet-landscape .map-zoom-hud {
+  right: 12px;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  bottom: auto;
+}
+
+.map-hud-zoom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 44px;
+}
+
+.map-hud-zoom-reset {
+  min-width: 32px;
+  margin: 0;
+  padding: 2px 4px;
+  border: 1px solid var(--udon-chrome-border, #555);
+  border-radius: 6px;
+  background: #333;
+  color: var(--udon-chrome-text, #e8e8e8);
+  font-size: 11px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.map-hud-zoom-range {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 28px;
+  height: 120px;
+  margin: 0;
+  accent-color: #8ab4f8;
+  cursor: pointer;
+  touch-action: none;
 }

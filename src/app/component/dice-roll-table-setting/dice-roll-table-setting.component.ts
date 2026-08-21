@@ -123,6 +123,11 @@ export class DiceRollTableSettingComponent implements OnInit, OnDestroy, AfterVi
     }, 500);
   }
 
+  importXml() {
+    if (this.GuestMode()) return;
+    this.saveDataService.pickAndLoadXmlOrZip();
+  }
+
   async saveAll() {
     if (this.isSaveing) return;
     this.isSaveing = true;
@@ -185,7 +190,7 @@ export class DiceRollTableSettingComponent implements OnInit, OnDestroy, AfterVi
   helpDiceRollTable() {
     if (this.GuestMode()) return;
     let coordinate = this.pointerDeviceService.pointers[0];
-    let option: PanelOption = { left: coordinate.x, top: coordinate.y, width: 600, height: 788 };
+    let option: PanelOption = { left: coordinate.x, top: coordinate.y, width: 600, height: 600 };
     let textView = this.panelService.open(TextViewComponent, option);
     textView.title = this.i18n.t('diceTable.help');
     textView.text = this.i18n.t('diceTable.helpText');

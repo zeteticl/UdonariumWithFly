@@ -95,6 +95,15 @@ export class SceneToolService {
     return this.selectedDrawings.length + this.selectedLights.length + this.selectedWalls.length;
   }
 
+  /** Flat list of currently selected scene objects (drawings, lights, walls). */
+  get selectedObjects(): ObjectNode[] {
+    return [
+      ...this.selectedDrawings,
+      ...this.selectedLights,
+      ...this.selectedWalls,
+    ];
+  }
+
   /** When true, normal tabletop pick / character select yields to scene tools. */
   get isBlockingPick(): boolean {
     return this.mode !== 'none';
@@ -360,7 +369,8 @@ export class SceneToolService {
     }
   }
 
-  private notifyTableUpdate() {
+  /** Notify peers / render that the current table's scene children changed. */
+  notifyTableUpdate() {
     const table = TableSelecter.instance.viewTable;
     if (table) EventSystem.trigger('UPDATE_GAME_OBJECT', table.toContext());
   }

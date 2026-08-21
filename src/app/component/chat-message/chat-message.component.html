@@ -71,6 +71,11 @@
     <span style="display: inline-block">
       <span [style.color]="!chatMessage.isSpecialColor && chatMessage.color && chatMessage.color != '#ffffff' ? chatMessage.color : ''" 
         [innerHTML]="htmlEscapedText | safe: 'html'" (click)="onLinkClick($event)"></span>
+      <div class="msg-attached-list" *ngIf="attachedImages.length">
+        <a class="msg-attached-link" *ngFor="let img of attachedImages" [href]="img.url" target="_blank" rel="noopener noreferrer">
+          <img class="msg-attached" *ngIf="img?.url" [src]="img.url | safe: 'resourceUrl'" alt="" draggable="false" />
+        </a>
+      </div>
       <span *ngIf="!isEditing && chatMessage.isEdited" class="is-edited"><b style="white-space: nowrap">{{ 'chat.edited' | i18n }}</b> {{ formatTimestamp(chatMessage.lastUpdate, 'M/d H:mm') }}</span>
       <button *ngIf="chatMessage.isSecret" (click)="discloseMessage()" style="padding-top: 1px; padding-bottom: 1px; margin-left: 3px;">{{ 'chat.disclose' | i18n }}</button>
     </span>

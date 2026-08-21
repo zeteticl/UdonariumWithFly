@@ -134,6 +134,9 @@ export class DraggableDirective implements AfterViewInit, OnDestroy {
       e.preventDefault();
     }
     e.stopPropagation();
+    if (this.input.isDragging) {
+      this.ngZone.run(() => this.onend.emit(e));
+    }
   }
 
   private onContextMenu(e: MouseEvent | TouchEvent) {

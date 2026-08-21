@@ -20,8 +20,11 @@ import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { MathUtil } from '@udonarium/core/system/util/math-util';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
+import { TabletopLoadSettle } from '@udonarium/tabletop-load-settle';
+import { shouldIgnoreTabletopDoubleClick } from '@udonarium/tabletop-interact';
+import { LAYER_PEER_MOVABLE_Z_PX, layerPeerMovableTransform } from '@udonarium/tabletop-object-util';
 import { CardStackListComponent } from 'component/card-stack-list/card-stack-list.component';
-import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
+import { CardStackSettingsComponent } from 'component/card-stack-settings/card-stack-settings.component';
 import { OpenUrlComponent } from 'component/open-url/open-url.component';
 import { ObjectInteractGesture } from 'component/game-table/object-interact-gesture';
 import { MovableOption } from 'directive/movable.directive';
@@ -34,6 +37,7 @@ import { PointerDeviceService } from 'service/pointer-device.service';
 import { ModalService } from 'service/modal.service';
 import { ChatMessageService } from 'service/chat-message.service';
 import { SelectionState, TabletopSelectionService } from 'service/tabletop-selection.service';
+import { TabletopActionService } from 'service/tabletop-action.service';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 
 @Component({
@@ -80,12 +84,13 @@ import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
     standalone: false
 })
 export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
+  get skipEnterBounce(): boolean { return TabletopLoadSettle.skipEnterAnimation; }
   @Input() cardStack: CardStack = null;
   @Input() is3D: boolean = false;
 
   get name(): string { return this.cardStack.name; }
   get rotate(): number { return this.cardStack.rotate; }
-  set rotate(rotate: number) { this.cardStack.rotate = rotate; }
+  set rotate(rotate: number) { this.cardStack.mutateAppearance(() => { this.cardStack.rotate = rotate; }); }
   get zindex(): number { return this.cardStack.zindex; }
   get isShowTotal(): boolean { return this.cardStack.isShowTotal; }
   get cards(): Card[] { return this.cardStack.cards; }
@@ -115,7 +120,7 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
   get rubiedText(): string { return StringUtil.rubyToHtml(StringUtil.escapeHtml(this.topCard.text)) }
 
   get isLocked(): boolean { return this.cardStack ? this.cardStack.isLocked : false; }
-  set isLocked(isLocked: boolean) { if (this.cardStack) this.cardStack.isLocked = isLocked; }
+  set isLocked(isLocked: boolean) { if (this.cardStack) { this.cardStack.mutateAppearance(() => { this.cardStack.isLocked = isLocked; }); } }
 
   gridSize: number = 50;
 
@@ -142,6 +147,7 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
     private pointerDeviceService: PointerDeviceService,
     private modalService: ModalService,
     private chatMessageService: ChatMessageService,
+    private tabletopActionService: TabletopActionService,
     private i18n: I18nService
   ) { }
 
@@ -210,7 +216,7 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
       });
     this.movableOption = {
       tabletopObject: this.cardStack,
-      transformCssOffset: 'translateZ(0.15px)',
+      transformCssOffset: layerPeerMovableTransform(),
       colideLayers: ['terrain', 'text-note']
     };
     this.rotableOption = {
@@ -274,6 +280,7 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
   }
 
   onDoubleClick(e?: Event) {
+    if (shouldIgnoreTabletopDoubleClick(e)) return;
     e?.stopPropagation();
     this.showDetail(this.cardStack);
   }
@@ -288,14 +295,14 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
     if (this.GuestMode()) return;
     // TODO: 想更好的做法
     if (this.isLocked) {
-      this.cardStack.toTopmost();
+      this.cardStack.raiseInTier();
       EventSystem.trigger('DRAG_LOCKED_OBJECT', {});
       return;
     }
 
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: this.cardStack.identifier, className: 'GameCharacter' });
     this.ngZone.run(() => {
-      this.cardStack.toTopmost();
+      this.cardStack.raiseInTier();
       this.startIconHiddenTimer();
     });
   }
@@ -308,13 +315,22 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
 
     if (this.GuestMode()) return;
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
+    this.tabletopActionService.ensureObjectSelected(this.cardStack);
     let position = this.pointerDeviceService.pointers[0];
 
     let menuActions: ContextMenuAction[] = [];
-    menuActions = menuActions.concat(this.makeSelectionContextMenu());
-    menuActions = menuActions.concat(this.makeContextMenu());
+    let title = this.name;
 
-    this.contextMenuService.open(position, menuActions, this.name);
+    if (this.isMultiSelectedStacks()) {
+      menuActions = this.makeSelectionContextMenu();
+      title = this.i18n.t('stack.selectedCount', { count: this.selectedCardStacks().length });
+    } else {
+      menuActions = menuActions.concat(this.makeSelectionContextMenu());
+      menuActions = menuActions.concat(this.makeContextMenu());
+    }
+    menuActions = this.tabletopActionService.withClipboardMenuPrefix(menuActions);
+
+    this.contextMenuService.open(position, menuActions, title);
   }
 
   onMove() {
@@ -332,7 +348,7 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
     if (card) {
       card.location.x += 100 + (Math.random() * 50);
       card.location.y += 25 + (Math.random() * 50);
-      card.setLocation(this.cardStack.location.name);
+      card.setLocation(this.cardStack.location.name, this.cardStack.tableIdentifier);
     }
     return card;
   }
@@ -354,8 +370,8 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
     for (let card of cards) {
       card.location.x += 25 - (Math.random() * 50);
       card.location.y += 25 - (Math.random() * 50);
-      card.toTopmost();
-      card.setLocation(this.cardStack.location.name);
+      card.raiseInTier();
+      card.setLocation(this.cardStack.location.name, this.cardStack.tableIdentifier);
     }
     this.cardStack.setLocation('graveyard');
     this.cardStack.destroy();
@@ -371,8 +387,9 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
       cardStack.location.y = this.cardStack.location.y + 50 - (Math.random() * 100);
       cardStack.posZ = this.cardStack.posZ;
       cardStack.location.name = this.cardStack.location.name;
+      cardStack.tableIdentifier = this.cardStack.tableIdentifier;
       cardStack.rotate = this.rotate;
-      cardStack.toTopmost();
+      cardStack.raiseInTier();
       cardStacks.push(cardStack);
     }
 
@@ -395,6 +412,7 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
     if (this.GuestMode()) return;
     let newCardStack = CardStack.create(bottomStack.name);
     newCardStack.location.name = bottomStack.location.name;
+    newCardStack.tableIdentifier = bottomStack.tableIdentifier;
     newCardStack.location.x = bottomStack.location.x;
     newCardStack.location.y = bottomStack.location.y;
     newCardStack.posZ = bottomStack.posZ;
@@ -422,8 +440,18 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
     }
   }
 
+  private selectedCardStacks(): CardStack[] {
+    return this.selectionService.objects.filter(
+      object => object.aliasName === this.cardStack.aliasName
+    ) as CardStack[];
+  }
+
+  private isMultiSelectedStacks(): boolean {
+    return this.isSelected && this.selectedCardStacks().length > 1;
+  }
+
   private makeSelectionContextMenu(): ContextMenuAction[] {
-    if (this.selectionService.objects.length < 1) return [];
+    if (this.selectionService.size <= 1) return [];
 
     let actions: ContextMenuAction[] = [];
 
@@ -433,10 +461,10 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
       y: this.cardStack.location.y + (size * this.gridSize) / 2,
       z: this.cardStack.posZ
     };
-    actions.push({ name: this.i18n.t('stack.menu.1'), action: () => this.selectionService.congregate(objectPosition) });
+    actions.push({ name: this.i18n.t('stack.menu.1'), hotkey: 'T', action: () => this.selectionService.congregate(objectPosition) });
 
-    if (this.isSelected) {
-      let selectedCardStacks = () => this.selectionService.objects.filter(object => object.aliasName === this.cardStack.aliasName) as CardStack[];
+    if (this.isMultiSelectedStacks()) {
+      let selectedCardStacks = () => this.selectedCardStacks();
       actions.push(
         {
           name: this.i18n.t('stack.menu.2'), action: null, subActions: [
@@ -469,7 +497,12 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
               }
             },
           ]
-        }
+        },
+        ContextMenuSeparator,
+        {
+          name: this.i18n.t('char.clearSelection'),
+          action: () => this.selectionService.clear()
+        },
       );
     }
     actions.push(ContextMenuSeparator);
@@ -486,6 +519,7 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
         },
         on: this.i18n.t('stack.menu.7'),
         off: this.i18n.t('stack.menu.8'),
+        hotkey: 'L',
       }),
       ContextMenuSeparator,
       {
@@ -560,13 +594,15 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
           this.cardStack.faceUp();
           SoundEffect.play(PresetSound.cardDraw);
         },
-        disabled: this.cards.length == 0
+        disabled: this.cards.length == 0,
+        hotkey: 'F',
       } : {
         name: this.i18n.t('stack.menu.12'), action: () => {
           this.cardStack.faceDown();
           SoundEffect.play(PresetSound.cardDraw);
         },
-        disabled: this.cards.length == 0
+        disabled: this.cards.length == 0,
+        hotkey: 'F',
       }),
       ContextMenuSeparator,
       {
@@ -676,22 +712,12 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
       }),
       (this.cardStack.getUrls().length <= 0 ? null : ContextMenuSeparator),
       {
-        name: this.i18n.t('stack.menu.27'), action: () => {
-          let cloneObject = this.cardStack.clone();
-          cloneObject.location.x += this.gridSize;
-          cloneObject.location.y += this.gridSize;
-          cloneObject.owner = '';
-          cloneObject.isLocked = false;
-          cloneObject.toTopmost();
-          SoundEffect.play(PresetSound.cardPut);
-        }
-      },
-      {
         name: this.i18n.t('stack.menu.28'), action: () => {
           this.cardStack.setLocation('graveyard');
           this.cardStack.destroy();
           SoundEffect.play(PresetSound.sweep);
-        }
+        },
+        hotkey: 'Del',
       },
     ];
 
@@ -702,15 +728,21 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
     return this.cardStack.name == '' ? this.i18n.t('stack.unnamed') : this.cardStack.name;
   }
 
-    private showDetail(gameObject: CardStack) {
+  private showDetail(gameObject: CardStack) {
     if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
-    let coordinate = this.pointerDeviceService.pointers[0];
     let title = this.i18n.t('stack.panelTitle');
     if (gameObject.name.length) title += ' - ' + gameObject.name;
-    let option: PanelOption = { title: title, left: coordinate.x - 300, top: coordinate.y - 300, width: 600, height: 490 };
-    let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
-    component.tabletopObject = gameObject;
+    const tourId = PanelService.tourIdObjectDetail(gameObject.identifier);
+    if (PanelService.bringTourPanelToFront(tourId, { title })) return;
+    let coordinate = this.pointerDeviceService.pointers[0];
+    let option: PanelOption = {
+      title: title, left: coordinate.x - 210, top: coordinate.y - 140, width: 420, height: 320,
+      tourPanelId: tourId,
+      geometryKey: PanelService.sheetGeometryKey(gameObject.aliasName),
+    };
+    let component = this.panelService.open<CardStackSettingsComponent>(CardStackSettingsComponent, option);
+    component.cardStack = gameObject;
   }
 
   private showStackList(gameObject: CardStack) {
@@ -718,7 +750,7 @@ export class CardStackComponent implements OnChanges, AfterViewInit, OnDestroy {
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
 
     let coordinate = this.pointerDeviceService.pointers[0];
-    let option: PanelOption = { left: coordinate.x - 200, top: coordinate.y - 300, width: 400, height: 600 };
+    let option: PanelOption = { left: coordinate.x - 200, top: coordinate.y - 260, width: 400, height: 520 };
 
     this.cardStack.owner = Network.peer.userId;
     let component = this.panelService.open<CardStackListComponent>(CardStackListComponent, option);

@@ -1,30 +1,107 @@
-<div class="help">{{ 'folderBackup.loadHelp' | i18n }}</div>
-<div class="help help-auth">{{ 'folderBackup.loadHelpAuth' | i18n }}</div>
-<div class="rules">
-  <div class="rules-title">{{ 'folderBackup.storeRulesTitle' | i18n }}</div>
-  <ul class="rules-list">
-    <li>{{ 'folderBackup.storeRules.debounce' | i18n }}</li>
-    <li>{{ 'folderBackup.storeRules.minInterval' | i18n }}</li>
-    <li>{{ 'folderBackup.storeRules.overwrite' | i18n }}</li>
-    <li>{{ 'folderBackup.storeRules.auth' | i18n }}</li>
-    <li>{{ 'folderBackup.storeRules.flush' | i18n }}</li>
-    <li>{{ 'folderBackup.storeRules.guest' | i18n }}</li>
+<div class="load-ui">
+  <section class="tut-card tut-ops">
+    <header class="tut-label tut-label-ops">
+      <i class="material-icons">folder_open</i>
+      <span>{{ 'folderBackup.loadTitle' | i18n }}</span>
+    </header>
+    <div class="tut-body help-text">{{ 'folderBackup.loadHelp' | i18n }}</div>
+  </section>
+
+  <details class="tut-card tut-changelog">
+    <summary class="tut-head">
+      <span class="tut-icon"><i class="material-icons">menu_book</i></span>
+      <span class="tut-copy">
+        <span class="tut-title">{{ 'folderBackup.storeRulesTitle' | i18n }}</span>
+      </span>
+      <span class="tut-toggle">
+        <i class="material-icons">expand_more</i>
+      </span>
+    </summary>
+    <div class="tut-body">
+      <ul class="rules-list">
+        <li>{{ 'folderBackup.storeRules.layered' | i18n }}</li>
+        <li>{{ 'folderBackup.storeRules.media' | i18n }}</li>
+        <li>{{ 'folderBackup.storeRules.retention' | i18n }}</li>
+        <li>{{ 'folderBackup.storeRules.auth' | i18n }}</li>
+        <li>{{ 'folderBackup.storeRules.flush' | i18n }}</li>
+        <li>{{ 'folderBackup.storeRules.guest' | i18n }}</li>
+        <li>{{ 'folderBackup.storeRules.audio' | i18n }}</li>
+      </ul>
+      <p class="help-auth">{{ 'folderBackup.loadHelpAuth' | i18n }}</p>
+    </div>
+  </details>
+
+  <div class="empty tut-card tut-welcome" *ngIf="!backups.length">
+    <div class="tut-body">{{ 'folderBackup.empty' | i18n }}</div>
+  </div>
+
+  <ul class="room-list" *ngIf="backups.length">
+    <li *ngFor="let room of backups" class="tut-card tut-welcome room-card"
+      [class.is-expanded]="expandedRoomId === room.roomId"
+      [class.is-current]="currentRoomId && currentRoomId === room.roomId">
+      <div class="room-head">
+        <button type="button" class="tut-head room-main" (click)="toggleRoom(room)">
+          <span class="room-thumb" aria-hidden="true"
+            (mouseenter)="showThumbPreview($event, room.previewUrl)"
+            (mousemove)="moveThumbPreview($event)"
+            (mouseleave)="hideThumbPreview()">
+            <img *ngIf="room.previewUrl" [src]="room.previewUrl" alt="" />
+            <i *ngIf="!room.previewUrl" class="material-icons">image</i>
+          </span>
+          <span class="tut-copy room-text">
+            <span class="tut-title name">
+              {{ room.displayName }}
+              <span class="current-badge" *ngIf="currentRoomId && currentRoomId === room.roomId">{{ 'folderBackup.currentRoom' | i18n }}</span>
+            </span>
+            <span class="tut-hint meta">{{ room.roomId }} · {{ formatSavedAt(room.savedAt) }}</span>
+            <span class="auth-badge" [ngClass]="'auth-' + (room.authStatus || 'missing')">{{ authStatusLabel(room.authStatus || 'missing') }}</span>
+          </span>
+          <span class="tut-toggle">
+            <i class="material-icons">{{ expandedRoomId === room.roomId ? 'expand_less' : 'expand_more' }}</i>
+          </span>
+        </button>
+        <button type="button" class="delete-btn" (click)="deleteBackup(room)"
+          [title]="'folderBackup.delete' | i18n"
+          [disabled]="deletingRoomId === room.roomId">
+          <i class="material-icons">delete</i>
+        </button>
+      </div>
+
+      <div class="slot-panel tut-scene" *ngIf="expandedRoomId === room.roomId">
+        <ng-container *ngFor="let slot of room.slots; let i = index">
+          <div class="slot-group-label" *ngIf="isGroupStart(room, i)">
+            <ng-container [ngSwitch]="slotGroup(slot)">
+              <span *ngSwitchCase="'latest'">{{ 'folderBackup.group.latest' | i18n }}</span>
+              <span *ngSwitchCase="'recent'">{{ 'folderBackup.group.recent' | i18n }}</span>
+              <span *ngSwitchCase="'calendar'">{{ 'folderBackup.group.calendar' | i18n }}</span>
+              <span *ngSwitchCase="'legacy'">{{ 'folderBackup.group.legacy' | i18n }}</span>
+            </ng-container>
+          </div>
+          <button type="button" class="slot-row" (click)="selectSlot(room, slot)">
+            <span class="slot-thumb" aria-hidden="true"
+              (mouseenter)="showThumbPreview($event, slot.previewUrl || room.previewUrl)"
+              (mousemove)="moveThumbPreview($event)"
+              (mouseleave)="hideThumbPreview()">
+              <img *ngIf="slot.previewUrl || room.previewUrl" [src]="slot.previewUrl || room.previewUrl" alt="" />
+              <i *ngIf="!(slot.previewUrl || room.previewUrl)" class="material-icons">image</i>
+            </span>
+            <span class="slot-text">
+              <span class="slot-name">{{ slotLabel(slot) }}</span>
+              <span class="slot-meta" *ngIf="slot.kind !== 'recent'">{{ formatSavedAt(slot.savedAt) }}</span>
+            </span>
+            <i class="material-icons">chevron_right</i>
+          </button>
+        </ng-container>
+      </div>
+    </li>
   </ul>
+
+  <footer class="load-actions">
+    <button type="button" class="btn-cancel" (click)="cancel()">{{ 'confirm.cancel' | i18n }}</button>
+  </footer>
 </div>
-<div class="empty" *ngIf="!backups.length">{{ 'folderBackup.empty' | i18n }}</div>
-<ul class="backup-list" *ngIf="backups.length">
-  <li *ngFor="let backup of backups" class="backup-row">
-    <button type="button" class="backup-item" (click)="select(backup)">
-      <span class="name">{{ backup.displayName }}</span>
-      <span class="meta">{{ backup.roomId }} · {{ formatSavedAt(backup.savedAt) }}</span>
-      <span class="auth-badge" [ngClass]="'auth-' + (backup.authStatus || 'missing')">{{ authStatusLabel(backup.authStatus || 'missing') }}</span>
-    </button>
-    <button type="button" class="delete-btn" (click)="deleteBackup(backup)"
-      [title]="'folderBackup.delete' | i18n"
-      [disabled]="deletingRoomId === backup.roomId">
-      <i class="material-icons">delete</i>
-      {{ 'folderBackup.delete' | i18n }}
-    </button>
-  </li>
-</ul>
-<button type="button" (click)="cancel()">{{ 'confirm.cancel' | i18n }}</button>
+
+<div class="thumb-preview" *ngIf="thumbPreviewSrc"
+  [style.left.px]="thumbPreviewX" [style.top.px]="thumbPreviewY">
+  <img [src]="thumbPreviewSrc" alt="" />
+</div>

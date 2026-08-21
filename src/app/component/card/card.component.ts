@@ -21,7 +21,10 @@ import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { MathUtil } from '@udonarium/core/system/util/math-util';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
-import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
+import { TabletopLoadSettle } from '@udonarium/tabletop-load-settle';
+import { shouldIgnoreTabletopDoubleClick } from '@udonarium/tabletop-interact';
+import { LAYER_PEER_MOVABLE_Z_PX, layerPeerMovableTransform } from '@udonarium/tabletop-object-util';
+import { CardSettingsComponent } from 'component/card-settings/card-settings.component';
 import { OpenUrlComponent } from 'component/open-url/open-url.component';
 import { ObjectInteractGesture } from 'component/game-table/object-interact-gesture';
 import { MovableOption } from 'directive/movable.directive';
@@ -32,6 +35,7 @@ import { ImageService } from 'service/image.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { SelectionState, TabletopSelectionService } from 'service/tabletop-selection.service';
+import { TabletopActionService } from 'service/tabletop-action.service';
 import { TabletopService } from 'service/tabletop.service';
 import { ModalService } from 'service/modal.service';
 import { ChatMessageService } from 'service/chat-message.service';
@@ -80,6 +84,7 @@ import { ChatMessageService } from 'service/chat-message.service';
     standalone: false
 })
 export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
+  get skipEnterBounce(): boolean { return TabletopLoadSettle.skipEnterAnimation; }
   @Input() card: Card = null;
   @Input() is3D: boolean = false;
   @ViewChild('cardImage', { static: false }) cardImageElement: ElementRef<HTMLImageElement>;
@@ -87,9 +92,9 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
 
   get name(): string { return this.card.name; }
   get state(): CardState { return this.card.state; }
-  set state(state: CardState) { this.card.state = state; }
+  set state(state: CardState) { this.card.mutateAppearance(() => { this.card.state = state; }); }
   get rotate(): number { return this.card.rotate; }
-  set rotate(rotate: number) { this.card.rotate = rotate; }
+  set rotate(rotate: number) { this.card.mutateAppearance(() => { this.card.rotate = rotate; }); }
   get owner(): string { return this.card.owner; }
   set owner(owner: string) { this.card.owner = owner; }
   get zindex(): number { return this.card.zindex; }
@@ -138,7 +143,7 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
   get rubiedText(): string { return StringUtil.rubyToHtml(StringUtil.escapeHtml(this.text)) }
 
   get isLocked(): boolean { return this.card ? this.card.isLocked : false; }
-  set isLocked(isLocked: boolean) { if (this.card) this.card.isLocked = isLocked; }
+  set isLocked(isLocked: boolean) { if (this.card) { this.card.mutateAppearance(() => { this.card.isLocked = isLocked; }); } }
 
   get isInverse(): boolean {
     const rotate = Math.abs(this.viewRotateZ + this.rotate) % 360;
@@ -175,6 +180,7 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
     private pointerDeviceService: PointerDeviceService,
     private modalService: ModalService,
     private chatMessageService: ChatMessageService,
+    private tabletopActionService: TabletopActionService,
     private i18n: I18nService
   ) { }
 
@@ -222,7 +228,7 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
       });
     this.movableOption = {
       tabletopObject: this.card,
-      transformCssOffset: 'translateZ(0.15px)',
+      transformCssOffset: layerPeerMovableTransform(),
       colideLayers: ['terrain', 'text-note']
     };
     this.rotableOption = {
@@ -268,6 +274,7 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
   }
 
   onDoubleClick(e?: Event) {
+    if (shouldIgnoreTabletopDoubleClick(e)) return;
     e?.stopPropagation();
     this.showDetail(this.card);
   }
@@ -281,7 +288,7 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
   onInputStart(e: MouseEvent | TouchEvent) {    
     // TODO: 想更好的做法
     this.ngZone.run(() => {
-      this.card.toTopmost();
+      this.card.raiseInTier();
     });
     this.startIconHiddenTimer();
 
@@ -297,13 +304,21 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
 
     if (this.GuestMode()) return;
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
+    this.tabletopActionService.ensureObjectSelected(this.card);
     let position = this.pointerDeviceService.pointers[0];
 
     let menuActions: ContextMenuAction[] = [];
-    menuActions = menuActions.concat(this.makeSelectionContextMenu());
-    menuActions = menuActions.concat(this.makeContextMenu());
+    let title = this.isVisible ? this.name : this.i18n.t('card.noun');
+    if (this.isMultiSelectedCards()) {
+      menuActions = this.makeSelectionContextMenu();
+      title = this.i18n.t('card.selectedCount', { count: this.selectedCards().length });
+    } else {
+      menuActions = menuActions.concat(this.makeSelectionContextMenu());
+      menuActions = menuActions.concat(this.makeContextMenu());
+    }
+    menuActions = this.tabletopActionService.withClipboardMenuPrefix(menuActions);
 
-    this.contextMenuService.open(position, menuActions, this.isVisible ? this.name : this.i18n.t('card.noun'));
+    this.contextMenuService.open(position, menuActions, title);
   }
 
   onMove() {
@@ -334,6 +349,7 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
     cardStack.location.y = this.card.location.y;
     cardStack.posZ = this.card.posZ;
     cardStack.location.name = this.card.location.name;
+    cardStack.tableIdentifier = this.card.tableIdentifier;
     cardStack.rotate = this.rotate;
     cardStack.zindex = this.card.zindex;
 
@@ -363,8 +379,18 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
     }
   }
 
+  private selectedCards(): Card[] {
+    return this.selectionService.objects.filter(
+      object => object.aliasName === this.card.aliasName
+    ) as Card[];
+  }
+
+  private isMultiSelectedCards(): boolean {
+    return this.isSelected && this.selectedCards().length > 1;
+  }
+
   private makeSelectionContextMenu(): ContextMenuAction[] {
-    if (this.selectionService.objects.length < 1) return [];
+    if (this.selectionService.size <= 1) return [];
 
     let actions: ContextMenuAction[] = [];
 
@@ -373,10 +399,10 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
       y: this.card.location.y + (this.card.size * this.gridSize) / 2,
       z: this.card.posZ
     };
-    actions.push({ name: this.i18n.t('card.menu.1'), action: () => this.selectionService.congregate(objectPosition) });
+    actions.push({ name: this.i18n.t('card.menu.1'), hotkey: 'T', action: () => this.selectionService.congregate(objectPosition) });
 
-    if (this.isSelected) {
-      let selectedCards = () => this.selectionService.objects.filter(object => object.aliasName === this.card.aliasName) as Card[];
+    if (this.isMultiSelectedCards()) {
+      let selectedCards = () => this.selectedCards();
       actions.push(
         {
           name: this.i18n.t('card.menu.2'), action: null, subActions: [
@@ -429,7 +455,12 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
               }
             },
           ]
-        }
+        },
+        ContextMenuSeparator,
+        {
+          name: this.i18n.t('char.clearSelection'),
+          action: () => this.selectionService.clear()
+        },
       );
     }
     actions.push(ContextMenuSeparator);
@@ -446,6 +477,7 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
       },
       on: this.i18n.t('card.menu.6'),
       off: this.i18n.t('card.menu.7'),
+      hotkey: 'L',
     }));
     actions.push(ContextMenuSeparator);
     actions.push(!this.isVisible || this.isHand
@@ -456,13 +488,15 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
             name: this.card.name == '' ? this.i18n.t('card.unnamed') : this.card.name
           }));
           SoundEffect.play(PresetSound.cardDraw);
-        }, default: !this.isLocked && (!this.ownerIsOnline || this.isHand)
+        }, default: !this.isLocked && (!this.ownerIsOnline || this.isHand),
+        hotkey: 'F',
       }
       : {
         name: this.i18n.t('card.menu.8'), action: () => {
           this.card.faceDown();
           SoundEffect.play(PresetSound.cardDraw);
-        }, default: !this.card.isLocked && (!this.ownerIsOnline || this.isHand)
+        }, default: !this.card.isLocked && (!this.ownerIsOnline || this.isHand),
+        hotkey: 'F',
       });
     actions.push(this.isHand
       ? {
@@ -511,7 +545,6 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
         name: this.i18n.t('card.menu.14'), action: () => {
           this.horizontal();
         },
-        hotkey: 'T',
         disabled: !this.card.isVisible || this.isLocked || this.card.rotate == 90
       });
     }
@@ -550,20 +583,11 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
     }
 
     actions.push({
-      name: this.i18n.t('card.menu.18'), action: () => {
-        let cloneObject = this.card.clone();
-        cloneObject.location.x += this.gridSize;
-        cloneObject.location.y += this.gridSize;
-        cloneObject.toTopmost();
-        cloneObject.isLocked = false;
-        SoundEffect.play(PresetSound.cardPut);
-      }
-    },
-    {
       name: this.i18n.t('card.menu.19'), action: () => {
         this.card.destroy();
         SoundEffect.play(PresetSound.sweep);
-      }
+      },
+      hotkey: 'Del',
     });
 
     return actions;
@@ -579,35 +603,41 @@ export class CardComponent implements OnDestroy, OnChanges, AfterViewInit {
   }
 
   vertical() {
-    if (!this.card.isVisible || this.card.rotate == 0) return; 
-    this.card.rotate = 0; 
+    if (!this.card.isVisible || this.card.rotate == 0) return;
+    this.rotate = 0;
     SoundEffect.play(PresetSound.cardPut);
   }
 
   horizontal() {
-    if (!this.card.isVisible || this.card.rotate == 90) return; 
-    this.card.rotate = 90; 
+    if (!this.card.isVisible || this.card.rotate == 90) return;
+    this.rotate = 90;
     SoundEffect.play(PresetSound.cardPut);
   }
 
   turnRight() {
-    this.card.rotate += 45; 
+    this.rotate = this.card.rotate + 45;
     SoundEffect.play(PresetSound.cardPut);
   }
 
   turnLeft() {
-    this.card.rotate -= 45; 
+    this.rotate = this.card.rotate - 45;
     SoundEffect.play(PresetSound.cardPut);
   }
 
   private showDetail(gameObject: Card) {
     if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
-    let coordinate = this.pointerDeviceService.pointers[0];
     let title = this.i18n.t('card.panelTitle');
     if (gameObject.name.length) title += ' - ' + (this.isVisible ? gameObject.name : this.i18n.t('card.back'));
-    let option: PanelOption = { title: title, left: coordinate.x - 300, top: coordinate.y - 300, width: 600, height: 490 };
-    let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
-    component.tabletopObject = gameObject;
+    const tourId = PanelService.tourIdObjectDetail(gameObject.identifier);
+    if (PanelService.bringTourPanelToFront(tourId, { title })) return;
+    let coordinate = this.pointerDeviceService.pointers[0];
+    let option: PanelOption = {
+      title: title, left: coordinate.x - 210, top: coordinate.y - 160, width: 420, height: 360,
+      tourPanelId: tourId,
+      geometryKey: PanelService.sheetGeometryKey(gameObject.aliasName),
+    };
+    let component = this.panelService.open<CardSettingsComponent>(CardSettingsComponent, option);
+    component.card = gameObject;
   }
 }

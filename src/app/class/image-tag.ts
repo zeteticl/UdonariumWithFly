@@ -74,10 +74,13 @@ export class ImageTag extends ObjectNode {
     return object;
   }
 
-  parseInnerXml(element: Element) {
-    // 更新既有物件
+  parseInnerXml(_element: Element) {
+    // Merge into the canonical imagetag_<imageId> object.
+    // ZIP/folder saves write syncId, so a fresh load *is* that canonical object —
+    // destroying it (the old clone-merge path) dropped tags and spoiler-hide.
     let imageTag = ImageTag.get(this.imageIdentifier);
     if (!imageTag) imageTag = ImageTag.create(this.imageIdentifier);
+    if (imageTag === this) return;
     const context = imageTag.toContext();
     context.syncData = this.toContext().syncData;
     imageTag.apply(context);

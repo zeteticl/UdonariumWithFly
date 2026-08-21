@@ -83,7 +83,7 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
   get cutInAudioIdentifier(): string { return this.selectedCutIn.audioIdentifier; }
   set cutInAudioIdentifier(audioIdentifier: string) { if (this.isEditable) this.selectedCutIn.audioIdentifier = audioIdentifier; }
   
-  get cutInAudioFileName(): string { return this.selectedCutIn.audioFileName; }
+  get cutInAudioFileName(): string { return this.selectedCutIn?.audioFileName || ''; }
   set cutInAudioFileName(audioFileName: string) { if (this.isEditable) this.selectedCutIn.audioFileName = audioFileName; }
 
   //get cutInSEIsLoop(): boolean { return this.selectedCutIn.endedAction == 2; }
@@ -240,6 +240,10 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
     }, 500);
   }
 
+  importXml() {
+    this.saveDataService.pickAndLoadXmlOrZip();
+  }
+
   delete() {
     if (!this.selectedCutIn) return;
     EventSystem.call('STOP_CUT_IN', { 
@@ -385,7 +389,7 @@ export class CutInSettingComponent implements OnInit, OnDestroy, AfterViewInit {
 
   helpCutIn() {
     let coordinate = this.pointerDeviceService.pointers[0];
-    let option: PanelOption = { left: coordinate.x, top: coordinate.y, width: 620, height: 730 };
+    let option: PanelOption = { left: coordinate.x, top: coordinate.y, width: 620, height: 600 };
     let textView = this.panelService.open(TextViewComponent, option);
     textView.title = this.i18n.t('cutin.help');
     textView.text = this.i18n.t('cutin.helpText', { minSize: CutInComponent.MIN_SIZE });

@@ -1,4 +1,5 @@
 import { Network } from '../network/network';
+import { netDebug } from '../network/net-debug';
 import { Event, EventContext } from './event';
 import { Listener } from './listener';
 import { Callback, EventMap } from './observer';
@@ -20,7 +21,6 @@ export class EventSystem implements Subject {
   private keyMap: Map<any, Listener[]> = new Map();
 
   private constructor() {
-    console.log('EventSystem ready...');
   }
 
   register(key: any): Listener {
@@ -174,6 +174,6 @@ export class EventSystem implements Subject {
   }
 
   private sendSystemMessage(message: string) {
-    console.log(message);
+    netDebug(message);
   }
 }

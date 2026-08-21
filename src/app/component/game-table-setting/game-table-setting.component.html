@@ -1,12 +1,12 @@
-<div class="settings-ui settings-layout" *ngIf="!GuestMode()">
-  <aside class="settings-aside">
-    <button type="button" class="btn btn-primary btn-block" (click)="createGameTable()">
+<div class="settings-ui dense table-setting" *ngIf="!GuestMode()" appFitPanel [fitMinHeight]="400" [fitMaxHeight]="620">
+  <aside class="table-aside">
+    <button type="button" class="btn btn-primary btn-block btn-sm" (click)="createGameTable()">
       <i class="material-icons">add</i>{{ 'table.create' | i18n }}
     </button>
     <select
       #select
-      class="settings-list"
-      size="16"
+      class="table-list"
+      size="12"
       (change)="selectGameTable(select.value)"
       [ngModel]="selectedTable?.identifier"
     >
@@ -21,285 +21,315 @@
     </select>
   </aside>
 
-  <main class="settings-main" *ngIf="!isEmpty || selectedTable">
-    <section class="card">
-      <header class="card-head">
-        <h3>{{ 'table.images' | i18n }}</h3>
-        <label class="icon-toggle" [title]="'table.showHiddenImages' | i18n">
-          <input
-            name="show-hide-images"
-            type="checkbox"
-            [checked]="isShowHideImages"
-            (click)="onShowHiddenImages($event)"
-          >
-          <i class="material-icons" [ngClass]="{'red-eye': isShowHideImages}">
-            {{ isShowHideImages ? 'visibility' : 'visibility_off' }}
-          </i>
-        </label>
-      </header>
-      <div class="image-grid">
-        <div class="image-slot">
-          <span class="image-label">{{ 'table.mapImage' | i18n }}</span>
-          <button
-            type="button"
-            class="image-frame"
-            (click)="openBgImageModal()"
-            [disabled]="!isEditable || tableGridType == -1"
-          >
-            <span *ngIf="getHidden(tableBackgroundImage)" class="image-badge">
-              <i class="material-icons" [class]="isShowHideImages ? 'red-eye': 'grow'">
-                {{ isShowHideImages ? 'visibility' : 'visibility_off' }}
-              </i>
-            </span>
-            <img
-              [ngClass]="{ blackout: !isShowHideImages && getHidden(tableBackgroundImage) }"
-              [src]="tableBackgroundImage.url | safe: 'resourceUrl'"
-              draggable="false"
-              alt=""
-            >
-          </button>
-        </div>
-
-        <div class="image-slot">
-          <span class="image-label">{{ 'table.backgroundFront' | i18n }}</span>
-          <button
-            *ngIf="!tableDistanceviewImage.url"
-            type="button"
-            class="image-frame image-frame-empty"
-            (click)="openDistanceViewImageModal()"
-            [disabled]="!isEditable"
-          >
-            <i class="material-icons">add_photo_alternate</i>
-            <span>{{ 'table.add' | i18n }}</span>
-          </button>
-          <button
-            *ngIf="tableDistanceviewImage.url"
-            type="button"
-            class="image-frame"
-            (click)="openDistanceViewImageModal()"
-            [disabled]="!isEditable || tableGridType == -1"
-          >
-            <span *ngIf="getHidden(tableDistanceviewImage)" class="image-badge">
-              <i class="material-icons" [class]="isShowHideImages ? 'red-eye': 'grow'">
-                {{ isShowHideImages ? 'visibility' : 'visibility_off' }}
-              </i>
-            </span>
-            <img
-              [ngClass]="{ blackout: !isShowHideImages && getHidden(tableDistanceviewImage) }"
-              [src]="tableDistanceviewImage.url | safe: 'resourceUrl'"
-              draggable="false"
-              alt=""
-            >
-          </button>
-        </div>
-
-        <div class="image-slot">
-          <span class="image-label">{{ 'table.backgroundBack' | i18n }}</span>
-          <button
-            *ngIf="!tableDistanceviewImage2.url"
-            type="button"
-            class="image-frame image-frame-empty"
-            (click)="openDistanceViewImageModal2()"
-            [disabled]="!isEditable"
-          >
-            <i class="material-icons">add_photo_alternate</i>
-            <span>{{ 'table.add' | i18n }}</span>
-          </button>
-          <button
-            *ngIf="tableDistanceviewImage2.url"
-            type="button"
-            class="image-frame"
-            (click)="openDistanceViewImageModal2()"
-            [disabled]="!isEditable || tableGridType == -1"
-          >
-            <span *ngIf="getHidden(tableDistanceviewImage2)" class="image-badge">
-              <i class="material-icons" [class]="isShowHideImages ? 'red-eye': 'grow'">
-                {{ isShowHideImages ? 'visibility' : 'visibility_off' }}
-              </i>
-            </span>
-            <img
-              [ngClass]="{ blackout: !isShowHideImages && getHidden(tableDistanceviewImage2) }"
-              [src]="tableDistanceviewImage2.url | safe: 'resourceUrl'"
-              draggable="false"
-              alt=""
-            >
-          </button>
-        </div>
-      </div>
-      <div class="field-row">
-        <label class="field">
-          <span>{{ 'table.backgroundFilter' | i18n }}</span>
-          <select [(ngModel)]="tableDistanceviewFilter" name="tableDistanceviewFilter" [disabled]="!isEditable">
-            <option value="">{{ 'table.none' | i18n }}</option>
-            <option value="white">{{ 'table.white' | i18n }}</option>
-            <option value="black">{{ 'table.black' | i18n }}</option>
-          </select>
-        </label>
-      </div>
-    </section>
-
-    <section class="card">
-      <header class="card-head"><h3>{{ 'table.basic' | i18n }}</h3></header>
-      <div class="field-row">
-        <label class="field grow">
-          <span>{{ 'table.name' | i18n }}</span>
-          <input type="text" [(ngModel)]="tableName" [placeholder]="'table.namePlaceholder' | i18n" [disabled]="!isEditable" />
-        </label>
-      </div>
-      <div class="slider-row">
-        <span class="slider-label">{{ 'table.width' | i18n }}</span>
-        <input
-          [(ngModel)]="tableWidth"
-          type="range"
-          [min]="minSize"
-          [max]="maxSize"
-          name="tableWidth"
-          [disabled]="!isEditable"
-        >
-        <input
-          [(ngModel)]="tableWidth"
-          type="number"
-          [min]="minSize"
-          [max]="maxSize"
-          class="num"
-          [disabled]="!isEditable"
-        >
-      </div>
-      <div class="slider-row">
-        <span class="slider-label">{{ 'table.height' | i18n }}</span>
-        <input
-          [(ngModel)]="tableHeight"
-          type="range"
-          [min]="minSize"
-          [max]="maxSize"
-          name="tableHeight"
-          [disabled]="!isEditable"
-        >
-        <input
-          [(ngModel)]="tableHeight"
-          type="number"
-          [min]="minSize"
-          [max]="maxSize"
-          class="num"
-          [disabled]="!isEditable"
-        >
-      </div>
-    </section>
-
-    <section class="card">
-      <header class="card-head"><h3>{{ 'table.grid' | i18n }}</h3></header>
-      <div class="field-row wrap">
-        <label class="field">
-          <span>{{ 'table.type' | i18n }}</span>
-          <select [(ngModel)]="tableGridType" name="tableGridType" [disabled]="!isEditable">
-            <option value="-1">{{ 'table.none' | i18n }}</option>
-            <option value="0">{{ 'table.gridSquare' | i18n }}</option>
-            <option value="1">{{ 'table.gridHexVertical' | i18n }}</option>
-            <option value="2">{{ 'table.gridHexHorizontal' | i18n }}</option>
-          </select>
-        </label>
-        <label class="field">
-          <span>{{ 'table.color' | i18n }}</span>
-          <select [(ngModel)]="tableGridColor" name="tableGridColor" [disabled]="!isEditable || tableGridType == -1">
-            <option value="#000000e6">{{ 'table.black' | i18n }}</option>
-            <option value="#0000dde6">{{ 'table.blue' | i18n }}</option>
-            <option value="#00dd00e6">{{ 'table.green' | i18n }}</option>
-            <option value="#00dddde6">{{ 'table.cyan' | i18n }}</option>
-            <option value="#dd0000e6">{{ 'table.red' | i18n }}</option>
-            <option value="#dd00dde6">{{ 'table.purple' | i18n }}</option>
-            <option value="#dddd00e6">{{ 'table.yellow' | i18n }}</option>
-            <option value="#dddddde6">{{ 'table.white' | i18n }}</option>
-          </select>
-        </label>
-      </div>
-      <div class="check-row">
-        <label [class.disabled]="!isEditable || tableGridType == -1">
-          <input type="checkbox" [(ngModel)]="tableGridNumberShow" name="tableGridNumberShow" [disabled]="!isEditable || tableGridType == -1" />
-          {{ 'table.showCoordinates' | i18n }}
-        </label>
-        <label>
-          <input type="checkbox" [(ngModel)]="tableGridShow" name="tableGridShow" />
-          {{ 'table.alwaysShowGrid' | i18n }}<sup class="self-only">*</sup>
-        </label>
-        <label>
-          <input type="checkbox" [(ngModel)]="tableGridSnap" name="tableGridSnap" />
-          {{ 'table.snap' | i18n }}<sup class="self-only">*</sup>
-        </label>
-      </div>
-    </section>
-
-    <section class="card">
-      <header class="card-head"><h3>{{ 'table.atmosphere' | i18n }}</h3></header>
-      <div class="slider-row">
-        <span class="slider-label">{{ 'table.darkness' | i18n }}</span>
-        <input type="range" min="0" max="1" step="0.05" [(ngModel)]="tableDarkness" [disabled]="!isEditable">
-        <span class="val">{{ tableDarkness | number:'1.0-2' }}</span>
-        <span class="btn-group">
-          <button type="button" class="btn btn-sm" (click)="transitionDay()" [disabled]="!isEditable">{{ 'table.day' | i18n }}</button>
-          <button type="button" class="btn btn-sm" (click)="transitionNight()" [disabled]="!isEditable">{{ 'table.night' | i18n }}</button>
-        </span>
-      </div>
-      <div class="slider-row">
-        <span class="slider-label">{{ 'table.globalIllumination' | i18n }}</span>
-        <input type="range" min="0" max="1" step="0.05" [(ngModel)]="tableGlobalIllumination" [disabled]="!isEditable">
-        <span class="val">{{ tableGlobalIllumination | number:'1.0-2' }}</span>
-      </div>
-      <div class="field-row wrap">
-        <label class="field">
-          <span>{{ 'table.weather' | i18n }}</span>
-          <select [(ngModel)]="tableWeatherType" [disabled]="!isEditable">
-            <option value="none">{{ 'table.none' | i18n }}</option>
-            <option value="rain">{{ 'table.rain' | i18n }}</option>
-            <option value="thunderstorm">{{ 'table.thunderstorm' | i18n }}</option>
-            <option value="snow">{{ 'table.snow' | i18n }}</option>
-            <option value="fog">{{ 'table.fog' | i18n }}</option>
-            <option value="wind">{{ 'table.wind' | i18n }}</option>
-            <option value="sakura">{{ 'table.sakura' | i18n }}</option>
-            <option value="maple">{{ 'table.maple' | i18n }}</option>
-            <option value="sandstorm">{{ 'table.sandstorm' | i18n }}</option>
-            <option value="rainbow">{{ 'table.rainbow' | i18n }}</option>
-            <option value="aurora">{{ 'table.aurora' | i18n }}</option>
-            <option value="burning">{{ 'table.burning' | i18n }}</option>
-          </select>
-        </label>
-        <label class="field grow" [class.disabled]="tableWeatherType === 'none'">
-          <span>{{ 'table.intensity' | i18n }}</span>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            [(ngModel)]="tableWeatherIntensity"
-            [disabled]="!isEditable || tableWeatherType === 'none'"
-          >
-        </label>
-      </div>
-      <div class="check-row">
-        <label>
-          <input type="checkbox" [(ngModel)]="tableVisionEnabled" [disabled]="!isEditable">
-          {{ 'table.enableVision' | i18n }}
-        </label>
-      </div>
-      <p class="hint">
-        {{ 'table.visionHint' | i18n }}
-      </p>
-    </section>
-
-    <footer class="actions">
+  <div class="table-body" *ngIf="!isEmpty || selectedTable">
+    <header class="table-toolbar">
       <ng-container *ngIf="!isDeleted">
-        <button type="button" class="btn" [disabled]="isSaveing" (click)="save()">
-          <span class="btn-label" [class.is-hidden]="isSaveing">{{ 'table.download' | i18n }}</span>
-          <span *ngIf="isSaveing" class="btn-progress">{{progresPercent}}%</span>
+        <button type="button" class="btn btn-sm" *ngIf="canActivate" (click)="toggleSelectedInHud()" [disabled]="!selectedTable" [attr.title]="'table.showInNavigation' | i18n">
+          <i class="material-icons">{{ tableShowInNavigation ? 'visibility' : 'visibility_off' }}</i>
+          {{ tableShowInNavigation ? ('table.hideFromHud' | i18n) : ('table.showInHud' | i18n) }}
         </button>
-        <button type="button" class="btn btn-danger" (click)="delete()" [disabled]="getGameTables().length <= 1">{{ 'table.delete' | i18n }}</button>
+        <button type="button" class="btn btn-sm" (click)="cloneGameTable()" [disabled]="!selectedTable">{{ 'table.clone' | i18n }}</button>
+        <button type="button" class="btn btn-sm btn-danger" (click)="delete()" [disabled]="getGameTables().length <= 1">{{ 'table.delete' | i18n }}</button>
       </ng-container>
       <ng-container *ngIf="isDeleted">
-        <button type="button" class="btn" (click)="restore()">{{ 'table.restore' | i18n }}</button>
+        <button type="button" class="btn btn-sm" (click)="restore()">{{ 'table.restore' | i18n }}</button>
       </ng-container>
-      <button type="button" class="btn btn-primary" (click)="confirm()">{{ 'table.confirm' | i18n }}</button>
-      <span class="local-note"><sup class="self-only">*</sup>{{ 'table.localOnly' | i18n }}</span>
-    </footer>
-  </main>
+      <button type="button" class="btn btn-sm" *ngIf="canActivate" (click)="saveAsScene()" [disabled]="!selectedTable || isDeleted">
+        <i class="material-icons">theaters</i>{{ 'scenePreset.saveAsScene' | i18n }}
+      </button>
+      <span class="local-note" *ngIf="isActiveSelected">{{ 'table.activeHint' | i18n }}</span>
+      <span class="local-note" *ngIf="!isActiveSelected && isViewingSelected">{{ 'table.viewingHint' | i18n }}</span>
+    </header>
+
+    <div class="table-scroll">
+      <section class="block">
+        <div class="block-head">
+          <span>{{ 'table.images' | i18n }}</span>
+          <label class="icon-toggle" [title]="'table.showHiddenImages' | i18n">
+            <input
+              name="show-hide-images"
+              type="checkbox"
+              [checked]="isShowHideImages"
+              (click)="onShowHiddenImages($event)"
+            >
+            <i class="material-icons" [ngClass]="{'red-eye': isShowHideImages}">
+              {{ isShowHideImages ? 'visibility' : 'visibility_off' }}
+            </i>
+          </label>
+        </div>
+        <div class="thumb-row">
+          <div class="thumb">
+            <span class="thumb-label">{{ 'table.mapImage' | i18n }}</span>
+            <button
+              type="button"
+              class="thumb-frame"
+              (click)="openBgImageModal()"
+              [disabled]="!isEditable || tableGridType == -1"
+            >
+              <span *ngIf="getHidden(tableBackgroundImage)" class="image-badge">
+                <i class="material-icons" [class]="isShowHideImages ? 'red-eye': 'grow'">
+                  {{ isShowHideImages ? 'visibility' : 'visibility_off' }}
+                </i>
+              </span>
+              <img
+                [ngClass]="{ blackout: !isShowHideImages && getHidden(tableBackgroundImage) }"
+                [src]="tableBackgroundImage.url | safe: 'resourceUrl'"
+                draggable="false"
+                alt=""
+              >
+            </button>
+          </div>
+          <div class="thumb">
+            <span class="thumb-label">{{ 'table.backgroundFront' | i18n }}</span>
+            <button
+              *ngIf="!tableDistanceviewImage.url"
+              type="button"
+              class="thumb-frame thumb-empty"
+              (click)="openDistanceViewImageModal()"
+              [disabled]="!isEditable"
+            >
+              <i class="material-icons">add_photo_alternate</i>
+            </button>
+            <button
+              *ngIf="tableDistanceviewImage.url"
+              type="button"
+              class="thumb-frame"
+              (click)="openDistanceViewImageModal()"
+              [disabled]="!isEditable || tableGridType == -1"
+            >
+              <span *ngIf="getHidden(tableDistanceviewImage)" class="image-badge">
+                <i class="material-icons" [class]="isShowHideImages ? 'red-eye': 'grow'">
+                  {{ isShowHideImages ? 'visibility' : 'visibility_off' }}
+                </i>
+              </span>
+              <img
+                [ngClass]="{ blackout: !isShowHideImages && getHidden(tableDistanceviewImage) }"
+                [src]="tableDistanceviewImage.url | safe: 'resourceUrl'"
+                draggable="false"
+                alt=""
+              >
+            </button>
+          </div>
+          <div class="thumb">
+            <span class="thumb-label">{{ 'table.backgroundBack' | i18n }}</span>
+            <button
+              *ngIf="!tableDistanceviewImage2.url"
+              type="button"
+              class="thumb-frame thumb-empty"
+              (click)="openDistanceViewImageModal2()"
+              [disabled]="!isEditable"
+            >
+              <i class="material-icons">add_photo_alternate</i>
+            </button>
+            <button
+              *ngIf="tableDistanceviewImage2.url"
+              type="button"
+              class="thumb-frame"
+              (click)="openDistanceViewImageModal2()"
+              [disabled]="!isEditable || tableGridType == -1"
+            >
+              <span *ngIf="getHidden(tableDistanceviewImage2)" class="image-badge">
+                <i class="material-icons" [class]="isShowHideImages ? 'red-eye': 'grow'">
+                  {{ isShowHideImages ? 'visibility' : 'visibility_off' }}
+                </i>
+              </span>
+              <img
+                [ngClass]="{ blackout: !isShowHideImages && getHidden(tableDistanceviewImage2) }"
+                [src]="tableDistanceviewImage2.url | safe: 'resourceUrl'"
+                draggable="false"
+                alt=""
+              >
+            </button>
+          </div>
+          <label class="inline-field">
+            <span>{{ 'table.backgroundFilter' | i18n }}</span>
+            <select [(ngModel)]="tableDistanceviewFilter" name="tableDistanceviewFilter" [disabled]="!isEditable">
+              <option value="">{{ 'table.none' | i18n }}</option>
+              <option value="white">{{ 'table.white' | i18n }}</option>
+              <option value="black">{{ 'table.black' | i18n }}</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><span>{{ 'table.basic' | i18n }}</span></div>
+        <div class="compact-row">
+          <label class="inline-field grow">
+            <span>{{ 'table.name' | i18n }}</span>
+            <input type="text" [(ngModel)]="tableName" [placeholder]="'table.namePlaceholder' | i18n" [disabled]="!isEditable" />
+          </label>
+          <label class="inline-field size-field">
+            <span>{{ 'table.width' | i18n }}</span>
+            <input
+              [(ngModel)]="tableWidth"
+              type="number"
+              [min]="minSize"
+              [max]="maxSize"
+              [disabled]="!isEditable"
+            >
+          </label>
+          <label class="inline-field size-field">
+            <span>{{ 'table.height' | i18n }}</span>
+            <input
+              [(ngModel)]="tableHeight"
+              type="number"
+              [min]="minSize"
+              [max]="maxSize"
+              [disabled]="!isEditable"
+            >
+          </label>
+        </div>
+        <div class="compact-row" *ngIf="canActivate">
+          <label class="inline-field">
+            <input type="checkbox" [(ngModel)]="tableShowInNavigation" [disabled]="!isEditable" />
+            <span>{{ 'table.showInNavigation' | i18n }}</span>
+          </label>
+          <label class="inline-field">
+            <input type="checkbox" [(ngModel)]="tablePlayerCanView" [disabled]="!isEditable" />
+            <span>{{ 'table.playerCanView' | i18n }}</span>
+          </label>
+        </div>
+        <div class="slider-row slim">
+          <span class="slider-label">W</span>
+          <input
+            [(ngModel)]="tableWidth"
+            type="range"
+            [min]="minSize"
+            [max]="maxSize"
+            name="tableWidth"
+            [disabled]="!isEditable"
+          >
+          <span class="slider-label">H</span>
+          <input
+            [(ngModel)]="tableHeight"
+            type="range"
+            [min]="minSize"
+            [max]="maxSize"
+            name="tableHeight"
+            [disabled]="!isEditable"
+          >
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><span>{{ 'table.grid' | i18n }}</span></div>
+        <div class="compact-row wrap">
+          <label class="inline-field">
+            <span>{{ 'table.type' | i18n }}</span>
+            <select [(ngModel)]="tableGridType" name="tableGridType" [disabled]="!isEditable">
+              <option value="-1">{{ 'table.none' | i18n }}</option>
+              <option value="0">{{ 'table.gridSquare' | i18n }}</option>
+              <option value="1">{{ 'table.gridHexVertical' | i18n }}</option>
+              <option value="2">{{ 'table.gridHexHorizontal' | i18n }}</option>
+            </select>
+          </label>
+          <label class="inline-field">
+            <span>{{ 'table.color' | i18n }}</span>
+            <select [(ngModel)]="tableGridColor" name="tableGridColor" [disabled]="!isEditable || tableGridType == -1">
+              <option value="#000000e6">{{ 'table.black' | i18n }}</option>
+              <option value="#0000dde6">{{ 'table.blue' | i18n }}</option>
+              <option value="#00dd00e6">{{ 'table.green' | i18n }}</option>
+              <option value="#00dddde6">{{ 'table.cyan' | i18n }}</option>
+              <option value="#dd0000e6">{{ 'table.red' | i18n }}</option>
+              <option value="#dd00dde6">{{ 'table.purple' | i18n }}</option>
+              <option value="#dddd00e6">{{ 'table.yellow' | i18n }}</option>
+              <option value="#dddddde6">{{ 'table.white' | i18n }}</option>
+            </select>
+          </label>
+          <label class="check" [class.disabled]="!isEditable || tableGridType == -1">
+            <input type="checkbox" [(ngModel)]="tableGridNumberShow" name="tableGridNumberShow" [disabled]="!isEditable || tableGridType == -1" />
+            {{ 'table.showCoordinates' | i18n }}
+          </label>
+          <label class="check">
+            <input type="checkbox" [(ngModel)]="tableGridShow" name="tableGridShow" />
+            {{ 'table.alwaysShowGrid' | i18n }}<sup class="self-only">*</sup>
+          </label>
+          <label class="check">
+            <input type="checkbox" [(ngModel)]="tableGridSnap" name="tableGridSnap" />
+            {{ 'table.snap' | i18n }}<sup class="self-only">*</sup>
+          </label>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><span>{{ 'table.atmosphere' | i18n }}</span></div>
+        <div class="slider-row slim">
+          <span class="slider-label">{{ 'table.darkness' | i18n }}</span>
+          <input type="range" min="0" max="1" step="0.05" [(ngModel)]="tableDarkness" [disabled]="!isEditable || !canControlDayNight">
+          <span class="val">{{ tableDarkness | number:'1.0-2' }}</span>
+          <button type="button" class="btn btn-sm" (click)="transitionDay()" [disabled]="!isEditable || !canControlDayNight">{{ 'table.day' | i18n }}</button>
+          <button type="button" class="btn btn-sm" (click)="transitionDusk()" [disabled]="!isEditable || !canControlDayNight">{{ 'table.dusk' | i18n }}</button>
+          <button type="button" class="btn btn-sm" (click)="transitionNight()" [disabled]="!isEditable || !canControlDayNight">{{ 'table.night' | i18n }}</button>
+        </div>
+        <div class="slider-row slim">
+          <span class="slider-label">{{ 'table.ambientLight' | i18n }}</span>
+          <input type="range" min="0" max="1" step="0.05" [(ngModel)]="tableGlobalIllumination" [disabled]="!isEditable">
+          <span class="val">{{ tableGlobalIllumination | number:'1.0-2' }}</span>
+        </div>
+        <div class="compact-row wrap" style="gap:10px;align-items:center">
+          <label class="check" [title]="'table.globalIlluminationHint' | i18n">
+            <input type="checkbox" [(ngModel)]="tableGlobalIlluminationEnabled" [disabled]="!isEditable || !tableVisionEnabled">
+            {{ 'table.globalIllumination' | i18n }}
+          </label>
+          <label class="check" [class.disabled]="!tableGlobalIlluminationEnabled || !tableVisionEnabled">
+            <input type="checkbox" [(ngModel)]="tableGlobalIlluminationThresholdEnabled"
+              [disabled]="!isEditable || !tableGlobalIlluminationEnabled || !tableVisionEnabled">
+            {{ 'table.globalIlluminationThreshold' | i18n }}
+          </label>
+          <label class="inline-field grow" *ngIf="tableGlobalIlluminationThresholdEnabled && tableGlobalIlluminationEnabled"
+            [class.disabled]="!tableVisionEnabled">
+            <span>{{ 'table.threshold' | i18n }}</span>
+            <input type="range" min="0" max="1" step="0.05" [(ngModel)]="tableGlobalIlluminationThreshold"
+              [disabled]="!isEditable || !tableVisionEnabled">
+            <span class="val">{{ tableGlobalIlluminationThreshold | number:'1.0-2' }}</span>
+          </label>
+        </div>
+        <div class="compact-row wrap">
+          <label class="inline-field">
+            <span>{{ 'table.weather' | i18n }}</span>
+            <select [(ngModel)]="tableWeatherType" [disabled]="!isEditable || !canControlWeather">
+              <option value="none">{{ 'table.none' | i18n }}</option>
+              <option value="rain">{{ 'table.rain' | i18n }}</option>
+              <option value="thunderstorm">{{ 'table.thunderstorm' | i18n }}</option>
+              <option value="snow">{{ 'table.snow' | i18n }}</option>
+              <option value="fog">{{ 'table.fog' | i18n }}</option>
+              <option value="wind">{{ 'table.wind' | i18n }}</option>
+              <option value="sakura">{{ 'table.sakura' | i18n }}</option>
+              <option value="maple">{{ 'table.maple' | i18n }}</option>
+              <option value="sandstorm">{{ 'table.sandstorm' | i18n }}</option>
+              <option value="rainbow">{{ 'table.rainbow' | i18n }}</option>
+              <option value="aurora">{{ 'table.aurora' | i18n }}</option>
+              <option value="burning">{{ 'table.burning' | i18n }}</option>
+            </select>
+          </label>
+          <label class="inline-field grow" [class.disabled]="tableWeatherType === 'none'">
+            <span>{{ 'table.intensity' | i18n }}</span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              [(ngModel)]="tableWeatherIntensity"
+              [disabled]="!isEditable || !canControlWeather || tableWeatherType === 'none'"
+            >
+          </label>
+          <label class="check">
+            <input type="checkbox" [(ngModel)]="weatherSeEnabled" />
+            {{ 'table.weatherSe' | i18n }}
+          </label>
+          <label class="check" [title]="'table.visionHint' | i18n">
+            <input type="checkbox" [(ngModel)]="tableVisionEnabled" [disabled]="!isEditable">
+            {{ 'table.enableVision' | i18n }}
+          </label>
+          <label class="check" [title]="'table.mode2dHint' | i18n">
+            <input type="checkbox" [(ngModel)]="tableIs2DMode" [disabled]="!isEditable">
+            {{ 'table.mode2d' | i18n }}
+          </label>
+        </div>
+      </section>
+    </div>
+  </div>
 </div>
 
 <div class="settings-ui empty-hint" *ngIf="isEmpty">

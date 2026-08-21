@@ -22,9 +22,10 @@ import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { ObjectNode } from '@udonarium/core/synchronize-object/object-node';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { EventSystem } from '@udonarium/core/system';
-import { RangeArea } from '@udonarium/range';
+import { shouldIgnoreTabletopDoubleClick } from '@udonarium/tabletop-interact';
+import { LAYER_PEER_MOVABLE_Z_PX, layerPeerMovableTransform } from '@udonarium/tabletop-object-util';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
-import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
+import { RangeSettingsComponent } from 'component/range-settings/range-settings.component';
 
 import { InputHandler } from 'directive/input-handler';
 import { MovableOption } from 'directive/movable.directive';
@@ -37,13 +38,14 @@ import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopActionService } from 'service/tabletop-action.service';
 
 import { TabletopService } from 'service/tabletop.service';
+import { GameCharacter } from '@udonarium/game-character';
+import { RangeArea, RangeFollowTarget } from '@udonarium/range';
 import { RangeRender, RangeRenderSetting, ClipAreaCorn, ClipAreaLine, ClipAreaSquare, ClipAreaDiamond} from './range-render'; // 注意：會存取其他元件資料夾來繪製格線
 import { TableSelecter } from '@udonarium/table-selecter';
 import { GameTable } from '@udonarium/game-table';
 import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { ModalService } from 'service/modal.service';
 import { OpenUrlComponent } from 'component/open-url/open-url.component';
-import { GameCharacter } from '@udonarium/game-character';
 import { SelectionState, TabletopSelectionService } from 'service/tabletop-selection.service';
 
 @Component({
@@ -299,6 +301,7 @@ export class RangeComponent implements OnChanges, OnDestroy, AfterViewInit {
 
   get tableSelecter(): TableSelecter { return this.tabletopService.tableSelecter; }
   get currentTable(): GameTable { return this.tabletopService.currentTable; }
+  get is2DMode(): boolean { return !!this.currentTable?.is2DMode || !!this.tableSelecter?.viewTable?.is2DMode; }
 
   get name(): string { return this.range.name; }
   get width(): number { return this.adjustMinBounds(this.range.width); }
@@ -306,7 +309,7 @@ export class RangeComponent implements OnChanges, OnDestroy, AfterViewInit {
   get opacity(): number { return this.range.opacity; }
   get imageFile(): ImageFile { return this.range.imageFile; }
   get isLocked(): boolean { return this.range.isLocked; }
-  set isLocked(isLock: boolean) { this.range.isLocked = isLock; }
+  set isLocked(isLock: boolean) { this.range.mutateAppearance(() => { this.range.isLocked = isLock; }); }
 
   get selectionState(): SelectionState { return this.selectionService.state(this.range); }
   get isSelected(): boolean { return this.selectionState !== SelectionState.NONE; }
@@ -339,15 +342,17 @@ export class RangeComponent implements OnChanges, OnDestroy, AfterViewInit {
   }
 
   get isAltitudeIndicate(): boolean { return this.range.isAltitudeIndicate; }
-  set isAltitudeIndicate(isAltitudeIndicate: boolean) { this.range.isAltitudeIndicate = isAltitudeIndicate; }
+  set isAltitudeIndicate(isAltitudeIndicate: boolean) {
+    this.range.mutateAppearance(() => { this.range.isAltitudeIndicate = isAltitudeIndicate; });
+  }
 
   get textShadowCss(): string {
     let shadow = StringUtil.textShadowColor(this.range.rangeColor, '#f5f5f5');
     return `${shadow} 0px 0px 3px`;
   }
 
-  get followingCharactor(): GameCharacter { return this.range.followingCharactor; }
-  set followingCharactor(followingCharactor: GameCharacter) { this.range.followingCharactor = followingCharactor; }
+  get followingCharactor(): RangeFollowTarget { return this.range.followingCharactor; }
+  set followingCharactor(followingCharactor: RangeFollowTarget) { this.range.followingCharactor = followingCharactor; }
 
   get isFollowed(): boolean {
     return this.followingCharactor 
@@ -356,10 +361,9 @@ export class RangeComponent implements OnChanges, OnDestroy, AfterViewInit {
       && (this.followingCharactor.altitude + this.followingCharactor.posZ - 0.5) <= (this.range.altitude + this.range.posZ) && (this.range.altitude + this.range.posZ) <= (this.followingCharactor.altitude + this.followingCharactor.posZ + 0.5)
   }
 
-  get dockableCharacters(): GameCharacter[] {
-    let ary: GameCharacter[] = this.tabletopService.characters.filter(character => {
-      if (character.location.name !== 'table' || character.isHideIn) return false;
-      //if (this.range.followingCharctor && this.range.followingCharctor === character) isContainFollowing = true;
+  get dockableCharacters(): RangeFollowTarget[] {
+    let ary: RangeFollowTarget[] = this.tabletopService.characterTokens.filter(character => {
+      if (!character.isVisibleOnTable || character.isHideIn) return false;
       return [
         {x: 0, y: 0},
         {x: character.size * this.gridSize, y: 0},
@@ -444,7 +448,7 @@ export class RangeComponent implements OnChanges, OnDestroy, AfterViewInit {
               this.setRange();
             });
             markForCheck = true;
-          } else if (object instanceof ObjectNode) {
+          } else if (object instanceof ObjectNode && this.followingCharactor instanceof GameCharacter) {
             if (this.followingCharactor.contains(object)) {
               this.ngZone.run(() => {
                 this.range.following();
@@ -472,7 +476,7 @@ export class RangeComponent implements OnChanges, OnDestroy, AfterViewInit {
       });
     this.movableOption = {
       tabletopObject: this.range,
-      transformCssOffset: 'translateZ(0.25px)',
+      transformCssOffset: layerPeerMovableTransform(),
       colideLayers: ['terrain', 'text-note']
     };
     this.rotableOption = {
@@ -518,13 +522,16 @@ export class RangeComponent implements OnChanges, OnDestroy, AfterViewInit {
     e.preventDefault();
 
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
+    this.tabletopActionService.ensureObjectSelected(this.range);
     let menuPosition = this.pointerDeviceService.pointers[0];
     let objectPosition = this.coordinateService.calcTabletopLocalCoordinate();
 
     let menuArray = [];
+    menuArray.push(...this.tabletopActionService.makeClipboardMenuActions());
+    if (menuArray.length) menuArray.push(ContextMenuSeparator);
 
     if (this.selectionService.objects.length) {
-      menuArray.push({ name: this.i18n.t('range.menu.1'), action: () => this.selectionService.congregate(objectPosition) });
+      menuArray.push({ name: this.i18n.t('range.menu.1'), hotkey: 'T', action: () => this.selectionService.congregate(objectPosition) });
       menuArray.push(ContextMenuSeparator);
     }
 
@@ -536,6 +543,7 @@ export class RangeComponent implements OnChanges, OnDestroy, AfterViewInit {
       },
       on: this.i18n.t('range.menu.2'),
       off: this.i18n.t('range.menu.3'),
+      hotkey: 'L',
     }));
     menuArray.push(
       {
@@ -589,15 +597,17 @@ export class RangeComponent implements OnChanges, OnDestroy, AfterViewInit {
         on: this.i18n.t('range.menu.8'),
         off: this.i18n.t('range.menu.9'),
       }));
-      menuArray.push(contextMenuToggleCheck({
-        get: () => this.range.isFollowAltitude,
-        set: (v) => {
-          this.range.isFollowAltitude = v;
-          if (v && this.followingCharactor) this.range.following();
-        },
-        on: this.i18n.t('range.menu.10'),
-        off: this.i18n.t('range.menu.11'),
-      }));
+      if (!this.is2DMode) {
+        menuArray.push(contextMenuToggleCheck({
+          get: () => this.range.isFollowAltitude,
+          set: (v) => {
+            this.range.isFollowAltitude = v;
+            if (v && this.followingCharactor) this.range.following();
+          },
+          on: this.i18n.t('range.menu.10'),
+          off: this.i18n.t('range.menu.11'),
+        }));
+      }
     } else {
       menuArray.push(contextMenuToggleCheck({
         get: () => this.range.subDivisionSnapPolygonal,
@@ -627,21 +637,23 @@ export class RangeComponent implements OnChanges, OnDestroy, AfterViewInit {
         disabled: this.range.fillType == 0
       }
     );
-    menuArray.push(contextMenuToggleCheck({
-      get: () => this.isAltitudeIndicate,
-      set: (v) => { this.isAltitudeIndicate = v; },
-      on: this.i18n.t('range.menu.17'),
-      off: this.i18n.t('range.menu.18'),
-    }));
-    menuArray.push({
-      name: this.i18n.t('range.menu.19'), action: () => {
-        if (this.altitude != 0) {
-          this.altitude = 0;
-          SoundEffect.play(PresetSound.sweep);
-        }
-      },
-      altitudeHande: this.range
-    });
+    if (!this.is2DMode) {
+      menuArray.push(contextMenuToggleCheck({
+        get: () => this.isAltitudeIndicate,
+        set: (v) => { this.isAltitudeIndicate = v; },
+        on: this.i18n.t('range.menu.17'),
+        off: this.i18n.t('range.menu.18'),
+      }));
+      menuArray.push({
+        name: this.i18n.t('range.menu.19'), action: () => {
+          if (this.altitude != 0) {
+            this.altitude = 0;
+            SoundEffect.play(PresetSound.sweep);
+          }
+        },
+        altitudeHande: this.range
+      });
+    }
     menuArray.push(ContextMenuSeparator);
     menuArray.push(
       { name: this.i18n.t('range.menu.20'), action: () => { this.showDetail(this.range); } }
@@ -672,25 +684,11 @@ export class RangeComponent implements OnChanges, OnDestroy, AfterViewInit {
     }
     menuArray.push(
       {
-        name: this.i18n.t('range.menu.22'), action: () => {
-          let cloneObject = this.range.clone();
-          //console.log('複製', cloneObject);
-          cloneObject.location.x += this.gridSize;
-          cloneObject.location.y += this.gridSize;
-          cloneObject.toTopmost();
-          cloneObject.isLocked = false;
-          cloneObject.followingCharctorIdentifier = null;
-          if (this.range.parent) this.range.parent.appendChild(cloneObject);
-          SoundEffect.play(PresetSound.cardPut);
-        }
-      }
-    );
-    menuArray.push(
-      {
         name: this.i18n.t('range.menu.23'), action: () => {
           this.range.destroy();
           SoundEffect.play(PresetSound.sweep);
-        }
+        },
+        hotkey: 'Del',
       }
     );
     menuArray.push( ContextMenuSeparator );
@@ -726,17 +724,24 @@ export class RangeComponent implements OnChanges, OnDestroy, AfterViewInit {
   }
 
   onDoubleClick(e: Event) {
+    if (shouldIgnoreTabletopDoubleClick(e)) return;
     e.stopPropagation();
     this.showDetail(this.range);
   }
 
   private showDetail(gameObject: RangeArea) {
-    let coordinate = this.pointerDeviceService.pointers[0];
     let title = this.i18n.t('range.panelTitle');
     if (gameObject.name.length) title += ' - ' + gameObject.name;
-    let option: PanelOption = { title: title, left: coordinate.x - 200, top: coordinate.y - 150, width: 400, height: 390 };
-    let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
-    component.tabletopObject = gameObject;
+    const tourId = PanelService.tourIdObjectDetail(gameObject.identifier);
+    if (PanelService.bringTourPanelToFront(tourId, { title })) return;
+    let coordinate = this.pointerDeviceService.pointers[0];
+    let option: PanelOption = {
+      title: title, left: coordinate.x - 210, top: coordinate.y - 180, width: 420, height: 400,
+      tourPanelId: tourId,
+      geometryKey: PanelService.sheetGeometryKey(gameObject.aliasName),
+    };
+    let component = this.panelService.open<RangeSettingsComponent>(RangeSettingsComponent, option);
+    component.range = gameObject;
   }
 
   private setRange() {

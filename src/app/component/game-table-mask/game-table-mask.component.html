@@ -1,13 +1,14 @@
 <div class="component is-3d" [ngClass]="{'is-grab': !isLock && !isScratching, 'is-scratching': isScratching && gameTableMask.isMine, 'is-border': isScratching || (!isLock && borderType >= 1) || borderType >= 2 }" style="pointer-events: none"
   [style.width.px]="width * gridSize" [style.height.px]="height * gridSize"
   appMovable [movable.option]="movableOption" [movable.disable]="isLock || isScratching" (movable.ondragstart)="onMove()" (movable.ondragend)="onMoved()">
-  <div class="is-fit-full is-3d" style="pointer-events: none"  [ngClass]="{fall: altitude == 0}" [ngStyle]="{'transform': 'translateZ(' + (altitude * gridSize) + 'px)'}">
+  <div class="is-fit-full is-3d" style="pointer-events: none"  [ngClass]="{fall: is2DMode || altitude == 0}" [ngStyle]="{'transform': 'translateZ(' + (is2DMode ? 0 : altitude * gridSize) + 'px)'}">
     <div *ngIf="!isScratching" class="is-3d text" style="left: 2px; top: 2px; backface-visibility: hidden"
+      [ngClass]="textPositionClass"
       [style.width.px]="width * gridSize - 4" [style.height.px]="height * gridSize - 4">
-      <div class="is-3d" [ngClass]="{'is-inverse': isInverse}" [style.font-size.px]="fontSize + 9" [style.color]="color" [style.text-shadow]="textShadowCss" style="z-index: 5; pointer-events: none" [innerHtml]="rubiedText"></div>
+      <div class="is-3d" [ngClass]="{'is-inverse': isInverse}" [style.font-size.px]="fontSize + 9" [style.color]="color" [style.text-shadow]="textShadowCss" [style.text-align]="textAlignCss" style="z-index: 5; pointer-events: none; max-width: 100%" [innerHtml]="rubiedText"></div>
     </div>
     <div class="is-fit-full is-3d">
-      <div class="is-fit-full is-3d chrome-smooth-image-trick" style="pointer-events: auto; position: absolute; backface-visibility: hidden"
+      <div class="is-fit-full is-3d chrome-smooth-image-trick mask-hit-surface" style="pointer-events: auto; position: absolute; backface-visibility: hidden"
         (dblclick)="onDoubleClick($event)"
         [ngStyle]="{'opacity': operateOpacity, 'background-color': imageFileUrl.length < 1 || blendType > 0 ? bgcolor : null, '-webkit-mask': masksCss, mask: masksCss}"
         [ngClass]="{image: imageFileUrl.length >= 1}">
@@ -57,7 +58,7 @@
       </div>
     </div>
   </div>
-  <div class="is-3d" *ngIf="isAltitudeIndicate && math.abs(gameTableMaskAltitude) >= 0.5"
+  <div class="is-3d" *ngIf="!is2DMode && isAltitudeIndicate && math.abs(gameTableMaskAltitude) >= 0.5"
     style="display: flex; align-items: center; border-left: 2px dashed blanchedalmond; transform-origin: top left; pointer-events: none"
     [style.height.px]="math.abs(gameTableMaskAltitude * gridSize)"
     [ngStyle]="{transform: 'translateX(' + (width * gridSize / 2) + 'px) translateY(' + (-height * gridSize / 2) + 'px) rotateX(-90deg) translateY(' + (altitude > 0 ? -altitude * gridSize : 0) + 'px) rotateY(' + (viewRotateZ) + 'deg)'}">

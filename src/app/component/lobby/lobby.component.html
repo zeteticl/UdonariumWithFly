@@ -1,12 +1,21 @@
-<div class="settings-ui" *ngIf="!isConnected; else other_content">
+<div class="settings-ui dense" appFitPanel [fitMinHeight]="280" [fitMaxHeight]="560">
   <section class="card">
     <header class="card-head"><h3>{{ 'lobby.title' | i18n }}</h3></header>
     <div class="actions">
       <button type="button" class="btn" (click)="reload()" [disabled]="isReloading">
         <i class="material-icons">refresh</i>{{ 'lobby.refresh' | i18n }}
       </button>
-      <button type="button" class="btn btn-primary" (click)="showRoomSetting()">
+      <button type="button" class="btn btn-primary" (click)="showRoomSetting()" [disabled]="connectionBusy.busy">
         <i class="material-icons">room_preferences</i>{{ 'lobby.createRoom' | i18n }}
+      </button>
+      <button type="button" class="btn" *ngIf="canShowLoadRoom" (click)="loadFolderBackup()"
+        [disabled]="isFolderLoadDisabled"
+        [title]="isFolderLoadDisabled
+          ? ('peer.loadData.gmOnly' | i18n)
+          : (folderBackup.isReady
+            ? ('menu.folderBackup.autoStoreHint' | i18n)
+            : (folderBackupActionLabelKey | i18n))">
+        <i class="material-icons">{{ folderBackup.isReady ? 'folder_open' : 'create_new_folder' }}</i>{{ folderBackupActionLabelKey | i18n }}<ng-container *ngIf="isFolderLoadDisabled">（{{ 'peer.loadData.gmOnly' | i18n }}）</ng-container>
       </button>
     </div>
 
@@ -30,11 +39,11 @@
             <td>{{ 'lobby.peerCount' | i18n:{ count: room.peers.length } }}</td>
             <td class="room-actions">
               <ng-container *ngIf="isRoleAuthRoom(room)">
-                <button type="button" class="btn btn-sm btn-primary" [disabled]="room.id === currentRoom" *ngIf="0 < room.id.length" (click)="connect(room)">{{ 'lobby.joinWithRole' | i18n }}</button>
+                <button type="button" class="btn btn-sm btn-primary" [disabled]="connectionBusy.busy || room.id === currentRoom" *ngIf="0 < room.id.length" (click)="connect(room)">{{ 'lobby.joinWithRole' | i18n }}</button>
               </ng-container>
               <ng-container *ngIf="!isRoleAuthRoom(room)">
-                <button type="button" class="btn btn-sm btn-primary" [disabled]="room.id === currentRoom" *ngIf="0 < room.id.length" (click)="connect(room, false)">{{ 'lobby.connect' | i18n }}</button>
-                <button type="button" class="btn btn-sm" [disabled]="room.id === currentRoom" *ngIf="0 < room.id.length && isAllowGuest(room)" (click)="connect(room, true)">{{ 'lobby.guest' | i18n }}</button>
+                <button type="button" class="btn btn-sm btn-primary" [disabled]="connectionBusy.busy || room.id === currentRoom" *ngIf="0 < room.id.length" (click)="connect(room, false)">{{ 'lobby.connect' | i18n }}</button>
+                <button type="button" class="btn btn-sm" [disabled]="connectionBusy.busy || room.id === currentRoom" *ngIf="0 < room.id.length && isAllowGuest(room)" (click)="connect(room, true)">{{ 'lobby.guest' | i18n }}</button>
               </ng-container>
             </td>
           </tr>
@@ -44,6 +53,3 @@
     <p class="empty-hint" *ngIf="rooms.length < 1">{{help}}</p>
   </section>
 </div>
-<ng-template #other_content>
-  <div class="settings-ui empty-hint">{{ 'lobby.helpConnected' | i18n }}</div>
-</ng-template>

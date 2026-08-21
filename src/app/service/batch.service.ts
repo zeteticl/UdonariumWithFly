@@ -29,6 +29,16 @@ export class BatchService {
     this.startTimer();
   }
 
+  /** Run pending tasks immediately (e.g. before map switch so poses land on the right table). */
+  flushNow() {
+    if (this.batchTaskTimer != null) {
+      clearInterval(this.batchTaskTimer);
+      this.batchTaskTimer = null;
+    }
+    if (this.batchTask.size < 1 && !this.needsChangeDetection) return;
+    this.execBatch();
+  }
+
   private startTimer() {
     if (this.batchTaskTimer != null) return;
     this.ngZone.runOutsideAngular(() => {

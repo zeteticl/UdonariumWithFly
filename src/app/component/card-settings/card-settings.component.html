@@ -1,0 +1,65 @@
+<div class="settings-ui dense object-settings card-settings" *ngIf="card; else emptyBlock" appFitPanel [fitMinHeight]="220">
+  <section class="card card-dense">
+    <div class="image-grid">
+      <div class="image-slot">
+        <span class="image-label">{{ 'sheet.changeFrontImage' | i18n }}</span>
+        <button type="button" class="image-frame" [class.image-frame-empty]="!card.frontImage?.url"
+          (click)="openImage('front')" [disabled]="GuestMode()">
+          <img *ngIf="card.frontImage?.url" [src]="card.frontImage.url | safe: 'resourceUrl'" alt="" />
+          <i *ngIf="!card.frontImage?.url" class="material-icons">add_photo_alternate</i>
+        </button>
+      </div>
+      <div class="image-slot">
+        <span class="image-label">{{ 'sheet.changeBackImage' | i18n }}</span>
+        <button type="button" class="image-frame" [class.image-frame-empty]="!card.backImage?.url"
+          (click)="openImage('back')" [disabled]="GuestMode()">
+          <img *ngIf="card.backImage?.url" [src]="card.backImage.url | safe: 'resourceUrl'" alt="" />
+          <i *ngIf="!card.backImage?.url" class="material-icons">add_photo_alternate</i>
+        </button>
+      </div>
+    </div>
+    <div class="field-row wrap">
+      <label class="field grow">
+        <span>{{ 'card.settings.name' | i18n }}</span>
+        <input type="text" [(ngModel)]="cardName" [disabled]="GuestMode() || !isVisible" />
+      </label>
+      <label class="field">
+        <span>{{ 'card.settings.size' | i18n }}</span>
+        <input type="number" min="0.5" step="0.5" [(ngModel)]="card.size" [disabled]="GuestMode()" />
+      </label>
+    </div>
+  </section>
+
+  <section class="card card-dense" *ngIf="isVisible">
+    <label class="field">
+      <span>{{ 'card.settings.text' | i18n }}</span>
+      <textarea class="text-body" rows="2" [(ngModel)]="card.text" [disabled]="GuestMode()"></textarea>
+    </label>
+    <div class="field-row wrap">
+      <label class="field">
+        <span>{{ 'note.fieldFontSize' | i18n }}</span>
+        <input type="number" min="1" step="1" [(ngModel)]="card.fontsize" [disabled]="GuestMode()" />
+      </label>
+      <label class="field">
+        <span>{{ 'note.fieldColor' | i18n }}</span>
+        <input type="color" [(ngModel)]="card.color" [disabled]="GuestMode()" />
+      </label>
+    </div>
+  </section>
+
+  <section class="card card-dense">
+    <div class="check-row tight">
+      <label><input type="checkbox" [(ngModel)]="card.isLocked" [disabled]="GuestMode()" /> {{ 'card.settings.locked' | i18n }}</label>
+    </div>
+  </section>
+
+  <section class="card card-dense footer-actions actions tight">
+    <button type="button" class="btn btn-sm" (click)="importXml()" [disabled]="GuestMode()">{{ 'sheet.import' | i18n }}</button>
+    <button type="button" class="btn btn-sm" [disabled]="isSaveing || GuestMode()" (click)="saveToXML()">
+      {{ isSaveing ? (progresPercent + '%') : ('sheet.download' | i18n) }}
+    </button>
+  </section>
+</div>
+<ng-template #emptyBlock>
+  <div class="settings-ui empty-hint">{{ 'card.settingsEmpty' | i18n }}</div>
+</ng-template>

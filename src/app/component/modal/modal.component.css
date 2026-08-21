@@ -9,7 +9,8 @@
   bottom :0;
   left :0;
   right :0;
-  z-index: 1899999;
+  /* Above context-menu / mobile action sheet (2_000_000) and map HUD (2_000_010). */
+  z-index: 2500000;
 
   display: flex;
   align-items: center;
@@ -34,6 +35,7 @@
 .modal-panel {
   box-sizing: border-box;
   overflow: hidden;
+  position: relative;
 
   color: #444;
   background: linear-gradient(-30deg, rgba(240,218,189, 0.9), rgba(255, 244, 232, 0.9));
@@ -41,7 +43,7 @@
 
   height: auto;
   max-height: calc(100% - 10px);
-  width: 800px;
+  width: 690px;
   max-width: 100%;
 
   display: flex;
@@ -58,6 +60,7 @@
   width: 100%;
   background-color: #CCC;
   color: #444;
+  cursor: grab;
 
   flex-shrink: 0;
   display: flex;

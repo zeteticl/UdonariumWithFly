@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, OnChanges, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostBinding, Input, OnChanges, OnDestroy, OnInit } from '@angular/core';
 import { ChatTab } from '@udonarium/chat-tab';
 import { EventSystem } from '@udonarium/core/system';
 import { StringUtil } from '@udonarium/core/system/util/string-util';
@@ -27,6 +27,10 @@ export class GameDataElementComponent implements OnInit, OnDestroy {
   @Input() isHideText: boolean = false;
   @Input() isNoLogging: boolean = false;
   @Input() descriptionType: string;
+  /** Compact single-line value controls (character settings sheet). */
+  @Input() dense: boolean = false;
+
+  @HostBinding('class.dense') get denseClass(): boolean { return this.dense; }
 
   stringUtil = StringUtil;
 
@@ -193,13 +197,20 @@ export class GameDataElementComponent implements OnInit, OnDestroy {
     if (this.currentValue !== '' && this.currentValue != null) {
       payload = `${this.currentValue}/${this.value}`;
     }
-    const text = `${payload} ${this.name}`.trim();
+    let text = `${payload} ${this.name}`.trim();
     if (!text) return;
 
     const sendFrom = (this.tabletopObject instanceof GameCharacter)
       ? this.tabletopObject.identifier
       : PeerCursor.myCursor.identifier;
-    const gameType = this.chatMessageService.gameType || 'DiceBot';
+    let gameType = this.chatMessageService.gameType || 'DiceBot';
+
+    // Same {} / ｛｝ ability TAG expansion as chat palette (e.g. 2d6+{敏捷} in 戰鬥特技).
+    if (this.tabletopObject instanceof GameCharacter && this.tabletopObject.chatPalette) {
+      const palette = this.tabletopObject.chatPalette;
+      text = palette.evaluate(text, this.tabletopObject.rootDataElement);
+      if (palette.dicebot) gameType = palette.dicebot;
+    }
 
     this.chatMessageService.sendMessage(chatTab, text, gameType, sendFrom);
   }
@@ -213,10 +224,21 @@ export class GameDataElementComponent implements OnInit, OnDestroy {
   private setUpdateTimer() {
     clearTimeout(this.updateTimer);
     this.updateTimer = setTimeout(() => {
+      const needsAppearance = !!(this.tabletopObject && this.isAppearancePlacementField(this.gameDataElement.name));
+      // Seed other maps from pre-edit live before mutating footprint DataElements.
+      if (needsAppearance) this.tabletopObject.ensureAppearanceBackfilled();
       if (this.gameDataElement.name !== this.name) this.gameDataElement.name = this.name;
       if (this.gameDataElement.currentValue !== this.currentValue) this.gameDataElement.currentValue = this.currentValue;
       if (this.gameDataElement.value !== this.value) this.gameDataElement.value = this.value;
+      // Per-map appearance (size/height/altitude) must not stay only on shared DataElements.
+      if (needsAppearance) {
+        this.tabletopObject.syncAppearanceToCurrentViewPlacement();
+      }
       this.updateTimer = null;
     }, 66);
+  }
+
+  private isAppearancePlacementField(name: string): boolean {
+    return TabletopObject.isPlacementFootprintName(name);
   }
 }

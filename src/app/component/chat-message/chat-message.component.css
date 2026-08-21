@@ -100,6 +100,31 @@
   white-space: pre-wrap;
 }
 
+.msg-attached-list {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.msg-attached-link {
+  display: inline-block;
+  line-height: 0;
+}
+
+.msg-attached {
+  max-width: min(280px, 100%);
+  max-height: 220px;
+  object-fit: contain;
+  vertical-align: bottom;
+  border-radius: 4px;
+  cursor: zoom-in;
+}
+
+.direct-message .msg-attached {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
 .dicebot-message .msg-name {
   font-size: 8px;
 }
@@ -227,7 +252,9 @@ textarea {
 }
 
 .container.compact {
-  overflow: hidden;
+  /* Keep horizontal clip only — overflow-y:hidden cuts oblique glyphs and wrapped last lines. */
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .container.compact.editing {
@@ -235,13 +262,25 @@ textarea {
 }
 
 .container.compact .message {
-  padding: 2px !important;
+  padding: 2px 2px 4px !important;
 }
 
 .container.compact .body {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+/* Operation logs are compact but often long; stack so the value line is never clipped. */
+.container.compact .message.operation-log .body {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.container.compact .message.operation-log .text {
+  min-width: 0;
 }
 
 .container.compact .title {

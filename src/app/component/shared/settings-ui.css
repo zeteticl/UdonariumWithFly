@@ -1,36 +1,94 @@
-.settings-ui {
+:host {
+  container-type: inline-size;
   display: block;
-  font-size: 13px;
-  color: #3a2f24;
 }
 
+.settings-ui {
+  display: block;
+  font-size: 12px;
+  color: #3a2f24;
+  /* Note-inventory density: default content should fit default panel height. */
+  --udon-settings-gap: 4px;
+  --udon-settings-pad: 5px 7px;
+  --udon-control-height: 26px;
+}
+
+/* Compact density is the default. `.dense` kept as an alias for older markup. */
+.settings-ui .card,
+.settings-ui.dense .card {
+  padding: var(--udon-settings-pad);
+}
+
+.settings-ui .card + .card,
+.settings-ui.dense .card + .card {
+  margin-top: var(--udon-settings-gap);
+}
+
+.settings-ui .field,
+.settings-ui.dense .field {
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.settings-ui .field-row,
+.settings-ui.dense .field-row {
+  margin-top: 4px;
+  gap: 4px;
+}
+
+.settings-ui .hint,
+.settings-ui .empty-hint,
+.settings-ui.dense .hint,
+.settings-ui.dense .empty-hint {
+  margin: 3px 0 0;
+  font-size: 11px;
+}
+
+.settings-ui .section-title,
+.settings-ui.dense .section-title {
+  margin: 8px 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5c4630;
+  letter-spacing: 0.03em;
+}
+
+.settings-ui .section-title:first-child,
+.settings-ui.dense .section-title:first-child {
+  margin-top: 0;
+}
+
+/* Keep list + form side-by-side; stack only when the panel itself is narrow. */
 .settings-layout {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-wrap: nowrap;
+  gap: var(--udon-settings-gap, 4px);
   align-items: stretch;
   min-height: 100%;
 }
 
 .settings-aside {
-  flex: 0 0 168px;
+  flex: 0 0 128px;
+  width: 128px;
+  min-width: 104px;
+  max-width: 148px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--udon-settings-gap, 4px);
 }
 
 .settings-main {
-  flex: 1 1 320px;
+  flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--udon-settings-gap, 4px);
 }
 
 .settings-list {
   width: 100%;
   flex: 1 1 auto;
-  min-height: 280px;
+  min-height: 120px;
   border: 1px solid #c4b29a;
   border-radius: 4px;
   background: #fffdf8;
@@ -38,7 +96,8 @@
 }
 
 .settings-list option {
-  padding: 4px 6px;
+  padding: 3px 6px;
+  font-size: 12px;
 }
 
 .settings-list option.is-unnamed {
@@ -47,23 +106,23 @@
 
 .card {
   border: 1px solid #d2c2ab;
-  border-radius: 6px;
+  border-radius: 5px;
   background: linear-gradient(180deg, #fffaf2 0%, #f7efe3 100%);
-  padding: 10px 12px;
+  padding: var(--udon-settings-pad, 5px 7px);
 }
 
 .card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 0 0 8px;
-  padding-bottom: 6px;
+  margin: 0 0 3px;
+  padding-bottom: 3px;
   border-bottom: 1px solid #e2d3bf;
 }
 
 .card-head h3 {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: #5c4630;
@@ -88,7 +147,7 @@
 .image-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .image-slot {
@@ -110,7 +169,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 108px;
+  height: 84px;
   padding: 0;
   margin: 0;
   overflow: hidden;
@@ -147,7 +206,7 @@
 }
 
 .image-frame-empty .material-icons {
-  font-size: 28px;
+  font-size: 22px;
   opacity: 0.75;
 }
 
@@ -166,9 +225,9 @@
 
 .field-row {
   display: flex;
-  gap: 10px;
+  gap: 6px;
   align-items: flex-end;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .field-row.wrap {
@@ -196,17 +255,19 @@
 .field input[type='text'],
 .field input[type='password'],
 .field input[type='number'],
+.field input[type='url'],
 .field select,
 .field textarea {
-  min-height: 28px;
-  padding: 3px 6px;
-  border: 1px solid #c4b29a;
-  border-radius: 4px;
-  background: #fff;
+  min-height: var(--udon-control-height, 26px);
+  padding: 2px 6px;
+  border: 1px solid var(--udon-control-border, #c4b29a);
+  border-radius: var(--udon-control-radius, 4px);
+  background: var(--udon-control-bg, #fff);
+  font-size: 12px;
 }
 
 .field textarea {
-  min-height: 6em;
+  min-height: 4em;
   resize: vertical;
   font-weight: normal;
 }
@@ -220,9 +281,9 @@ label.disabled {
 .slider-row {
   display: grid;
   grid-template-columns: 4.5em 1fr 3.2em auto;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .slider-label {
@@ -259,8 +320,8 @@ label.disabled {
 .check-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 14px;
-  margin-top: 8px;
+  gap: 6px 10px;
+  margin-top: 4px;
   font-size: 12px;
   font-weight: 700;
   color: #5c4630;
@@ -275,9 +336,9 @@ label.disabled {
 }
 
 .hint {
-  margin: 8px 0 0;
+  margin: 3px 0 0;
   font-size: 11px;
-  line-height: 1.4;
+  line-height: 1.35;
   color: #7a6a58;
   font-weight: normal;
 }
@@ -286,8 +347,8 @@ label.disabled {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  padding-top: 2px;
+  gap: 4px;
+  padding-top: 0;
 }
 
 .actions-spacer {
@@ -310,8 +371,8 @@ label.disabled {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  min-height: 28px;
-  padding: 4px 10px;
+  min-height: var(--udon-control-height, 26px);
+  padding: 3px 8px;
   border: 1px solid #b89b78;
   border-radius: 4px;
   background: #f4e8d6;
@@ -417,11 +478,11 @@ label.disabled {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   user-select: none;
   border: 1px dashed #c4b29a;
   border-radius: 6px;
-  padding: 20px 12px;
+  padding: 8px 10px;
   text-align: center;
   background: repeating-linear-gradient(
     -45deg,
@@ -440,13 +501,13 @@ label.disabled {
 }
 
 .drop-zone .material-icons {
-  font-size: 40px;
+  font-size: 28px;
   opacity: 0.75;
   color: #7a6550;
 }
 
 .drop-zone-title {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -458,9 +519,9 @@ label.disabled {
 .volume-row {
   display: grid;
   grid-template-columns: 6.5em auto 1fr 3.2em auto;
-  gap: 8px;
+  gap: 4px;
   align-items: center;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .volume-row .slider-label {
@@ -550,15 +611,24 @@ label.disabled {
   vertical-align: middle;
 }
 
-@media (max-width: 640px) {
+/* Query panel host width (not browser viewport). */
+@container (max-width: 420px) {
+  .settings-layout {
+    flex-wrap: wrap;
+  }
+
   .settings-aside {
     flex: 1 1 100%;
+    width: auto;
+    max-width: none;
   }
 
   .settings-list {
     min-height: 120px;
   }
+}
 
+@media (max-width: 640px) {
   .image-grid {
     grid-template-columns: 1fr;
   }

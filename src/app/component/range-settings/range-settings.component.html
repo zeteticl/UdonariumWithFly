@@ -1,0 +1,79 @@
+<div class="settings-ui dense object-settings range-settings" *ngIf="range; else emptyBlock" appFitPanel [fitMinHeight]="240">
+  <section class="card card-dense">
+    <div class="field-row wrap">
+      <label class="field grow">
+        <span>{{ 'range.settings.name' | i18n }}</span>
+        <input type="text" [(ngModel)]="rangeName" [disabled]="GuestMode()" />
+      </label>
+      <label class="field grow">
+        <span>{{ 'range.settings.type' | i18n }}</span>
+        <select [(ngModel)]="range.type" [disabled]="GuestMode()">
+          <option *ngFor="let opt of typeOptions" [ngValue]="opt.value">{{ opt.labelKey | i18n }}</option>
+        </select>
+      </label>
+    </div>
+    <div class="field-row wrap">
+      <label class="field">
+        <span>{{ 'range.settings.length' | i18n }}</span>
+        <input type="number" min="0.5" step="0.5" [(ngModel)]="length" [disabled]="GuestMode()" />
+      </label>
+      <label class="field" *ngIf="range.isApplyWidth">
+        <span>{{ 'note.fieldWidth' | i18n }}</span>
+        <input type="number" min="0.5" step="0.5" [(ngModel)]="width" [disabled]="GuestMode()" />
+      </label>
+      <label class="field">
+        <span>{{ 'mask.fieldOpacity' | i18n }}</span>
+        <input type="number" min="0" max="100" step="1" [(ngModel)]="opacityPercent" [disabled]="GuestMode()" />
+      </label>
+      <label class="field">
+        <span>{{ 'mask.fieldAltitude' | i18n }}</span>
+        <input type="number" step="0.5" [(ngModel)]="range.altitude" [disabled]="GuestMode()" />
+      </label>
+    </div>
+    <div class="field-row wrap">
+      <label class="field">
+        <span>{{ 'range.settings.rangeColor' | i18n }}</span>
+        <input type="color" [(ngModel)]="range.rangeColor" [disabled]="GuestMode()" />
+      </label>
+      <label class="field">
+        <span>{{ 'range.settings.gridColor' | i18n }}</span>
+        <input type="color" [(ngModel)]="range.gridColor" [disabled]="GuestMode()" />
+      </label>
+      <label class="field grow">
+        <span>{{ 'range.settings.fill' | i18n }}</span>
+        <select [(ngModel)]="range.fillType" [disabled]="GuestMode()">
+          <option *ngFor="let opt of fillOptions" [ngValue]="opt.value">{{ opt.labelKey | i18n }}</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section class="card card-dense">
+    <div class="field-row wrap">
+      <label class="field grow">
+        <span>{{ 'range.followTitle' | i18n }}</span>
+        <input type="text" [ngModel]="followName || ('range.menu.5' | i18n)" disabled />
+      </label>
+      <button type="button" class="btn btn-sm" (click)="clearFollow()" [disabled]="GuestMode() || !range.followingCharctorIdentifier">
+        {{ 'range.menu.6' | i18n }}
+      </button>
+    </div>
+    <div class="check-row tight">
+      <label><input type="checkbox" [(ngModel)]="range.isExpandByFollowing" [disabled]="GuestMode()" /> {{ 'range.settings.expandFollow' | i18n }}</label>
+      <label><input type="checkbox" [(ngModel)]="range.isFollowAltitude" [disabled]="GuestMode()" /> {{ 'range.settings.followAltitude' | i18n }}</label>
+      <label><input type="checkbox" [(ngModel)]="range.subDivisionSnapPolygonal" [disabled]="GuestMode()" /> {{ 'range.settings.fineRotate' | i18n }}</label>
+      <label><input type="checkbox" [(ngModel)]="range.isLocked" [disabled]="GuestMode()" /> {{ 'range.settings.locked' | i18n }}</label>
+      <label><input type="checkbox" [(ngModel)]="range.isAltitudeIndicate" [disabled]="GuestMode()" /> {{ 'range.settings.altitudeIndicate' | i18n }}</label>
+    </div>
+  </section>
+
+  <section class="card card-dense footer-actions actions tight">
+    <button type="button" class="btn btn-sm" (click)="importXml()" [disabled]="GuestMode()">{{ 'sheet.import' | i18n }}</button>
+    <button type="button" class="btn btn-sm" [disabled]="isSaveing || GuestMode()" (click)="saveToXML()">
+      {{ isSaveing ? (progresPercent + '%') : ('sheet.download' | i18n) }}
+    </button>
+  </section>
+</div>
+<ng-template #emptyBlock>
+  <div class="settings-ui empty-hint">{{ 'range.settingsEmpty' | i18n }}</div>
+</ng-template>

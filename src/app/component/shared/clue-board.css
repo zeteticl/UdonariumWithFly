@@ -1,0 +1,297 @@
+/* Shared clue-board chrome (token frames + push pins). */
+
+/*
+  Oblique pin host. Rotate around the needle plant (50% / 88%) so the tip stays
+  fixed on the photo while the head tilts. Yarn joins at `.push-pin-tip` (50% / 50%).
+*/
+.push-pin {
+  position: absolute;
+  /* Defaults; overridden by sync'd pushPinLeft / pushPinTop. */
+  top: -20px;
+  left: -4px;
+  width: 30px;
+  height: 38px;
+  z-index: 20;
+  pointer-events: none;
+  /*
+    Local translateZ(4px) keeps the head above clueStringsZ (photo < yarn < pin).
+    Layer peer hosts must stay preserve-3d — flattening collapses this lift.
+    Do NOT put filter on this host (filter also flattens translateZ).
+  */
+  transform: translateZ(4px);
+  transform-origin: 50% 88%;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.push-pin-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.4));
+}
+
+/*
+  Yarn joins under the pin head (covered by the red head). Pin tilts around the
+  needle plant (transform-origin 50% / 88%). Keep tip % in sync with PIN_BOX.tipX/Y.
+*/
+.push-pin-tip {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 0;
+  line-height: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Frame wraps OUTSIDE the token footprint (content-box) so the full sprite stays visible. */
+.token-frame {
+  position: relative;
+  display: block;
+  box-sizing: content-box;
+  overflow: visible;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+/*
+  Framed prints: pin sits on the outer matte/frame edge (not down on the print).
+  Default top:-20 / left:-4 already aligns with the frame corner.
+*/
+
+.token-frame > .image {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  object-position: center center;
+  display: block;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 1;
+  background: #1c1c1c;
+}
+
+/* Pin must paint above the print (and photo gloss overlays). */
+.token-frame > .push-pin {
+  z-index: 30;
+}
+
+/* ---- Polaroid: Instant film (thick bottom caption when name shown) ---- */
+.token-frame.polaroid {
+  /* Content = cell; pad+border grow outward via negative margin (keeps token on footprint). */
+  padding: 7px;
+  margin: -8px; /* 7px pad + 1px border */
+  background:
+    radial-gradient(120% 80% at 30% 20%, #ffffff 0%, transparent 55%),
+    linear-gradient(165deg, #fffcf8 0%, #f4efe6 42%, #ebe3d6 100%);
+  border: 1px solid #cfc6b8;
+  border-radius: 3px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.18),
+    1px 2px 0 rgba(255, 255, 255, 0.15),
+    4px 7px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* Caption lives in the bottom matte outside the cell (absolute), footprint height stays cell-sized. */
+.token-frame.polaroid.has-caption {
+  display: block;
+  padding: 7px 7px 29px 7px; /* 7 + 22px caption strip */
+  margin: -8px -8px -30px -8px; /* bottom: 29 pad + 1 border */
+  box-sizing: content-box;
+}
+
+.token-frame.polaroid::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  z-index: 2;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 2px #111,
+    inset 0 0 0 3px rgba(255, 255, 255, 0.08),
+    inset 0 3px 6px rgba(0, 0, 0, 0.35);
+}
+
+.token-frame.polaroid.has-caption::before {
+  /* Photo well only — leave the caption strip clear (22px strip + 7px pad). */
+  bottom: 29px;
+}
+
+.token-frame.polaroid > .image {
+  border: none;
+  background: #0e0e0e;
+  filter: contrast(1.05) saturate(0.92);
+}
+
+.token-frame.polaroid.has-caption > .image {
+  width: 100% !important;
+  height: 100% !important;
+  flex: none;
+  align-self: auto;
+}
+
+.token-frame.polaroid .token-frame-caption {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 3;
+  height: 22px;
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  line-height: 22px;
+  color: #2f2a24;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: "Segoe Print", "Comic Sans MS", "Marker Felt", cursive, sans-serif;
+  pointer-events: none;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+/* ---- Photo: developed print (equal white border, glossy well) ---- */
+.token-frame.photo {
+  padding: 8px;
+  margin: -9px; /* 8px pad + 1px border */
+  background:
+    linear-gradient(180deg, #fffefb 0%, #f7f2ea 55%, #efe8dc 100%);
+  border: 1px solid #d2c8b8;
+  border-radius: 1px;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 0 0 1px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(0, 0, 0, 0.2),
+    2px 3px 0 rgba(0, 0, 0, 0.08),
+    4px 8px 16px rgba(0, 0, 0, 0.48);
+}
+
+/* Outer paper edge + recessed photo well */
+.token-frame.photo::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  z-index: 2;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.35),
+    inset 0 2px 5px rgba(0, 0, 0, 0.28);
+}
+
+/* Soft gloss streak across the print (no mix-blend — it flattens 3D pin Z). */
+.token-frame.photo::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 10px;
+  height: 38%;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(
+    185deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.05) 45%,
+    transparent 70%
+  );
+}
+
+.token-frame.photo > .image {
+  border: none;
+  background: #151515;
+  /* Keep print look without filter on a sibling plane that fights pin Z. */
+  box-shadow: none;
+  opacity: 0.96;
+  filter: contrast(1.06) saturate(0.88) sepia(0.1);
+}
+
+/* ---- Card: bevelled cardstock edge + inner rail ---- */
+.token-frame.card {
+  padding: 7px;
+  margin: -9px; /* 7px pad + 2px border */
+  background: linear-gradient(145deg, #faf3e4 0%, #ead9b4 55%, #dcc89a 100%);
+  border: 2px solid #b89255;
+  border-radius: 5px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+    inset 0 0 0 3px #c9a66b,
+    inset 0 0 0 4px #8a6a35,
+    0 0 0 1px #7a5828,
+    3px 4px 10px rgba(0, 0, 0, 0.45);
+}
+
+.token-frame.card > .image {
+  border: 1px solid #6b4e28;
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.35),
+    inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.paper-a4 {
+  background-color: #f6f1e4 !important;
+  background-image:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.03) 0, transparent 8px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent 40%) !important;
+  box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.paper-sticky {
+  background-color: #ffe566 !important;
+  background-image: none !important;
+  box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.35);
+}
+
+.clue-strings-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.clue-strings-3d {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+.clue-string-beam {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  border-radius: 1px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+.clue-string {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 2.2;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+}

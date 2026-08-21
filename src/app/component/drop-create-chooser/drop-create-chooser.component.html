@@ -1,0 +1,38 @@
+<div class="settings-ui dense drop-create">
+  <section class="card">
+    <header class="card-head">
+      <h3>
+        <i class="material-icons head-icon" aria-hidden="true">add_to_photos</i>
+        {{ 'dropCreate.title' | i18n }}
+      </h3>
+    </header>
+    <p class="lead" *ngIf="text">{{ text }}</p>
+    <p class="hint" *ngIf="help">{{ help }}</p>
+
+    <div class="choice-grid" role="radiogroup" [attr.aria-label]="'dropCreate.title' | i18n">
+      <button
+        type="button"
+        class="choice-tile"
+        *ngFor="let c of choices"
+        [class.is-selected]="choiceValue === c.id"
+        (click)="select(c.id)"
+        (dblclick)="confirm(c.id)"
+        role="radio"
+        [attr.aria-checked]="choiceValue === c.id">
+        <i class="material-icons tile-icon" aria-hidden="true">{{ c.icon || 'help_outline' }}</i>
+        <span class="tile-label">{{ c.label }}</span>
+        <span class="tile-hint" *ngIf="c.hint">{{ c.hint }}</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="card footer-actions actions tight">
+    <button type="button" class="btn" (click)="cancel()">
+      {{ cancelLabel || ('common.cancel' | i18n) }}
+    </button>
+    <span class="actions-spacer"></span>
+    <button type="button" class="btn btn-primary" (click)="confirm()" [disabled]="!choiceValue">
+      <i class="material-icons" aria-hidden="true">check</i>{{ okLabel || ('dropCreate.ok' | i18n) }}
+    </button>
+  </section>
+</div>

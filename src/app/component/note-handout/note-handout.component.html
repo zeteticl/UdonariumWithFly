@@ -1,0 +1,63 @@
+<div *ngIf="isOpen" class="handout-backdrop is-fill" [class.is-preview]="isPreview"
+  (click)="onBackdropClick()" [@fadeInOut]="'in'">
+  <div class="handout-chrome" (click)="$event.stopPropagation()">
+    <div class="handout-bar">
+      <span class="handout-title">
+        <span *ngIf="isPreview" class="preview-badge">{{ 'note.previewBadge' | i18n }}</span>
+        {{ title }}
+        <span *ngIf="isPreview && previewZoom !== 1" class="preview-zoom-label">{{ previewZoomPercent }}%</span>
+      </span>
+      <div class="handout-actions">
+        <ng-container *ngIf="isPdf">
+          <button type="button" class="nav-btn" data-no-dblclick
+            (click)="prevPage($event)" (dblclick)="$event.stopPropagation(); $event.preventDefault()"
+            [disabled]="pdfPageCount <= 1">
+            <i class="material-icons">chevron_left</i>
+          </button>
+          <span class="page-label">{{ pdfPage }}{{ pdfPageCount ? ' / ' + pdfPageCount : '' }}</span>
+          <button type="button" class="nav-btn" data-no-dblclick
+            (click)="nextPage($event)" (dblclick)="$event.stopPropagation(); $event.preventDefault()"
+            [disabled]="pdfPageCount <= 1">
+            <i class="material-icons">chevron_right</i>
+          </button>
+        </ng-container>
+        <button *ngIf="isPreview && (previewZoom !== 1 || previewPanX !== 0 || previewPanY !== 0)"
+          type="button" class="nav-btn" data-no-dblclick
+          (click)="resetPreviewView($event)"
+          [attr.title]="'note.previewResetView' | i18n"
+          [attr.aria-label]="'note.previewResetView' | i18n">
+          <i class="material-icons">restart_alt</i>
+        </button>
+        <button type="button" class="close-btn" (click)="close()" [attr.aria-label]="'note.closeHandout' | i18n">
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+    </div>
+    <div class="handout-content-stage"
+      [class.is-preview-stage]="isPreview"
+      [class.is-dragging]="isPreviewDragging"
+      [style.transform]="previewTransform"
+      (pointerdown)="onPreviewPointerDown($event)"
+      (pointermove)="onPreviewPointerMove($event)"
+      (pointerup)="onPreviewPointerUp($event)"
+      (pointercancel)="onPreviewPointerUp($event)"
+      (dblclick)="onPreviewDblClick($event)">
+      <img *ngIf="!isPdf && !isVideo && imageUrl" class="handout-image"
+        [class.is-preview-media]="isPreview"
+        [src]="imageUrl | safe: 'resourceUrl'" draggable="false"
+        (click)="onPreviewMediaClick($event)" />
+      <video *ngIf="isVideo" class="handout-video"
+        [class.is-preview-media]="isPreview"
+        [src]="resolvedVideoUrl | safe: 'resourceUrl'"
+        controls playsinline [attr.autoplay]="isPreview ? null : ''"
+        (pointerdown)="$event.stopPropagation()"></video>
+      <canvas *ngIf="isPdf" #pdfCanvas class="handout-pdf"
+        [class.is-preview-media]="isPreview"
+        (click)="onPreviewMediaClick($event)"></canvas>
+      <div *ngIf="isText" class="handout-text note-md"
+        [class.is-preview-media]="isPreview"
+        [innerHTML]="textHtml | safe: 'html'"
+        (click)="onPreviewMediaClick($event)"></div>
+    </div>
+  </div>
+</div>

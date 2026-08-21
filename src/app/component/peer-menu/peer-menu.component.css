@@ -2,34 +2,80 @@
   display: block;
 }
 
+.peer-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .lang-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 10px;
-  padding: 6px 8px;
-  background: #f1f5f9;
-  border-radius: 6px;
+  gap: 6px;
+  margin: 0;
 }
 .lang-label {
   font-weight: bold;
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .lang-select {
   flex: 1;
   min-width: 0;
-  max-width: 14em;
-  font-size: 13px;
+  max-width: 18em;
+  font-size: 12px;
+  height: var(--udon-control-height, 26px);
+}
+
+.profile-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.profile-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.name-row {
+  margin-top: 2px;
+}
+
+.name-inputs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.color-input {
+  width: 1.6em;
+  height: var(--udon-control-height, 26px);
+  padding: 0;
+  border: 1px solid #c9b8a2;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.name-inputs input[type="text"] {
+  font-weight: bolder;
+  min-width: 8em;
 }
 
 .image {
-  padding: 0px;
-  width: 64px;
-  height: 64px;
-  display: table-cell;
+  padding: 0;
+  width: 56px;
+  height: 56px;
+  display: inline-block;
   vertical-align: top;
-  border-radius: 0.6rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  flex: 0 0 auto;
 }
 
 .image img{
@@ -172,16 +218,48 @@
 .identity-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: 6px;
+  margin-bottom: 0;
   flex-wrap: wrap;
 }
 .identity-label {
-  font-size: smaller;
+  font-size: 12px;
+}
+
+.id-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0 0 4px;
+}
+
+.pwd-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.health-legend {
+  margin: 0 0 4px;
 }
 
 .peer-info {
   position: relative;
+}
+
+.peer-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.kick-btn .material-icons {
+  font-size: 16px;
+  vertical-align: middle;
 }
 
 .session-info {
@@ -221,7 +299,7 @@
 }
 
 .invite-block {
-  margin-top: 6px;
+  margin-top: 4px;
 }
 .invite-label {
   font-size: 12px;
@@ -234,32 +312,25 @@
   gap: 4px;
   align-items: center;
 }
-.invite-row button {
-  font-size: 12px;
-}
 .room-actions {
-  margin-top: 8px;
+  margin-top: 0;
 }
 .connect-actions {
-  margin-top: 6px;
+  margin-top: 4px;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
   align-items: center;
 }
-.connect-actions button {
-  font-size: 12px;
-  margin-left: 0;
+.connect-actions input[type="text"] {
+  min-width: 10em;
+  flex: 1 1 140px;
 }
 .room-zip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
   align-items: center;
-}
-.room-zip-row button {
-  font-size: 12px;
-  margin-left: 0;
 }
 .folder-status {
   font-size: 12px;
@@ -274,4 +345,61 @@
   font-size: 12px;
   color: #64748b;
   margin-top: 2px;
+}
+
+/* —— Mobile: keep room join / save actions visible —— */
+:host-context(html.udon-mobile-layout) .room-actions {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin-bottom: 10px;
+  padding: 8px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+:host-context(html.udon-mobile-layout) .room-zip-row button,
+:host-context(html.udon-mobile-layout) .connect-actions button {
+  min-height: 40px;
+  font-size: 13px;
+  padding: 6px 10px;
+}
+
+:host-context(html.udon-mobile-layout) .connect-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+:host-context(html.udon-mobile-layout) .connect-actions input {
+  min-height: 40px;
+  flex: 1 1 140px;
+}
+
+.app-version {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid #e2d3bf;
+  font-size: 11px;
+  color: #64748b;
+  word-break: break-all;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.app-update-icon {
+  flex: 0 0 auto;
+  font-size: 16px;
+  color: #c45c26;
+  cursor: pointer;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.app-update-icon:hover {
+  color: #a34618;
 }

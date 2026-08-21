@@ -120,12 +120,6 @@
   ],
   "screenshots": [
     {
-      "src": "./card.png",
-      "sizes": "1631x905",
-      "type": "image/png",
-      "form_factor": "wide"
-    },
-    {
       "src": "./mobile.jpg",
       "sizes": "540x1163",
       "type": "image/jpeg",

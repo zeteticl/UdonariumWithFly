@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { Injectable, OnDestroy } from '@angular/core';
+import { BehaviorSubject, Subscription } from 'rxjs';
+import { MobileLayoutService } from 'service/mobile-layout.service';
 
 const HOVER_TIPS_KEY = 'udonarium.ui.hoverTips';
 
@@ -14,7 +15,7 @@ export interface TeachingTipState {
 }
 
 @Injectable({ providedIn: 'root' })
-export class TeachingTipService {
+export class TeachingTipService implements OnDestroy {
   private readonly stateSubject = new BehaviorSubject<TeachingTipState>({
     visible: false,
     tipKey: '',
@@ -31,16 +32,30 @@ export class TeachingTipService {
   paused = false;
 
   private enabled = true;
+  private readonly mobileSub: Subscription;
 
-  constructor() {
+  constructor(private mobileLayout: MobileLayoutService) {
     try {
       const stored = localStorage.getItem(HOVER_TIPS_KEY);
       if (stored === '0') this.enabled = false;
     } catch { /* ignore */ }
+    // Touch / sticky-hover leaves tips stuck over the map after menu taps.
+    this.mobileSub = this.mobileLayout.isMobile$.subscribe(isMobile => {
+      if (isMobile) this.hideAll();
+    });
+  }
+
+  ngOnDestroy() {
+    this.mobileSub.unsubscribe();
   }
 
   get isEnabled(): boolean {
     return this.enabled;
+  }
+
+  /** Hover tips are desktop-only; mobile sticky-hover obstructs the map. */
+  get isAvailable(): boolean {
+    return !this.mobileLayout.isMobile;
   }
 
   setEnabled(enabled: boolean) {
@@ -52,7 +67,7 @@ export class TeachingTipService {
   }
 
   show(tipKey: string, anchorEl: HTMLElement) {
-    if (!this.enabled || this.paused || !tipKey || !anchorEl) return;
+    if (!this.enabled || this.paused || !this.isAvailable || !tipKey || !anchorEl) return;
     const rect = anchorEl.getBoundingClientRect();
     const boxW = 280;
     const boxH = 120;

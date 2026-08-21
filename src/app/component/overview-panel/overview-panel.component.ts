@@ -1,4 +1,4 @@
-import { animate, keyframes, style, transition, trigger } from '@angular/animations';
+import { animate, state, style, transition, trigger } from '@angular/animations';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -18,9 +18,11 @@ import { TabletopObject } from '@udonarium/tabletop-object';
 import { GameObjectInventoryService } from 'service/game-object-inventory.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { GameCharacter } from '@udonarium/game-character';
+import { CharacterToken } from '@udonarium/character-token';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { ImageFile } from '@udonarium/core/file-storage/image-file';
 import { StringUtil } from '@udonarium/core/system/util/string-util';
+import { noteMarkdownToHtml } from '@udonarium/note-markdown';
 import { OpenUrlComponent } from 'component/open-url/open-url.component';
 import { ModalService } from 'service/modal.service';
 import { Card, CardState } from '@udonarium/card';
@@ -36,17 +38,14 @@ import { imageEffectFilter, imageEffectOpacity, imageEffectTransform } from '@ud
     changeDetection: ChangeDetectionStrategy.OnPush,
     animations: [
         trigger('fadeInOut', [
-            transition('void => *', [
-                animate('100ms ease-out', keyframes([
-                    style({ opacity: 0, offset: 0 }),
-                    style({ opacity: 1, offset: 1.0 })
-                ]))
+            state('in', style({ opacity: 1 })),
+            state('out', style({ opacity: 0 })),
+            transition('void => in', [
+                style({ opacity: 0 }),
+                animate('150ms ease-out')
             ]),
-            transition('* => void', [
-                animate('100ms ease-in', keyframes([
-                    style({ opacity: 1, offset: 0 }),
-                    style({ opacity: 0, offset: 1.0 })
-                ]))
+            transition('in => out', [
+                animate('300ms ease-in')
             ])
         ])
     ],
@@ -65,6 +64,41 @@ export class OverviewPanelComponent implements OnChanges, AfterViewInit, OnDestr
 
   @Input() cardState: CardState = null;
 
+  /** Sheet body for character / character-token overview. */
+  get overviewCharacterBody(): GameCharacter | null {
+    if (!this.tabletopObject) return null;
+    if (this.tabletopObject instanceof GameCharacter) return this.tabletopObject;
+    if (this.tabletopObject instanceof CharacterToken) return this.tabletopObject.character;
+    return null;
+  }
+
+  /** Appearance host (Token preferred for FX / aura / overview-face flag). */
+  private get overviewAppearance(): GameCharacter | CharacterToken | null {
+    if (this.tabletopObject instanceof CharacterToken) return this.tabletopObject;
+    if (this.tabletopObject instanceof GameCharacter) {
+      return CharacterToken.appearanceHostFor(this.tabletopObject) || this.tabletopObject;
+    }
+    return this.overviewCharacterBody;
+  }
+
+  /** When true, tooltip stays until unpinned (or object deleted). */
+  isPinned = false;
+  /** Set by TooltipDirective to sync pin state. */
+  onPinnedChange: ((pinned: boolean) => void) | null = null;
+
+  /** Angular animation state for enter / leave. */
+  fadeState: 'in' | 'out' = 'in';
+  private fadeOutPromise: Promise<void> | null = null;
+
+  /** Fade out then resolve (for dynamic destroy — leave animation alone is skipped). */
+  beginFadeOut(durationMs = 300): Promise<void> {
+    if (this.fadeOutPromise) return this.fadeOutPromise;
+    this.fadeState = 'out';
+    this.changeDetector.markForCheck();
+    this.fadeOutPromise = new Promise(resolve => setTimeout(resolve, durationMs));
+    return this.fadeOutPromise;
+  }
+
   readonly CardStateFront = CardState.FRONT;
   readonly CardStateBack = CardState.BACK;
 
@@ -78,11 +112,12 @@ export class OverviewPanelComponent implements OnChanges, AfterViewInit, OnDestr
 
   get imageUrl(): string {
     if (!this.tabletopObject) return '';
-    if (this.isUseIcon) {
-      return this.tabletopObject.faceIcon.url;
+    const body = this.overviewCharacterBody;
+    if (this.isUseIcon && body?.faceIcon) {
+      return body.faceIcon.url;
     }
-    if (this.tabletopObject instanceof GameCharacter && this.tabletopObject.standList && this.tabletopObject.standList.overviewIndex > -1) {
-      const standElement = this.tabletopObject.standList.standElements[this.tabletopObject.standList.overviewIndex];
+    if (body && body.standList && body.standList.overviewIndex > -1) {
+      const standElement = body.standList.standElements[body.standList.overviewIndex];
       if (!standElement) return '';
       try {
         const element = standElement.getFirstElementByName('imageIdentifier')
@@ -103,34 +138,48 @@ export class OverviewPanelComponent implements OnChanges, AfterViewInit, OnDestr
       }
       if (this.tabletopObject.isGMMode) return this.tabletopObject.frontImage ? this.tabletopObject.frontImage.url : '';
     }
+    if (this.tabletopObject instanceof CharacterToken) {
+      return body?.imageFile?.url || this.tabletopObject.imageFile?.url || '';
+    }
     return this.tabletopObject.imageFile ? this.tabletopObject.imageFile.url : '';
   }
   get hasImage(): boolean { return 0 < this.imageUrl.length; }
   get isUseIcon(): boolean {
-    return (this.tabletopObject instanceof GameCharacter && this.tabletopObject.isUseIconToOverviewImage && this.tabletopObject.faceIcon && 0 < this.tabletopObject.faceIcon.url.length);
+    const body = this.overviewCharacterBody;
+    const host = this.overviewAppearance;
+    // Flag is per-map cosmetics on the Token; faceIcon image stays on the sheet.
+    return !!(
+      body &&
+      host &&
+      host.isUseIconToOverviewImage &&
+      body.faceIcon &&
+      0 < body.faceIcon.url?.length
+    );
   }
 
   get roll(): number {
-    if (this.tabletopObject instanceof GameCharacter) {
-      if (this.tabletopObject.standList && this.tabletopObject.standList.overviewIndex > -1) {
-        const standElement = this.tabletopObject.standList.standElements[this.tabletopObject.standList.overviewIndex];
+    const body = this.overviewCharacterBody;
+    if (body) {
+      if (body.standList && body.standList.overviewIndex > -1) {
+        const standElement = body.standList.standElements[body.standList.overviewIndex];
         if (!standElement) return 0;
         try {
           const element = standElement.getFirstElementByName('applyRoll');
-          return (element && element.value) ? this.tabletopObject.roll : 0;
+          return (element && element.value) ? body.roll : 0;
         } catch(e) {
           console.log(e);
         }
       }
-      return this.tabletopObject.roll;
+      return body.roll;
     }
     return 0;
   }
 
   get applyImageEffect(): boolean {
-    if (this.tabletopObject instanceof GameCharacter) {
-      if (this.tabletopObject.standList && this.tabletopObject.standList.overviewIndex > -1) {
-        const standElement = this.tabletopObject.standList.standElements[this.tabletopObject.standList.overviewIndex];
+    const body = this.overviewCharacterBody;
+    if (body) {
+      if (body.standList && body.standList.overviewIndex > -1) {
+        const standElement = body.standList.standElements[body.standList.overviewIndex];
         if (!standElement) return false;
         try {
           const element = standElement.getFirstElementByName('applyImageEffect');
@@ -145,53 +194,68 @@ export class OverviewPanelComponent implements OnChanges, AfterViewInit, OnDestr
   }
 
   get isInverse(): boolean {
-    if (this.tabletopObject instanceof GameCharacter) {
-      return this.applyImageEffect ? this.tabletopObject.isInverse : false;
+    const host = this.overviewAppearance;
+    if (host instanceof GameCharacter || host instanceof CharacterToken) {
+      return this.applyImageEffect ? !!host.isInverse : false;
     }
     return false;
   }
 
   get isHollow(): boolean {
-    if (this.tabletopObject instanceof GameCharacter) {
-      return this.applyImageEffect ? this.tabletopObject.isHollow : false;
+    const host = this.overviewAppearance;
+    if (host instanceof GameCharacter || host instanceof CharacterToken) {
+      return this.applyImageEffect ? !!host.isHollow : false;
     }
     return false;
   }
 
   get isBlackPaint(): boolean {
-    if (this.tabletopObject instanceof GameCharacter) {
-      return this.applyImageEffect ? this.tabletopObject.isBlackPaint : false;
+    const host = this.overviewAppearance;
+    if (host instanceof GameCharacter || host instanceof CharacterToken) {
+      return this.applyImageEffect ? !!host.isBlackPaint : false;
     }
     return false;
   }
 
   get charOverviewFilter(): string | null {
-    if (!(this.tabletopObject instanceof GameCharacter) || !this.applyImageEffect) return null;
-    return imageEffectFilter(this.tabletopObject);
+    const host = this.overviewAppearance;
+    if (!host || !this.applyImageEffect) return null;
+    return imageEffectFilter(host);
   }
   get charOverviewOpacity(): number | null {
-    if (!(this.tabletopObject instanceof GameCharacter) || !this.applyImageEffect) return null;
-    return imageEffectOpacity(this.tabletopObject);
+    const host = this.overviewAppearance;
+    if (!host || !this.applyImageEffect) return null;
+    return imageEffectOpacity(host);
   }
   get charOverviewTransform(): string | null {
-    if (!(this.tabletopObject instanceof GameCharacter) || !this.applyImageEffect) return null;
-    return imageEffectTransform(this.tabletopObject);
+    const host = this.overviewAppearance;
+    if (!host || !this.applyImageEffect) return null;
+    return imageEffectTransform(host);
   }
 
-  followImageFilter(ch: GameCharacter): string | null { return imageEffectFilter(ch); }
-  followImageOpacity(ch: GameCharacter): number | null { return imageEffectOpacity(ch); }
-  followImageTransform(ch: GameCharacter): string | null { return imageEffectTransform(ch); }
+  followImageFilter(ch: GameCharacter | CharacterToken): string | null { return imageEffectFilter(ch); }
+  followImageOpacity(ch: GameCharacter | CharacterToken): number | null { return imageEffectOpacity(ch); }
+  followImageTransform(ch: GameCharacter | CharacterToken): string | null { return imageEffectTransform(ch); }
 
   get aura(): number {
-    if (this.tabletopObject instanceof GameCharacter) {
-      return this.applyImageEffect ? this.tabletopObject.aura : -1;
+    const host = this.overviewAppearance;
+    if (host instanceof GameCharacter || host instanceof CharacterToken) {
+      return this.applyImageEffect ? (host.aura ?? -1) : -1;
     }
     return -1;
   }
 
-  get inventoryDataElms(): DataElement[] { return this.tabletopObject ? this.getInventoryTags(this.tabletopObject) : []; }
-  get dataElms(): DataElement[] { return this.tabletopObject && this.tabletopObject.detailDataElement ? this.tabletopObject.detailDataElement.children as DataElement[] : []; }
-  get hasDataElms(): boolean { return 0 < this.dataElms.length; }
+  get inventoryDataElms(): DataElement[] {
+    const body = this.overviewCharacterBody;
+    if (!body) return [];
+    return this.getInventoryTags(body);
+  }
+  get dataElms(): DataElement[] {
+    const body = this.overviewCharacterBody;
+    if (body?.detailDataElement) return body.detailDataElement.children as DataElement[];
+    return this.tabletopObject && this.tabletopObject.detailDataElement ? this.tabletopObject.detailDataElement.children as DataElement[] : [];
+  }
+  get hasDataElms(): boolean { return 0 < this.dataElms.length || 0 < this.inventoryDataElms.length; }
 
   //get newLineStrings(): string { return this.inventoryService.newLineStrings; }
   get newLineDataElement(): DataElement { return this.inventoryService.newLineDataElement; }
@@ -224,20 +288,36 @@ export class OverviewPanelComponent implements OnChanges, AfterViewInit, OnDestr
     return Network.GuestMode();
   }
 
+  togglePin(e: Event) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.isPinned = !this.isPinned;
+    this.onPinnedChange?.(this.isPinned);
+    this.changeDetector.markForCheck();
+  }
 
   ngOnChanges(): void {
     EventSystem.unregister(this);
-    EventSystem.register(this)
-      .on(`UPDATE_GAME_OBJECT/identifier/${this.tabletopObject?.identifier}`, event => {
+    const ids = new Set<string>();
+    if (this.tabletopObject?.identifier) ids.add(this.tabletopObject.identifier);
+    // CharacterToken overview reads the body sheet — watch body updates too (esp. temporary copies).
+    const body = this.overviewCharacterBody;
+    if (body?.identifier) ids.add(body.identifier);
+    const reg = EventSystem.register(this);
+    for (const id of ids) {
+      reg
+        .on(`UPDATE_GAME_OBJECT/identifier/${id}`, () => {
+          this.changeDetector.markForCheck();
+        })
+        .on(`UPDATE_OBJECT_CHILDREN/identifier/${id}`, () => {
+          this.changeDetector.markForCheck();
+        });
+    }
+    reg
+      .on('SYNCHRONIZE_FILE_LIST', () => {
         this.changeDetector.markForCheck();
       })
-      .on(`UPDATE_OBJECT_CHILDREN/identifier/${this.tabletopObject?.identifier}`, event => {
-        this.changeDetector.markForCheck();
-      })
-      .on('SYNCHRONIZE_FILE_LIST', event => {
-        this.changeDetector.markForCheck();
-      })
-      .on('UPDATE_FILE_RESOURE', event => {
+      .on('UPDATE_FILE_RESOURE', () => {
         this.changeDetector.markForCheck();
       });
   }
@@ -329,7 +409,10 @@ export class OverviewPanelComponent implements OnChanges, AfterViewInit, OnDestr
     return false; 
   }
   private getInventoryTags(gameObject: TabletopObject): DataElement[] {
-    return this.inventoryService.tableInventory.dataElementMap.get(gameObject.identifier);
+    const cached = this.inventoryService.tableInventory.dataElementMap.get(gameObject.identifier);
+    if (cached) return cached;
+    // Temporary bodies are excluded from inventory maps — build the same summary tags locally.
+    return this.inventoryService.summaryElementsFor(gameObject);
   }
 
   onCardImageLoad() {
@@ -443,12 +526,16 @@ export class OverviewPanelComponent implements OnChanges, AfterViewInit, OnDestr
 
   adjustedRubiedNote(text, isRubied=true) {
     if (!text) return '';
-    let ret = StringUtil.escapeHtml(text);
-    if (isRubied) ret = StringUtil.rubyToHtml(ret);
-    return (ret.lastIndexOf("\n") == ret.length - 1) ? ret + "\n" : ret;
+    let ret = noteMarkdownToHtml(text, { ruby: isRubied });
+    return (ret.lastIndexOf('\n') == ret.length - 1) ? ret + '\n' : ret;
   }
 
   textAreaActivate() {
     if (this.textAreaElementRef && this.textAreaElementRef.nativeElement) this.textAreaElementRef.nativeElement.focus();
+  }
+
+  /** Footprint DataElements (size/altitude/length/…) stay per-map. */
+  writeOverviewDataElm(el: DataElement, value: any) {
+    TabletopObject.writeDataElementValue(el, value);
   }
 }

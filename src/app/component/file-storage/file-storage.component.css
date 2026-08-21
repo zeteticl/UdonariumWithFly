@@ -7,7 +7,7 @@
 .file-storage {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
 }
 
 .drop-zone-wrap {
@@ -44,9 +44,9 @@
 .cond-select {
   min-height: 28px;
   padding: 3px 6px;
-  border: 1px solid #c4b29a;
-  border-radius: 4px;
-  background: #fff;
+  border: 1px solid var(--udon-control-border, #c4b29a);
+  border-radius: var(--udon-control-radius, 4px);
+  background: var(--udon-control-bg, #fff);
 }
 
 .sort-label {
@@ -67,8 +67,8 @@
   position: relative;
   font-size: 0;
   display: inline-block;
-  min-width: 100px;
-  height: 120px;
+  min-width: 80px;
+  height: 96px;
   text-align: center;
   border: 2px solid transparent;
   margin-right: -2px;

@@ -5,7 +5,7 @@ import { AudioStorage } from './core/file-storage/audio-storage';
 import { SyncObject } from './core/synchronize-object/decorator';
 import { GameObject } from './core/synchronize-object/game-object';
 import { ObjectStore } from './core/synchronize-object/object-store';
-import { EventSystem } from './core/system';
+import { EventSystem, Network } from './core/system';
 
 export class PresetSound {
   static dicePick: string = '';
@@ -37,7 +37,14 @@ export class SoundEffect extends GameObject {
     super.onStoreAdded();
     EventSystem.register(this)
       .on<string>('SOUND_EFFECT', event => {
+        // Playback only — each peer honors its own chat/jukebox SE mute.
         AudioPlayer.playSoundEffect(AudioStorage.instance.get(event.data));
+      })
+      .on<string>('SOUND_BOARD', event => {
+        AudioPlayer.playSoundboard(AudioStorage.instance.get(event.data));
+      })
+      .on('SOUND_BOARD_STOP', () => {
+        AudioPlayer.stopSoundboard();
       })
       .on('SEND_MESSAGE', event => {
         let chatMessage = ObjectStore.instance.get<ChatMessage>(event.data.messageIdentifier);
@@ -74,8 +81,15 @@ export class SoundEffect extends GameObject {
     SoundEffect._play(identifier);
   }
 
+  /** Broadcast to room. Never gated by local mute (mute is playback-only per peer). */
   private static _play(identifier: string) {
-    EventSystem.call('SOUND_EFFECT', identifier);
+    if (!identifier) return;
+    // Play immediately under the user gesture. Network.send broadcasts are
+    // echoed back asynchronously via setZeroTimeout and can miss autoplay unlock.
+    EventSystem.trigger('SOUND_EFFECT', identifier);
+    for (const peerId of Network.peerIds) {
+      EventSystem.call('SOUND_EFFECT', identifier, peerId);
+    }
   }
 
   static playLocal(identifier: string)
@@ -90,7 +104,50 @@ export class SoundEffect extends GameObject {
     SoundEffect._playLocal(identifier);
   }
 
+  /** This client only. Still respects local SE mute on playback. */
   private static _playLocal(identifier: string) {
+    if (!identifier) return;
     EventSystem.trigger('SOUND_EFFECT', identifier);
+  }
+
+  /** Soundboard pad — separate local channel from system SE. Room-synced. */
+  static playPad(identifier: string)
+  static playPad(audio: AudioFile)
+  static playPad(arg: any) {
+    const identifier = typeof arg === 'string' ? arg : arg?.identifier;
+    SoundEffect._playPad(identifier);
+  }
+
+  static playPadLocal(identifier: string)
+  static playPadLocal(audio: AudioFile)
+  static playPadLocal(arg: any) {
+    const identifier = typeof arg === 'string' ? arg : arg?.identifier;
+    SoundEffect._playPadLocal(identifier);
+  }
+
+  private static _playPad(identifier: string) {
+    if (!identifier) return;
+    EventSystem.trigger('SOUND_BOARD', identifier);
+    for (const peerId of Network.peerIds) {
+      EventSystem.call('SOUND_BOARD', identifier, peerId);
+    }
+  }
+
+  private static _playPadLocal(identifier: string) {
+    if (!identifier) return;
+    EventSystem.trigger('SOUND_BOARD', identifier);
+  }
+
+  /** Force-stop all soundboard one-shots for the whole room. */
+  static stopPads() {
+    EventSystem.trigger('SOUND_BOARD_STOP', null);
+    for (const peerId of Network.peerIds) {
+      EventSystem.call('SOUND_BOARD_STOP', null, peerId);
+    }
+  }
+
+  /** Force-stop soundboard one-shots on this client only. */
+  static stopPadsLocal() {
+    EventSystem.trigger('SOUND_BOARD_STOP', null);
   }
 }

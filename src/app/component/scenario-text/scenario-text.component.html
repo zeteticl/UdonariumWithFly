@@ -1,0 +1,71 @@
+<div class="settings-ui dense scenario-text" appFitPanel [fitMinHeight]="280" [fitMaxHeight]="560">
+  <section class="card">
+    <header class="card-head"><h3>{{ 'scenarioText.title' | i18n }}</h3></header>
+    <p class="hint">{{ 'scenarioText.hint' | i18n }}</p>
+    <div class="radio-row">
+      <span>{{ 'scenarioText.sender' | i18n }}</span>
+      <label>
+        <input type="radio" [name]="radioName" [(ngModel)]="senderMode" value="title" [disabled]="GuestMode()" />
+        {{ 'scenarioText.senderTitle' | i18n }}
+      </label>
+      <label>
+        <input type="radio" [name]="radioName" [(ngModel)]="senderMode" value="character" [disabled]="GuestMode()" />
+        {{ 'scenarioText.senderCharacter' | i18n }}
+      </label>
+      <label>
+        <input type="radio" [name]="radioName" [(ngModel)]="senderMode" value="player" [disabled]="GuestMode()" />
+        {{ 'scenarioText.senderPlayer' | i18n }}
+      </label>
+    </div>
+    <label class="field sender-character" *ngIf="senderMode === 'character'">
+      <span>{{ 'scenarioText.senderCharacterPick' | i18n }}</span>
+      <select [(ngModel)]="senderCharacterId" [disabled]="GuestMode() || !gameCharacters.length">
+        <option *ngIf="!gameCharacters.length" value="">{{ 'scenarioText.noCharacter' | i18n }}</option>
+        <option *ngFor="let character of gameCharacters" [ngValue]="character.identifier">
+          {{ characterOptionLabel(character) }}
+        </option>
+      </select>
+    </label>
+    <footer class="actions">
+      <button type="button" class="btn btn-sm btn-primary" (click)="create()" [disabled]="GuestMode()">
+        <i class="material-icons">add</i>{{ 'scenarioText.create' | i18n }}
+      </button>
+    </footer>
+  </section>
+
+  <section class="card" *ngIf="items.length">
+    <div class="list-item" *ngFor="let item of items" [class.is-selected]="item === selected" (click)="select(item)">
+      <span class="list-item-name">{{ item.title || ('scenarioText.untitled' | i18n) }}</span>
+      <span class="btn-group" (click)="$event.stopPropagation()">
+        <button type="button" class="btn btn-sm btn-primary" (click)="send(item)" [disabled]="GuestMode()">
+          <i class="material-icons">send</i>{{ 'scenarioText.send' | i18n }}
+        </button>
+        <button type="button" class="btn btn-sm" (click)="remove(item)" [disabled]="GuestMode()">
+          <i class="material-icons">delete</i>
+        </button>
+      </span>
+    </div>
+  </section>
+  <p class="empty-hint" *ngIf="!items.length">{{ 'scenarioText.empty' | i18n }}</p>
+
+  <section class="card" *ngIf="selected">
+    <header class="card-head"><h3>{{ 'scenarioText.edit' | i18n }}</h3></header>
+    <label class="field">
+      <span>{{ 'scenarioText.fieldTitle' | i18n }}</span>
+      <input type="text" [(ngModel)]="selected.title" [disabled]="GuestMode()" />
+    </label>
+    <div class="field">
+      <span>{{ 'scenarioText.fieldBody' | i18n }}</span>
+      <div class="body-row">
+        <textarea #bodyArea rows="10" [(ngModel)]="selected.body" [disabled]="GuestMode()"></textarea>
+        <button type="button" class="btn btn-sm btn-primary send-selection"
+          (mousedown)="$event.preventDefault()"
+          (click)="sendSelection(bodyArea)"
+          [disabled]="GuestMode()">
+          <i class="material-icons">short_text</i>{{ 'scenarioText.sendSelection' | i18n }}
+        </button>
+      </div>
+    </div>
+    <p class="hint warn" *ngIf="selected.isOverLimit">{{ 'scenarioText.overLimit' | i18n:{ n: maxBytes } }}</p>
+  </section>
+</div>

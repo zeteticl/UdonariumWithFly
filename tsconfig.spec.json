@@ -1,14 +1,23 @@
-/* To learn more about this file see: https://angular.io/config/tsconfig. */
+/* Spec tsconfig: include hammer + FS Access typings used by the app. */
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
     "types": [
-      "jasmine"
+      "jasmine",
+      "hammerjs"
     ]
   },
+  "files": [
+    "src/app/class/core/file-storage/fs-access.d.ts"
+  ],
   "include": [
-    "src/**/*.spec.ts",
-    "src/**/*.d.ts"
+    "src/testing/**/*.ts",
+    "src/app/class/**/*.spec.ts",
+    "src/app/service/default-room/**/*.spec.ts",
+    "src/app/service/folder-backup-layout.spec.ts",
+    "src/app/service/folder-backup-persist.spec.ts",
+    "src/app/service/save-snapshot.flush.spec.ts",
+    "src/app/service/save-xml-remap.spec.ts"
   ]
 }

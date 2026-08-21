@@ -4,6 +4,7 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
+  HostBinding,
   HostListener,
   Input,
   NgZone,
@@ -14,9 +15,11 @@ import { ImageFile, ImageState } from '@udonarium/core/file-storage/image-file';
 import { EventSystem, Network } from '@udonarium/core/system';
 import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { MathUtil } from '@udonarium/core/system/util/math-util';
+import { shouldIgnoreTabletopDoubleClick } from '@udonarium/tabletop-interact';
 import { GameTableMask } from '@udonarium/game-table-mask';
+import { LAYER_PEER_MOVABLE_Z_PX, layerPeerMovableTransform } from '@udonarium/tabletop-object-util';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
-import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
+import { MaskSettingsComponent } from 'component/mask-settings/mask-settings.component';
 import { OpenUrlComponent } from 'component/open-url/open-url.component';
 import { InputHandler } from 'directive/input-handler';
 import { MovableOption } from 'directive/movable.directive';
@@ -27,6 +30,7 @@ import { CoordinateService } from 'service/coordinate.service';
 import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { TabletopActionService } from 'service/tabletop-action.service';
+import { executeTabletopClickAction } from '@udonarium/tabletop-click-action';
 import { UUID } from '@udonarium/core/system/util/uuid';
 import { animate, keyframes, style, transition, trigger } from '@angular/animations';
 import { TableSelecter } from '@udonarium/table-selecter';
@@ -68,25 +72,87 @@ import { SelectionState, TabletopSelectionService } from 'service/tabletop-selec
     standalone: false
 })
 export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewInit {
+  /** GM+Alt pass-through: one shared capture listener for Alt+double-click mask actions. */
+  private static readonly altPassThroughMasks = new Set<GameTableMaskComponent>();
+  private static altPassThroughDblClickBound = false;
+  private static readonly onAltPassThroughDocDblClick = (e: MouseEvent) => {
+    if (!e.altKey) return;
+    // Mask PE is off during Alt pass-through; do not steal dblclick from a piece under the mask.
+    const hit = document.elementFromPoint(e.clientX, e.clientY) as Element | null;
+    if (hit) {
+      const underPiece = hit.closest(
+        'game-character, text-note, card, card-stack, dice-symbol, range, terrain'
+      );
+      if (underPiece) return;
+      const stackHost = hit.closest('[data-stack-id]') as HTMLElement | null;
+      if (stackHost && stackHost.tagName.toLowerCase() !== 'game-table-mask') return;
+    }
+    let best: GameTableMaskComponent = null;
+    let bestZ = -Infinity;
+    for (const c of GameTableMaskComponent.altPassThroughMasks) {
+      if (!c.isAltHitPassThrough || !c.hasClickAction) continue;
+      if (!c.coversClientPoint(e.clientX, e.clientY)) continue;
+      const z = typeof c.gameTableMask?.zindex === 'number' ? c.gameTableMask.zindex : -1;
+      if (z >= bestZ) {
+        best = c;
+        bestZ = z;
+      }
+    }
+    if (!best) return;
+    e.preventDefault();
+    e.stopPropagation();
+    best.runAltClickAction();
+  };
+
   @Input() gameTableMask: GameTableMask = null;
   @Input() is3D: boolean = false;
-
   get name(): string { return this.gameTableMask.name; }
+  get hasClickAction(): boolean { return !!this.gameTableMask && this.gameTableMask.hasAnyClickAction; }
   get width(): number { return MathUtil.clampMin(this.gameTableMask.width); }
   get height(): number { return MathUtil.clampMin(this.gameTableMask.height); }
   get opacity(): number { return this.gameTableMask.opacity; }
   get imageFile(): ImageFile { return this.gameTableMask.imageFile; }
   get isLock(): boolean { return this.gameTableMask.isLock; }
-  set isLock(isLock: boolean) { this.gameTableMask.isLock = isLock; }
+  set isLock(isLock: boolean) { this.gameTableMask.mutateAppearance(() => { this.gameTableMask.isLock = isLock; }); }
   get blendType(): number { return this.gameTableMask.blendType; }
-  set blendType(blendType: number) { this.gameTableMask.blendType = blendType; }
+  set blendType(blendType: number) {
+    this.gameTableMask.mutateAppearance(() => { this.gameTableMask.blendType = blendType; });
+  }
   get borderType(): number { return this.gameTableMask.borderType; }
-  set borderType(borderType: number) { this.gameTableMask.borderType = borderType; }
+  set borderType(borderType: number) {
+    this.gameTableMask.mutateAppearance(() => { this.gameTableMask.borderType = borderType; });
+  }
 
   get fontSize(): number { return this.gameTableMask.fontsize; }
   set fontSize(fontSize: number) { this.gameTableMask.fontsize = fontSize; }
   get text(): string { return this.gameTableMask.text; }
   set text(text: string) { this.gameTableMask.text = text; }
+
+  private static readonly TEXT_POSITIONS = [
+    'top-left', 'top-center', 'top-right',
+    'middle-left', 'middle-center', 'middle-right',
+    'bottom-left', 'bottom-center', 'bottom-right',
+  ] as const;
+
+  get textPosition(): string {
+    const p = this.gameTableMask?.textPosition || 'middle-center';
+    return (GameTableMaskComponent.TEXT_POSITIONS as readonly string[]).includes(p) ? p : 'middle-center';
+  }
+  set textPosition(v: string) {
+    if (!this.gameTableMask) return;
+    const next = (GameTableMaskComponent.TEXT_POSITIONS as readonly string[]).includes(v) ? v : 'middle-center';
+    this.gameTableMask.mutateAppearance(() => { this.gameTableMask.textPosition = next; });
+  }
+
+  get textPositionClass(): string {
+    return `text-pos-${this.textPosition}`;
+  }
+
+  get textAlignCss(): string {
+    if (this.textPosition.endsWith('-left')) return 'left';
+    if (this.textPosition.endsWith('-right')) return 'right';
+    return 'center';
+  }
   get color(): string { return this.gameTableMask.color; }
   set color(color: string) { this.gameTableMask.color = color; }
   get bgcolor(): string { return this.gameTableMask.bgcolor; }
@@ -182,8 +248,14 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
   get altitude(): number { return this.gameTableMask.altitude; }
   set altitude(altitude: number) { this.gameTableMask.altitude = altitude; }
 
+  get is2DMode(): boolean { return !!TableSelecter.instance?.viewTable?.is2DMode; }
+
   get isAltitudeIndicate(): boolean { return this.gameTableMask.isAltitudeIndicate; }
-  set isAltitudeIndicate(isAltitudeIndicate: boolean) { this.gameTableMask.isAltitudeIndicate = isAltitudeIndicate; }
+  set isAltitudeIndicate(isAltitudeIndicate: boolean) {
+    this.gameTableMask.mutateAppearance(() => {
+      this.gameTableMask.isAltitudeIndicate = isAltitudeIndicate;
+    });
+  }
 
   get gameTableMaskAltitude(): number {
     return +this.altitude.toFixed(1); 
@@ -198,6 +270,12 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
   }
 
   get isGMMode(): boolean { return this.gameTableMask.isGMMode; }
+
+  /** GM + Alt highlight: mask must not block pick/drag of outlined pieces underneath. */
+  @HostBinding('class.is-alt-hit-pass-through')
+  get isAltHitPassThrough(): boolean {
+    return !!(this.isGMMode && this.selectionService.canvasHighlight && !this.isScratching);
+  }
   get isScratching(): boolean { return !!this.gameTableMask.owner; }
 
   get hasOwner(): boolean { return this.gameTableMask.hasOwner; }
@@ -263,12 +341,14 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
     EventSystem.unregister(this);
     EventSystem.register(this)
       .on(`UPDATE_GAME_OBJECT/identifier/${this.gameTableMask?.identifier}`, event => {
+        this.syncAltHitPassThroughListener();
         this.changeDetector.markForCheck();
       })
       .on(`UPDATE_OBJECT_CHILDREN/identifier/${this.gameTableMask?.identifier}`, event => {
         this.changeDetector.markForCheck();
       })
       .on('CHANGE_GM_MODE', event => {
+        this.syncAltHitPassThroughListener();
         this.changeDetector.markForCheck();
       })
       .on('SYNCHRONIZE_FILE_LIST', event => {
@@ -285,10 +365,15 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
       })
       .on(`UPDATE_SELECTION/identifier/${this.gameTableMask?.identifier}`, event => {
         this.changeDetector.markForCheck();
+      })
+      .on('CANVAS_HIGHLIGHT', () => {
+        this.syncAltHitPassThroughListener();
+        this.changeDetector.markForCheck();
       });
     this.movableOption = {
       tabletopObject: this.gameTableMask,
-      transformCssOffset: 'translateZ(0.10px)',
+      // Same height as note/card peers; [ ] order is DOM/z-index, not altitude.
+      transformCssOffset: layerPeerMovableTransform(),
       colideLayers: ['terrain']
     };
     this.panelId = UUID.generateUuid();
@@ -300,9 +385,12 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
     });
     this.input.onStart = this.onInputStart.bind(this);
     this.input.onMove = this.onInputMove.bind(this);
+    this.syncAltHitPassThroughListener();
   }
 
   ngOnDestroy() {
+    GameTableMaskComponent.altPassThroughMasks.delete(this);
+    GameTableMaskComponent.refreshAltPassThroughDocListener();
     this.input.destroy();
     EventSystem.unregister(this);
     clearTimeout(this._scratchingTimerId);
@@ -316,6 +404,10 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
   }
 
   onInputStart(e: any) {
+    // Same as card/note: interact brings mask to shared [ ] front (unless locked/scratching).
+    if (!this.isLock && !this.isScratching) {
+      this.ngZone.run(() => this.gameTableMask.raiseInTier());
+    }
     if (!this.isScratching || !this.gameTableMask.isMine) { 
       this.input.cancel();
     } else if (!window.PointerEvent && e.button < 2 && e.buttons < 2) {
@@ -415,13 +507,22 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
 
     if (this.GuestMode()) return;
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
+    this.tabletopActionService.ensureObjectSelected(this.gameTableMask);
     let menuPosition = this.pointerDeviceService.pointers[0];
 
     let menuActions: ContextMenuAction[] = [];
-    menuActions = menuActions.concat(this.makeSelectionContextMenu());
-    menuActions = menuActions.concat(this.makeContextMenu());
+    let title = this.name;
 
-    this.contextMenuService.open(menuPosition, menuActions, this.name);
+    if (this.isMultiSelectedMasks()) {
+      menuActions = this.makeSelectionContextMenu();
+      title = this.i18n.t('mask.selectedCount', { count: this.selectedMasks().length });
+    } else {
+      menuActions = menuActions.concat(this.makeSelectionContextMenu());
+      menuActions = menuActions.concat(this.makeContextMenu());
+    }
+    menuActions = this.tabletopActionService.withClipboardMenuPrefix(menuActions);
+
+    this.contextMenuService.open(menuPosition, menuActions, title);
   }
 
   onMove() {
@@ -475,39 +576,44 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
     e.stopPropagation();
   }
 
+  private selectedMasks(): GameTableMask[] {
+    return this.selectionService.objects.filter(
+      object => object.aliasName === this.gameTableMask.aliasName
+    ) as GameTableMask[];
+  }
+
+  private isMultiSelectedMasks(): boolean {
+    return this.isSelected && this.selectedMasks().length > 1;
+  }
+
   private makeSelectionContextMenu(): ContextMenuAction[] {
-    if (this.selectionService.objects.length < 1) return [];
+    if (this.selectionService.size <= 1) return [];
 
     let actions: ContextMenuAction[] = [];
 
     let objectPosition = this.coordinateService.calcTabletopLocalCoordinate();
-    actions.push({ name: this.i18n.t('mask.menu.1'), action: () => this.selectionService.congregate(objectPosition) });
+    actions.push({ name: this.i18n.t('mask.menu.1'), hotkey: 'T', action: () => this.selectionService.congregate(objectPosition) });
 
-    if (this.isSelected) {
-      let selectedGameTableMasks = () => this.selectionService.objects.filter(object => object.aliasName === this.gameTableMask.aliasName) as GameTableMask[];
+    if (this.isMultiSelectedMasks()) {
+      let selectedGameTableMasks = () => this.selectedMasks();
       actions.push(
         {
           name: this.i18n.t('mask.menu.2'), action: null, subActions: [
             {
               name: this.i18n.t('mask.menu.3'), action: () => {
-                selectedGameTableMasks().forEach(gameTableMask => gameTableMask.isLock = true);
+                selectedGameTableMasks().forEach(gameTableMask => {
+                  gameTableMask.mutateAppearance(() => { gameTableMask.isLock = true; });
+                });
                 SoundEffect.play(PresetSound.lock);
               }
             },
-            {
-              name: this.i18n.t('mask.menu.4'), action: () => {
-                selectedGameTableMasks().forEach(gameTableMask => {
-                  let cloneObject = gameTableMask.clone();
-                  cloneObject.location.x += this.gridSize;
-                  cloneObject.location.y += this.gridSize;
-                  cloneObject.isLock = false;
-                  if (gameTableMask.parent) gameTableMask.parent.appendChild(cloneObject);
-                });
-                SoundEffect.play(PresetSound.cardPut);
-              }
-            },
           ]
-        }
+        },
+        ContextMenuSeparator,
+        {
+          name: this.i18n.t('char.clearSelection'),
+          action: () => this.selectionService.clear()
+        },
       );
     }
     actions.push(ContextMenuSeparator);
@@ -535,8 +641,10 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
       : null),
       (this.isGMMode ? ContextMenuSeparator : null),
       contextMenuToggleCheck({
-        get: () => this.gameTableMask.affectsLight !== false,
-        set: (v) => { this.gameTableMask.affectsLight = v; },
+        get: () => !!this.gameTableMask.affectsLight,
+        set: (v) => {
+          this.gameTableMask.mutateAppearance(() => { this.gameTableMask.affectsLight = v; });
+        },
         on: this.i18n.t('mask.menu.9'),
         off: this.i18n.t('mask.menu.10'),
       }),
@@ -549,6 +657,7 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
         on: this.i18n.t('mask.menu.11'),
         off: this.i18n.t('mask.menu.12'),
         disabled: this.isScratching,
+        hotkey: 'L',
       }),
       (this.isLock ? null : { name: this.i18n.t('mask.menu.13'), action: null, subActions: [
         {
@@ -708,6 +817,26 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
         disabled: this.isScratching
       },
       {
+        name: this.i18n.t('mask.fieldTextAlignH'),
+        subActions: GameTableMask.TEXT_ALIGN_H.map(id => ({
+          name: `${this.gameTableMask.textAlignH === id ? '◉' : '○'} ${this.i18n.t(`mask.textAlign.${id}`)}`,
+          action: () => { this.gameTableMask.textAlignH = id; this.changeDetector.markForCheck(); },
+          nameUpdate: () => `${this.gameTableMask.textAlignH === id ? '◉' : '○'} ${this.i18n.t(`mask.textAlign.${id}`)}`,
+          checkBox: 'radio' as const,
+        })),
+        disabled: this.isScratching || !this.text,
+      },
+      {
+        name: this.i18n.t('mask.fieldTextAlignV'),
+        subActions: GameTableMask.TEXT_ALIGN_V.map(id => ({
+          name: `${this.gameTableMask.textAlignV === id ? '◉' : '○'} ${this.i18n.t(`mask.textAlign.${id}`)}`,
+          action: () => { this.gameTableMask.textAlignV = id; this.changeDetector.markForCheck(); },
+          nameUpdate: () => `${this.gameTableMask.textAlignV === id ? '◉' : '○'} ${this.i18n.t(`mask.textAlign.${id}`)}`,
+          checkBox: 'radio' as const,
+        })),
+        disabled: this.isScratching || !this.text,
+      },
+      {
         name: this.i18n.t('mask.menu.25'),
         subActions: [
           { name: `${this.blendType == 0 ? '◉' : '○'} ${this.i18n.t('mask.dynamic.4')}`,  action: () => { this.blendType = 0; SoundEffect.play(PresetSound.cardDraw) }, checkBox: 'radio' },
@@ -719,22 +848,30 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
         disabled: this.isScratching
       },
       ContextMenuSeparator,
-      contextMenuToggleCheck({
-        get: () => this.isAltitudeIndicate,
-        set: (v) => { this.isAltitudeIndicate = v; },
-        on: this.i18n.t('mask.menu.27'),
-        off: this.i18n.t('mask.menu.28'),
-      }),
-      {
-        name: this.i18n.t('mask.menu.29'), action: () => {
-          if (this.altitude != 0) {
-            this.altitude = 0;
-            SoundEffect.play(PresetSound.sweep);
-          }
+      ...(this.is2DMode ? [] : [
+        contextMenuToggleCheck({
+          get: () => this.isAltitudeIndicate,
+          set: (v) => { this.isAltitudeIndicate = v; },
+          on: this.i18n.t('mask.menu.27'),
+          off: this.i18n.t('mask.menu.28'),
+        }),
+        {
+          name: this.i18n.t('mask.menu.29'), action: () => {
+            if (this.altitude != 0) {
+              this.altitude = 0;
+              SoundEffect.play(PresetSound.sweep);
+            }
+          },
+          disabled: this.isScratching,
+          altitudeHande: this.gameTableMask,
+          altitudeDisabled: this.isScratching
         },
-        disabled: this.isScratching,
-        altitudeHande: this.gameTableMask,
-        altitudeDisabled: this.isScratching
+        ContextMenuSeparator,
+      ]),
+      {
+        name: this.i18n.t('mask.clickSettings'),
+        action: () => this.showClickSettings(this.gameTableMask),
+        disabled: this.isScratching
       },
       ContextMenuSeparator,
       { name: this.i18n.t('mask.menu.30'), action: () => { this.showDetail(this.gameTableMask); } },
@@ -759,23 +896,12 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
       }),
       (this.gameTableMask.getUrls().length <= 0 ? null : ContextMenuSeparator),
       {
-        name: this.i18n.t('mask.menu.32'), action: () => {
-          let cloneObject = this.gameTableMask.clone();
-          console.log('複製', cloneObject);
-          cloneObject.location.x += this.gridSize;
-          cloneObject.location.y += this.gridSize;
-          cloneObject.isLock = false;
-          cloneObject.isPreview = false;
-          if (this.gameTableMask.parent) this.gameTableMask.parent.appendChild(cloneObject);
-          SoundEffect.play(PresetSound.cardPut);
-        }
-      },
-      {
         name: this.i18n.t('mask.menu.33'), action: () => {
           this.chatMessageService.sendOperationLog(this.i18n.t('mask.deleted', { name: this.maskDisplayName() }));
           this.gameTableMask.destroy();
           SoundEffect.play(PresetSound.sweep);
-        }
+        },
+        hotkey: 'Del',
       },
       ContextMenuSeparator,
       { name: this.i18n.t('mask.menu.34'), action: null, subActions: this.tabletopActionService.makeDefaultContextMenuActions(objectPosition) }
@@ -789,18 +915,70 @@ export class GameTableMaskComponent implements OnChanges, OnDestroy, AfterViewIn
   }
 
   onDoubleClick(e: Event) {
+    if (shouldIgnoreTabletopDoubleClick(e)) return;
     e.stopPropagation();
+    e.preventDefault();
+    const me = e as MouseEvent;
+    // Alt+double-click runs mask actions and must not open settings.
+    if (me?.altKey && this.hasClickAction) {
+      this.ngZone.run(() => executeTabletopClickAction(this.gameTableMask, this.chatMessageService));
+      return;
+    }
     this.showDetail(this.gameTableMask);
+  }
+
+  private syncAltHitPassThroughListener() {
+    if (this.isAltHitPassThrough) {
+      GameTableMaskComponent.altPassThroughMasks.add(this);
+    } else {
+      GameTableMaskComponent.altPassThroughMasks.delete(this);
+    }
+    GameTableMaskComponent.refreshAltPassThroughDocListener();
+  }
+
+  private static refreshAltPassThroughDocListener() {
+    const need = GameTableMaskComponent.altPassThroughMasks.size > 0;
+    if (need && !GameTableMaskComponent.altPassThroughDblClickBound) {
+      document.addEventListener('dblclick', GameTableMaskComponent.onAltPassThroughDocDblClick, true);
+      GameTableMaskComponent.altPassThroughDblClickBound = true;
+    } else if (!need && GameTableMaskComponent.altPassThroughDblClickBound) {
+      document.removeEventListener('dblclick', GameTableMaskComponent.onAltPassThroughDocDblClick, true);
+      GameTableMaskComponent.altPassThroughDblClickBound = false;
+    }
+  }
+
+  private coversClientPoint(x: number, y: number): boolean {
+    const hit = this.elementRef.nativeElement.querySelector('.mask-hit-surface') as HTMLElement
+      || this.elementRef.nativeElement.querySelector('.component') as HTMLElement;
+    if (!hit) return false;
+    const r = hit.getBoundingClientRect();
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
+      && r.width > 1 && r.height > 1;
+  }
+
+  private runAltClickAction() {
+    this.ngZone.run(() => executeTabletopClickAction(this.gameTableMask, this.chatMessageService));
   }
 
   private showDetail(gameObject: GameTableMask) {
     if (this.GuestMode()) return;
-    let coordinate = this.pointerDeviceService.pointers[0];
     let title = this.i18n.t('mask.panelTitle');
     if (gameObject.name.length) title += ' - ' + gameObject.name;
-    let option: PanelOption = { title: title, left: coordinate.x - 200, top: coordinate.y - 150, width: 400, height: 530 };
-    let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
-    component.tabletopObject = gameObject;
+    const tourId = PanelService.tourIdObjectDetail(gameObject.identifier);
+    if (PanelService.bringTourPanelToFront(tourId, { title })) return;
+    const coordinate = this.pointerDeviceService.pointers[0];
+    const option: PanelOption = {
+      title, left: coordinate.x - 200, top: coordinate.y - 140, width: 400, height: 400,
+      tourPanelId: tourId,
+      geometryKey: PanelService.sheetGeometryKey(gameObject.aliasName),
+    };
+    const component = this.panelService.open<MaskSettingsComponent>(MaskSettingsComponent, option);
+    component.mask = gameObject;
+    component.embedded = false;
+  }
+
+  private showClickSettings(gameObject: GameTableMask) {
+    this.showDetail(gameObject);
   }
   
   identify(index, gridInfo){

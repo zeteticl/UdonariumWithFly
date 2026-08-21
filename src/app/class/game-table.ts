@@ -39,10 +39,29 @@ export class GameTable extends ObjectNode {
   @SyncVar() isShowNumber: boolean = true;
 
   @SyncVar() darkness: number = 0;
+  /** Ambient fill that softens the darkness overlay (0–1). Not Foundry GI. */
   @SyncVar() globalIllumination: number = 1;
+  /**
+   * Foundry-style Global Illumination: when true (and threshold allows), tokens with
+   * vision see everything in line-of-sight as brightly lit without needing lights.
+   * When false, vision only reveals areas that are also illuminated.
+   */
+  @SyncVar() globalIlluminationEnabled: boolean = true;
+  /**
+   * Auto-disable GI when darkness >= this value. Negative = threshold off
+   * (GI follows globalIlluminationEnabled only).
+   */
+  @SyncVar() globalIlluminationThreshold: number = -1;
   @SyncVar() weatherType: WeatherType = 'none';
   @SyncVar() weatherIntensity: number = 0.5;
   @SyncVar() visionEnabled: boolean = false;
+  /** Room-wide top-down view: lock camera pitch and lay tokens flat (note-like). */
+  @SyncVar() is2DMode: boolean = false;
+
+  /** Show this table in the top scene navigation bar. */
+  @SyncVar() showInNavigation: boolean = true;
+  /** Non-GM players may View this table (Foundry-style scene access). */
+  @SyncVar() playerCanView: boolean = true;
 
   gridHeight: number = 0;
   gridClipRect: {top: number, right: number, bottom: number, left: number} = null;
@@ -78,6 +97,9 @@ export class GameTable extends ObjectNode {
   // GameObject Lifecycle
   onStoreAdded() {
     super.onStoreAdded();
-    if (this.selected) EventSystem.trigger('SELECT_GAME_TABLE', { identifier: this.identifier });
+    if (this.selected) {
+      // Catalog / local rehydrate only — TableSelecter must NOT broadcast Activate.
+      EventSystem.trigger('SELECT_GAME_TABLE', { identifier: this.identifier, _fromCatalog: true });
+    }
   }
 }

@@ -1,9 +1,97 @@
-<div class="permission-setting" *ngIf="isGMMode; else notGm">
+<div class="settings-ui dense permission-setting" *ngIf="canEditPerms; else notGm">
+  <div class="section-title">{{ 'peer.loadDataPermTitle' | i18n }}</div>
+  <div class="scene-perm-group">
+    <div class="scene-perm-sub scene-perm-sub-flat">
+      <label>
+        <input type="checkbox" [(ngModel)]="playerCanLoadZip">
+        <i class="material-icons perm-icon">open_in_browser</i>
+        {{ 'menu.loadZip' | i18n }}
+      </label>
+      <label>
+        <input type="checkbox" [(ngModel)]="playerCanLoadRoom">
+        <i class="material-icons perm-icon">folder_open</i>
+        {{ 'menu.folderBackup.loadRoom' | i18n }}
+      </label>
+    </div>
+  </div>
+  <p class="hint">{{ 'peer.loadDataPermHelp' | i18n }}</p>
+
+  <div class="section-title">{{ 'peer.atmospherePermTitle' | i18n }}</div>
+  <div class="scene-perm-group">
+    <div class="scene-perm-sub scene-perm-sub-flat">
+      <label>
+        <input type="checkbox" [(ngModel)]="playerCanControlWeather">
+        <i class="material-icons perm-icon">wb_cloudy</i>
+        {{ 'table.weather' | i18n }}
+      </label>
+      <label>
+        <input type="checkbox" [(ngModel)]="playerCanControlDayNight">
+        <i class="material-icons perm-icon">brightness_6</i>
+        {{ 'table.dayNight' | i18n }}
+      </label>
+    </div>
+  </div>
+  <p class="hint">{{ 'peer.atmospherePermHelp' | i18n }}</p>
+
+  <div class="section-title">{{ 'peer.menuPermTitle' | i18n }}</div>
+  <div class="scene-perm-group">
+    <div class="scene-perm-row scene-perm-head">
+      <label>
+        <input type="checkbox" [ngModel]="allMenusEnabled" (ngModelChange)="setAllMenus($event)">
+        <b>{{ 'peer.menuPermAll' | i18n }}</b>
+      </label>
+    </div>
+    <div class="scene-perm-sub scene-perm-sub-flat">
+      <label>
+        <input type="checkbox" [(ngModel)]="playerCanOpenTable">
+        <i class="material-icons perm-icon">layers</i>
+        {{ 'menu.table' | i18n }}
+      </label>
+      <label>
+        <input type="checkbox" [(ngModel)]="playerCanOpenImages">
+        <i class="material-icons perm-icon">photo_library</i>
+        {{ 'menu.images' | i18n }}
+      </label>
+      <label>
+        <input type="checkbox" [(ngModel)]="playerCanOpenMusic">
+        <i class="material-icons perm-icon">queue_music</i>
+        {{ 'menu.music' | i18n }}
+      </label>
+      <label>
+        <input type="checkbox" [(ngModel)]="playerCanOpenToolbox">
+        <i class="material-icons perm-icon">build</i>
+        {{ 'menu.toolbox' | i18n }}
+      </label>
+      <label>
+        <input type="checkbox" [(ngModel)]="playerCanOpenScenePreset">
+        <i class="material-icons perm-icon">theaters</i>
+        {{ 'menu.scenePreset' | i18n }}
+      </label>
+      <label>
+        <input type="checkbox" [(ngModel)]="playerCanOpenScenarioText">
+        <i class="material-icons perm-icon">menu_book</i>
+        {{ 'menu.scenarioText' | i18n }}
+      </label>
+      <label>
+        <input type="checkbox" [(ngModel)]="playerCanOpenInventory">
+        <i class="material-icons perm-icon">folder_shared</i>
+        {{ 'menu.inventory' | i18n }}
+      </label>
+      <label>
+        <input type="checkbox" [(ngModel)]="playerCanOpenNotes">
+        <i class="material-icons perm-icon">note</i>
+        {{ 'menu.notes' | i18n }}
+      </label>
+    </div>
+  </div>
+  <p class="hint">{{ 'peer.menuPermHelp' | i18n }}</p>
+
   <div class="section-title">{{ 'peer.scenePermTitle' | i18n }}</div>
   <div class="scene-perm-group">
     <div class="scene-perm-row scene-perm-head">
       <label>
         <input type="checkbox" [ngModel]="sceneAllCreate" (ngModelChange)="setAllSceneCreate($event)">
+        <i class="material-icons perm-icon">architecture</i>
         <b>{{ 'peer.sceneCanCreate' | i18n }}</b>
       </label>
     </div>
@@ -21,6 +109,7 @@
     <div class="scene-perm-row scene-perm-head">
       <label>
         <input type="checkbox" [ngModel]="sceneAllModify" (ngModelChange)="setAllSceneModify($event)">
+        <i class="material-icons perm-icon">architecture</i>
         <b>{{ 'peer.sceneCanModify' | i18n }}</b>
       </label>
     </div>

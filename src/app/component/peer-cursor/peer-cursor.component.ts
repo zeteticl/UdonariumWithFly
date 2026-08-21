@@ -142,6 +142,8 @@ export class PeerCursorComponent implements OnInit, AfterViewInit, OnDestroy {
     let coordinate: PointerCoordinate = { x: x, y: y, z: 0 };
     coordinate = this.coordinateService.calcTabletopLocalCoordinate(coordinate, target);
 
+    // peerIds are remote peers only — skip mesh chatter when alone.
+    if (Network.peerIds.length < 1) return;
     EventSystem.call('CURSOR_MOVE', [coordinate.x, coordinate.y, coordinate.z]);
   }
 

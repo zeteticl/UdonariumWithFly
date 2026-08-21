@@ -1,5 +1,5 @@
 <div class="table" [ngClass]="{ 'direct-message': isDirect }">
-  <div class="table-cell imagebox" [ngClass]="{'not-allow-chat': !isAllowsChat}" (contextmenu)="onContextMenu($event)" style="cursor: context-menu; padding-left: 4px; padding-right: 2px">
+  <div class="table-cell imagebox" [ngClass]="{'not-allow-chat': !isAllowsChat}" (click)="onImageboxClick($event)" (contextmenu)="onContextMenu($event)" style="cursor: pointer; padding-left: 4px; padding-right: 2px">
     <div *ngIf="!character; else isCharacter" class="imagebox">
       <img *ngIf="0 < imageFile.url.length" class="image face-icon" [src]="imageFile.url | safe: 'resourceUrl'" />
     </div>
@@ -12,7 +12,7 @@
           [style.filter]="charImageFilter"
           [style.opacity]="charImageOpacity"
           [style.transform]="charImageTransform">
-          <span class="aura imagebox" [ngClass]="{black: character.aura == 0, blue: character.aura == 1, green: character.aura == 2, cyan: character.aura == 3, red: character.aura == 4, magenta: character.aura == 5, yellow: character.aura == 6, white: character.aura == 7}">
+          <span class="aura imagebox" [ngClass]="{black: appearanceHost?.aura == 0, blue: appearanceHost?.aura == 1, green: appearanceHost?.aura == 2, cyan: appearanceHost?.aura == 3, red: appearanceHost?.aura == 4, magenta: appearanceHost?.aura == 5, yellow: appearanceHost?.aura == 6, white: appearanceHost?.aura == 7}">
             <img class="image" [src]="character.imageFile.url | safe: 'resourceUrl'" />
           </span>
         </div>
@@ -21,14 +21,14 @@
   </div>
   <div class="table-cell">
     <div class="ff-flex">
-      <label style="margin-right: 2px" *ngIf="!ClarifyMode()">
+      <label class="face-icon-label" style="margin-right: 2px" *ngIf="!ClarifyMode()">
         <input *ngIf="character" type="checkbox" [(ngModel)]="isUseFaceIcon" checked="{{isUseFaceIcon ? 'checked' : ''}}" (change)="isUseFaceIcon = (isUseFaceIcon ? true : false)" />
         <b *ngIf="character" style="font-size: smaller">{{ 'chat.faceIcon' | i18n }}</b>
       </label>
-      <span style="white-space: nowrap">
-        <select [style.max-width]="character ? '10em' : '13em'" [ngClass]="{'not-allow-chat': !isAllowsChat}" [(ngModel)]="sendFrom" (change)="onChangeSendFromList()" [ngStyle]="{'color': color, 'font-weight': (sendFrom != myPeer?.identifier ? 'normal' : 'bolder')}">
+      <span class="send-from-wrap" style="white-space: nowrap">
+        <select class="send-from-select" [style.max-width]="character ? '10em' : '13em'" [ngClass]="{'not-allow-chat': !isAllowsChat}" [(ngModel)]="sendFrom" (change)="onChangeSendFromList()" [ngStyle]="{'color': color, 'font-weight': (sendFrom != myPeer?.identifier ? 'normal' : 'bolder')}">
           <option *ngIf="!onlyCharacters" value="{{myPeer?.identifier}}" [style.color]="myColor" style="font-weight: bolder;">{{myPeer?.name}}{{ 'chat.you' | i18n }}</option>
-          <option *ngFor="let gameCharacter of gameCharacters" style="font-weight: normal" [style.color]="gameCharacter.chatPalette && gameCharacter.chatPalette.color && gameCharacter.chatPalette.color != '#ffffff' ? gameCharacter.chatPalette.color : '#444'" value="{{gameCharacter.identifier}}">{{gameCharacter.name}}</option>
+          <option *ngFor="let gameCharacter of gameCharacters" style="font-weight: normal" [style.color]="gameCharacter.chatPalette && gameCharacter.chatPalette.color && gameCharacter.chatPalette.color != '#ffffff' ? gameCharacter.chatPalette.color : '#444'" value="{{gameCharacter.identifier}}">{{gameCharacter.chatSelectLabel}}</option>
         </select>
         <button *ngIf="character" type="button" class="ff-button my-char-btn"
           [class.is-mine]="isMyClaimedCharacter"
@@ -42,31 +42,31 @@
             <i class="material-icons" style="font-size: 0.8em">{{ isUseChatBalloon && isUseStandImageOnChatTab ? 'textsms' : 'speaker_notes_off'}}</i>
         </button>
       </span>
-      <span style="white-space: nowrap">
-        <span style="display: inline-block; margin: auto 2px; text-align: center">➡</span>
-        <select style="max-width: 9.5em" [(ngModel)]="sendTo" [ngClass]="{'not-specified': sendTo == ''}" [ngStyle]="{'color': (sendTo == '' ? null : sendToColor), 'font-weight': (sendTo == '' ? 'normal' : 'bolder')}">
+      <span class="send-to-wrap" style="white-space: nowrap">
+        <span class="send-arrow" style="display: inline-block; margin: auto 2px; text-align: center">➡</span>
+        <select class="send-to-select" style="max-width: 9.5em" [(ngModel)]="sendTo" [ngClass]="{'not-specified': sendTo == ''}" [ngStyle]="{'color': (sendTo == '' ? null : sendToColor), 'font-weight': (sendTo == '' ? 'normal' : 'bolder')}">
           <option value="" class="not-specified">{{ 'chat.all' | i18n }}</option>
           <option *ngFor="let peer of otherPeers" value="{{peer.identifier}}" [style.color]="peer.color" style="font-weight: bolder;">{{peer.name}}
             <ng-container *ngIf="peer === myPeer">{{ 'chat.you' | i18n }}</ng-container>
           </option>
         </select>
       </span>
-      <span style="white-space: nowrap">
-        <select #select *ngIf="diceBotInfosIndexed.length > 0" style="width: 11em;" (change)="loadDiceBot(select.value)" [(ngModel)]="gameType" [ngModelOptions]="{standalone: true}"
+      <span class="dicebot-wrap" style="white-space: nowrap" [class.is-collapsed]="isDiceBotCollapsed">
+        <select class="dicebot-select" #select *ngIf="diceBotInfosIndexed.length > 0" style="width: 11em;" (change)="loadDiceBot(select.value)" [(ngModel)]="gameType" [ngModelOptions]="{standalone: true}"
           [ngClass]="{'not-specified': gameType == 'DiceBot' || gameType == ''}">
           <option value="DiceBot" class="not-specified">{{ 'chat.diceBotUnspecified' | i18n }}</option>
           <optgroup *ngFor="let group of diceBotInfosIndexed" class="dice-bot-group" label="{{group.index}}">
             <option *ngFor="let diceBotInfo of group.infos" value="{{diceBotInfo.id}}">{{diceBotInfo.game}}</option>
           </optgroup>
         </select>
-        <select #select *ngIf="diceBotInfosIndexed.length < 1" style="width: 11em;" (change)="loadDiceBot(select.value)" [(ngModel)]="gameType" [ngModelOptions]="{standalone: true}" disabled
+        <select class="dicebot-select" #select *ngIf="diceBotInfosIndexed.length < 1" style="width: 11em;" (change)="loadDiceBot(select.value)" [(ngModel)]="gameType" [ngModelOptions]="{standalone: true}" disabled
           [ngClass]="{'not-specified': gameType == 'DiceBot' || gameType == ''}">
           <option value="DiceBot" class="not-specified">{{ 'chat.diceBotLoading' | i18n }}</option>
         </select>
         <button class="ff-button dicebot-help" style="cursor: help" (click)="showDicebotHelp()">?</button>
       </span>
     </div>
-    <div *ngIf="hasStand" [ngClass]="{'disabled-stand': !isUseStandImageOnChatTab}" style="font-size: smaller; margin-top: 1px" [title]="isUseStandImageOnChatTab ? '' : ('chat.standDisabledTitle' | i18n)">
+    <div class="stand-controls" *ngIf="hasStand" [ngClass]="{'disabled-stand': !isUseStandImageOnChatTab}" style="font-size: smaller; margin-top: 1px" [title]="isUseStandImageOnChatTab ? '' : ('chat.standDisabledTitle' | i18n)">
       <span style="font-size: medium">
         <button class="indicate ff-button stand-indicate" style="font-size: 0.8em; padding: 1px; height: 1.3rem; width: 1.3rem; margin-left: 2px; margin-right: 2px" [title]="isUseStandImageOnChatTab ? ('chat.standShowTitle' | i18n) : ('chat.standDisabledTitle' | i18n)" [ngClass]="{'is-active': isUseStandImage}" (click)="isUseStandImage = !isUseStandImage">
           <i class="material-icons" style="font-size: 12px; overflow: hidden; vertical-align: text-bottom">{{ isUseStandImageOnChatTab && isUseStandImage ? 'how_to_reg' : 'person_off'}}</i>
@@ -76,20 +76,32 @@
         <option value="" class="not-specified">{{ 'chat.standUnselected' | i18n }}</option>
         <option *ngFor="let name of standNameList" value="{{name}}">{{name}}</option>
       </select>
-      <span style="white-space: nowrap; margin-left: 0.6em; display: inline-block">
-        <b style="font-size: smaller;">{{ 'chat.standPosition' | i18n }}</b><input style="width: 176px" (change)="isUseStandImage = true" type="range" min="0" max="100" [(ngModel)]="character.standList.position" [attr.disabled]="!isUseStandImageOnChatTab || !isUseStandImage ? '' : null">
-        <input style="width: 3em; text-align: right; margin-right: 3px;" type="number" min="0" max="100" (change)="isUseStandImage = true" [(ngModel)]="character.standList.position" [attr.disabled]="!isUseStandImageOnChatTab || !isUseStandImage ? '' : null"><b style="font-size: smaller;">{{ 'chat.standPercent' | i18n }}</b>
+      <span class="stand-position" style="white-space: nowrap; margin-left: 0.6em; display: inline-block">
+        <b style="font-size: smaller;">{{ 'chat.standPosition' | i18n }}</b><input style="width: 176px" (change)="isUseStandImage = true" type="range" min="0" max="100" [(ngModel)]="standPosition" [attr.disabled]="!isUseStandImageOnChatTab || !isUseStandImage ? '' : null">
+        <input style="width: 3em; text-align: right; margin-right: 3px;" type="number" min="0" max="100" (change)="isUseStandImage = true" [(ngModel)]="standPosition" [attr.disabled]="!isUseStandImageOnChatTab || !isUseStandImage ? '' : null"><b style="font-size: smaller;">{{ 'chat.standPercent' | i18n }}</b>
       </span>
       <button style="margin-left: 0.6em; font-size: smaller;" type="button" (click)="farewellStand()">{{ 'chat.standExit' | i18n }}</button>
     </div>
-    <div>
-      <form>
-        <input *ngIf="onlyCharacters" type="color" style="width:1em; margin-left: 3px" [(ngModel)]="paletteColor" [ngModelOptions]="{standalone: true}">
-        <textarea class="chat-input" [placeholder]="(!onlyCharacters ? 'chat.placeholderDefault' : 'chat.placeholderCharacter') | i18n" [(ngModel)]="text"
+    <div class="composer-row" [class.is-drag-over]="isDragOverAttach"
+      (dragover)="onDragOverAttach($event)" (dragleave)="onDragLeaveAttach($event)" (drop)="onDropAttach($event)">
+      <div class="attach-preview" *ngIf="pendingAttachedImages.length || isAttachingImages">
+        <div class="attach-thumb" *ngFor="let img of pendingAttachedImages">
+          <img *ngIf="img?.url" [src]="img.url | safe: 'resourceUrl'" alt="" draggable="false" />
+          <button type="button" class="attach-remove" (click)="removePendingAttachment(img.identifier)" [attr.aria-label]="'chat.removeAttachment' | i18n" [title]="'chat.removeAttachment' | i18n">×</button>
+        </div>
+        <span class="attach-loading" *ngIf="isAttachingImages">{{ 'chat.attaching' | i18n }}</span>
+      </div>
+      <form class="chat-composer">
+        <input *ngIf="onlyCharacters" type="color" class="palette-color" style="width:1em; margin-left: 3px" [(ngModel)]="paletteColor" [ngModelOptions]="{standalone: true}">
+        <textarea class="chat-input" [class.is-clarify]="ClarifyMode()" [rows]="ClarifyMode() ? 1 : 2" [placeholder]="(!onlyCharacters ? 'chat.placeholderDefault' : 'chat.placeholderCharacter') | i18n" [(ngModel)]="text"
           [ngModelOptions]="{standalone: true}" (input)="onInput()" (keydown.enter)="sendChat($event)" (focus)="isFilterTextUpdate = true" (blur)="isFilterTextUpdate = false"
+          (paste)="onPaste($event)"
           (keydown.control.arrowup)="moveHistory($event, 1)" (keydown.control.arrowdown)="moveHistory($event, -1)" (keydown.arrowdown)="moveTo($event)" [disabled]="!isAllowsChat"
           #textArea></textarea>
-        <button type="submit" (click)="sendChat(null)" [disabled]="!isAllowsChat"><b>{{ 'chat.send' | i18n }}</b></button>
+        <button type="submit" class="send-btn" (click)="sendChat(null)" [disabled]="!isAllowsChat || isAttachingImages" [attr.aria-label]="'chat.send' | i18n">
+          <b class="send-label">{{ 'chat.send' | i18n }}</b>
+          <i class="material-icons send-icon" aria-hidden="true">send</i>
+        </button>
       </form>
     </div>
     <div class="writing-info">

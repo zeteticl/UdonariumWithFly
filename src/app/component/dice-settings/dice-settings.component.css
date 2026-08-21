@@ -1,0 +1,105 @@
+.dice-settings .section-title {
+  margin: 0 0 2px;
+}
+
+.dice-settings .hint {
+  margin: 0 0 4px;
+}
+
+.face-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.face-chip {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid #c4b29a;
+  border-radius: 4px;
+  background: #fffdf8;
+  overflow: hidden;
+  cursor: pointer;
+  color: #7a6550;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.face-chip img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #fffdf8;
+}
+
+.face-chip .material-icons {
+  font-size: 22px;
+  opacity: 0.7;
+}
+
+.face-chip .face-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  font-size: 9px;
+  line-height: 1.15;
+  text-align: center;
+  background: rgba(255, 253, 248, 0.9);
+  color: #5c4630;
+  font-weight: 700;
+}
+
+.face-chip.is-active {
+  border-color: #8a6a45;
+  box-shadow: inset 0 -2px 0 #8a6a45;
+}
+
+.face-chip.has-image:hover {
+  border-color: #8a6a45;
+  background: #f7efe3;
+}
+
+.face-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.face-preview {
+  position: fixed;
+  z-index: 10050;
+  width: 220px;
+  height: 220px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid #c4b29a;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #2a241c;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.face-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #2a241c;
+}
+
+.face-preview-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  color: #fffdf8;
+  background: rgba(42, 36, 28, 0.82);
+}

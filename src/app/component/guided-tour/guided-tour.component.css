@@ -5,6 +5,12 @@
   pointer-events: none;
 }
 
+/* Running tour only: sit below mobile nav (12500) so spotlight targets stay tappable.
+   Welcome dialog stays at 13000 so Start/Skip are above the bottom bar. */
+.guided-tour-root.mobile-running {
+  z-index: 12400;
+}
+
 .guided-tour-scrim,
 .gt-shade {
   position: fixed;
@@ -30,7 +36,7 @@
   left: 24px;
   top: 24px;
   width: 320px;
-  max-width: calc(100vw - 24px);
+  max-width: calc(100vw - 16px);
   padding: 12px 14px;
   box-sizing: border-box;
   pointer-events: auto;
@@ -41,6 +47,18 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   font-size: 13px;
   line-height: 1.45;
+  z-index: 1;
+}
+
+.guided-tour-bubble.mobile {
+  font-size: 14px;
+  padding: 14px 14px 12px;
+}
+
+.guided-tour-bubble.mobile .gt-btn {
+  min-height: 36px;
+  padding: 8px 12px;
+  font-size: 13px;
 }
 
 .guided-tour-bubble.welcome {
@@ -48,6 +66,12 @@
   top: 50%;
   transform: translate(-50%, -50%);
   width: 380px;
+}
+
+.guided-tour-bubble.welcome.mobile {
+  width: min(380px, calc(100vw - 24px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
 }
 
 .gt-lang {
@@ -70,7 +94,7 @@
   min-width: 0;
   padding: 4px 6px;
   border: 1px solid #777;
-  border-radius: 3px;
+  border-radius: var(--udon-control-radius, 4px);
   background: #2a2a2a;
   color: #eee;
   font-size: 13px;

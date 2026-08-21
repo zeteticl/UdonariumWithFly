@@ -1,0 +1,157 @@
+:host {
+  pointer-events: none;
+}
+
+.resource-hud {
+  pointer-events: auto;
+  position: fixed;
+  z-index: 40;
+  min-width: 260px;
+  max-width: 360px;
+  max-height: 50vh;
+  overflow: auto;
+  padding: 6px 8px 8px;
+  background: rgba(28, 24, 20, 0.88);
+  color: #f3ebe0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+  user-select: none;
+}
+
+.resource-hud.is-collapsed {
+  min-width: 0;
+  max-height: none;
+  overflow: visible;
+  padding-bottom: 6px;
+}
+
+.hud-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.hud-head:active {
+  cursor: grabbing;
+}
+
+.resource-hud.is-collapsed .hud-head {
+  margin-bottom: 0;
+}
+
+.hud-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud-drag,
+.hud-collapse {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+
+.hud-drag {
+  cursor: grab;
+}
+
+.hud-drag:active {
+  cursor: grabbing;
+}
+
+.hud-drag .material-icons,
+.hud-collapse .material-icons {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.gm-toggle {
+  font-weight: 400;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.char-block + .char-block {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.char-name {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.res-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.res-label {
+  min-width: 2.8em;
+  font-weight: 600;
+}
+
+.res-row input[type="range"] {
+  flex: 1;
+  min-width: 60px;
+}
+
+.res-num {
+  width: 3.2em;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  padding: 1px 3px;
+}
+
+.res-max {
+  opacity: 0.75;
+  min-width: 2.5em;
+}
+
+.btn-nudge {
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.btn-nudge:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.empty {
+  opacity: 0.7;
+  margin: 4px 0;
+}

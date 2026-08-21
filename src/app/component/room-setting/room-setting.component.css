@@ -54,3 +54,39 @@
   background: rgba(180, 83, 9, 0.1);
 }
 
+.hint.hint-ok {
+  color: #166534;
+}
+
+.hint.hint-warn {
+  color: #92400e;
+}
+
+.perm-embed {
+  margin: 12px 0 8px;
+}
+
+.perm-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.perm-toggle .material-icons {
+  font-size: 18px;
+}
+
+.perm-toggle .perm-chevron {
+  margin-left: auto;
+}
+
+.perm-embed-body {
+  margin-top: 8px;
+  padding: 10px 10px 4px;
+  border: 1px solid #e2d3bf;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.45);
+}
+

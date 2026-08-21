@@ -1,5 +1,6 @@
 import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { ChatTab } from '@udonarium/chat-tab';
+import { ChatTabList } from '@udonarium/chat-tab-list';
 import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { Network, EventSystem } from '@udonarium/core/system';
 import { UUID } from '@udonarium/core/system/util/uuid';
@@ -45,6 +46,10 @@ export class ChatLogOutputComponent implements OnInit, AfterViewInit {
   //set tabName(tabName: string) { this.selectedTab.name = tabName; }
 
   get chatTabs(): ChatTab[] { return this.chatMessageService.chatTabs; }
+  tabLabel(tab: ChatTab): string {
+    if (!tab || tab.name === '') return this.i18n.t('chat.unnamedTab');
+    return ChatTabList.localizedName(tab);
+  }
   get isEmpty(): boolean { return this.chatMessageService.chatTabs.length < 1 }
 
   get isDisable(): boolean { return this.isEmpty || this.isSaveing || (!this.isAllTabs && this.selectedTabs.length === 0) }
@@ -111,14 +116,14 @@ export class ChatLogOutputComponent implements OnInit, AfterViewInit {
   saveLog() {
     if (this.GuestMode()) return;
     if (this.isDisable) return;
-    const fileName = this.roomName + '_chatLog_' + (this.isAllTabs ? this.i18n.t('chatLog.fileAllTabs') : this.selectedTabs[0].name + (this.selectedTabs.length > 1 ? this.i18n.t('chatLog.fileAndOthers') : ''));
+    const fileName = this.roomName + '_chatLog_' + (this.isAllTabs ? this.i18n.t('chatLog.fileAllTabs') : this.tabLabel(this.selectedTabs[0]) + (this.selectedTabs.length > 1 ? this.i18n.t('chatLog.fileAndOthers') : ''));
     const tabs = this.isAllTabs ? null : this.selectedTabs;
     this.saveDataService.saveChatLog(this.logFormat, fileName, tabs, this.dateFormat, this.isWriteOerationLog);
   }
 
   async saveLogWithImages() {
     if (this.isDisable) return;
-    const fileName = this.roomName + '_chatLogWithImages_' + (this.isAllTabs ? this.i18n.t('chatLog.fileAllTabs') : this.selectedTabs[0].name + (this.selectedTabs.length > 1 ? this.i18n.t('chatLog.fileAndOthers') : ''));
+    const fileName = this.roomName + '_chatLogWithImages_' + (this.isAllTabs ? this.i18n.t('chatLog.fileAllTabs') : this.tabLabel(this.selectedTabs[0]) + (this.selectedTabs.length > 1 ? this.i18n.t('chatLog.fileAndOthers') : ''));
     const tabs = this.isAllTabs ? null : this.selectedTabs;
 
     this.isSaveing = true;

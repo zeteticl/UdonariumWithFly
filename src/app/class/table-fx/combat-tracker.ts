@@ -323,6 +323,25 @@ export class CombatTracker extends GameObject implements InnerXml {
     return e.combatants[e.turnIndex] || null;
   }
 
+  /**
+   * Peek the next playable combatant (same walk as {@link nextTurn}) without mutating.
+   * Returns null when combat is idle or only one playable combatant remains.
+   */
+  nextCombatant(): CombatantData {
+    const e = this.activeEncounter;
+    if (!e?.isStarted || !e.combatants.length) return null;
+    const cur = this.currentCombatant();
+    let i = e.turnIndex;
+    for (let n = 0; n < e.combatants.length; n++) {
+      i = (i + 1) % e.combatants.length;
+      if (!this.isPlayable(e, i)) continue;
+      const c = e.combatants[i];
+      if (cur && c.id === cur.id) return null;
+      return c;
+    }
+    return null;
+  }
+
   rollDie(dice: InitiativeDice): number {
     if (dice === 'd100') return 1 + Math.floor(Math.random() * 100);
     return 1 + Math.floor(Math.random() * 20);

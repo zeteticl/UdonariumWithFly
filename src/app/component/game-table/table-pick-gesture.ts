@@ -107,8 +107,10 @@ export class TablePickGesture {
     this.clearActivateTimer();
     this.pickCursor.update(this.input.pointer);
 
-    // Scene tools / transform already own this gesture — do not start region pick.
-    if (this.oncancelifneeded != null && this.oncancelifneeded()) {
+    // Shift multi-select must run even when the table is in transform mode
+    // (cancelInput leaves that flag true after a normal click).
+    const isShiftAdditive = e instanceof MouseEvent && e.shiftKey;
+    if (!isShiftAdditive && this.oncancelifneeded != null && this.oncancelifneeded()) {
       return this.cancel();
     }
 
@@ -116,7 +118,7 @@ export class TablePickGesture {
     if (!isMainButton) return this.cancel();
 
     const isBackground = (e.target instanceof HTMLElement) && e.target.contains(this.gameObjectsElement);
-    this.isAdditiveMode = (e instanceof MouseEvent && e.shiftKey);
+    this.isAdditiveMode = isShiftAdditive;
     // Shift+object = toggle stroke; Shift+empty = additive box select.
     // Ctrl+left is path / pan (see game-table onTableMouseStart).
     this.isStrokeMode = (e instanceof MouseEvent && e.button === 0 && e.shiftKey && !isBackground);

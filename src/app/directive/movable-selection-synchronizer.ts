@@ -1,7 +1,12 @@
 import { MathUtil } from '@udonarium/core/system/util/math-util';
 import { GameCharacter } from '@udonarium/game-character';
+import { GameTableMask } from '@udonarium/game-table-mask';
+import { PeerCursor } from '@udonarium/peer-cursor';
+import { TableSelecter } from '@udonarium/table-selecter';
 import { TabletopObject } from '@udonarium/tabletop-object';
 import { Stackable } from '@udonarium/tabletop-object-util';
+import { Terrain } from '@udonarium/terrain';
+import { assembleBakeGroupAt, terrainsInBakeGroup } from '@udonarium/terrain-model/bake-group';
 import { IPoint2D, Transform } from '@udonarium/transform/transform';
 import { PointerCoordinate, PointerDeviceService } from 'service/pointer-device.service';
 import { SelectionState, TabletopSelectionService } from 'service/tabletop-selection.service';
@@ -11,6 +16,86 @@ import { MovableDirective } from './movable.directive';
 
 export class MovableSelectionSynchronizer {
   private static readonly objectMap: Map<TabletopObject, Set<MovableDirective>> = new Map();
+  /** Tracks whether the last sync placed this token on a terrain floor. */
+  private static readonly floorRideActive = new WeakMap<object, boolean>();
+  /** Last terrain floor Z we wrote while riding — used so leave-to-0 does not wipe stacks. */
+  private static readonly floorRidePosZ = new WeakMap<object, number>();
+  private static readonly FLOOR_Z_EPS = 0.05;
+
+  /**
+   * Keep character/token feet on Terrain.floorHitAt while nudging / pathing.
+   * No new SyncVars; only adjusts posZ when over an interactable floor.
+   * Leaving a floor drops to 0 only when posZ still matches the last ride Z
+   * (character-stack / manual lifts that diverged are left alone).
+   */
+  static syncTerrainFloor(target: MovableDirective | TabletopObject): void {
+    const asMovable = target as MovableDirective;
+    const isMovable = !!asMovable && typeof asMovable.posX === 'number' && !!asMovable.tabletopObject
+      && asMovable.nativeElement != null;
+    const object = isMovable ? asMovable.tabletopObject : target as TabletopObject;
+    if (!object) return;
+    const alias = object.aliasName;
+    if (alias !== 'character' && alias !== 'character-token') return;
+    if (TableSelecter.instance?.viewTable?.is2DMode) return;
+
+    const key: object = isMovable ? asMovable : object;
+    const readZ = () => (isMovable ? asMovable.posZ : object.posZ);
+    const writeZ = (z: number) => {
+      if (Math.abs(readZ() - z) < MovableSelectionSynchronizer.FLOOR_Z_EPS) return;
+      if (isMovable) asMovable.posZ = z;
+      else object.posZ = z;
+    };
+
+    const terrains = TableSelecter.instance?.viewTable?.terrains;
+    if (!terrains?.length) {
+      // Map switch / empty table: drop ride tracking only — do not force posZ.
+      MovableSelectionSynchronizer.floorRideActive.delete(key);
+      MovableSelectionSynchronizer.floorRidePosZ.delete(key);
+      return;
+    }
+    // Fast path: no interactable floors and not currently riding → skip O(n) sample.
+    if (!MovableSelectionSynchronizer.floorRideActive.get(key)
+      && !terrains.some(t => t?.hasFloor && t.isInteract && t.location?.name === 'table')) {
+      return;
+    }
+
+    let cx: number;
+    let cy: number;
+    if (isMovable) {
+      if (asMovable.width < 0) asMovable.width = asMovable.nativeElement?.clientWidth ?? 50;
+      if (asMovable.height < 0) asMovable.height = asMovable.nativeElement?.clientHeight ?? 50;
+      cx = asMovable.posX + asMovable.width / 2;
+      cy = asMovable.posY + asMovable.height / 2;
+    } else {
+      const size = typeof (object as any).size === 'number' ? (object as any).size : 1;
+      const half = (size * 50) / 2;
+      cx = object.location.x + half;
+      cy = object.location.y + half;
+    }
+
+    const hit = Terrain.floorHitAt(terrains, cx, cy, 50);
+    if (hit) {
+      MovableSelectionSynchronizer.floorRideActive.set(key, true);
+      MovableSelectionSynchronizer.floorRidePosZ.set(key, hit.posZ);
+      writeZ(hit.posZ);
+      return;
+    }
+    if (!MovableSelectionSynchronizer.floorRideActive.get(key)) return;
+    MovableSelectionSynchronizer.floorRideActive.delete(key);
+    const lastZ = MovableSelectionSynchronizer.floorRidePosZ.get(key);
+    MovableSelectionSynchronizer.floorRidePosZ.delete(key);
+    // Only clear when still sitting on the ride height we last wrote.
+    if (lastZ == null) return;
+    if (Math.abs(readZ() - lastZ) < MovableSelectionSynchronizer.FLOOR_Z_EPS) {
+      writeZ(0);
+    }
+  }
+
+  /** @internal test helper — true when leave should drop posZ to ground. */
+  static shouldClearFloorRideOnLeave(currentPosZ: number, lastFloorPosZ: number | undefined, eps = 0.05): boolean {
+    if (lastFloorPosZ == null) return false;
+    return Math.abs(currentPosZ - lastFloorPosZ) < eps;
+  }
 
   get selectedMovables(): Set<MovableDirective> {
     let selected: Set<MovableDirective> = new Set();
@@ -58,18 +143,30 @@ export class MovableSelectionSynchronizer {
 
   private onPickObject(e: CustomEvent) {
     if (this.selection.excludeElement === this.movable.nativeElement) return;
-    if (this.pointerDevice.isDragging || this.movable.isDisable) return;
+    if (this.movable.isDisable) return;
+    const src = e.detail?.srcEvent;
+    const shiftPick = src instanceof MouseEvent && src.shiftKey;
+    // Shift additive pick: table may briefly mark isDragging; still allow toggle.
+    if (this.pointerDevice.isDragging && !shiftPick) return;
 
     if (this.selection.excludeElement == null) {
       this.toggleState();
+      this.syncBakeGroupSelectionAfterToggle();
       this.selection.excludeElement = this.movable.nativeElement;
     } else {
       this.movable.state = SelectionState.SELECTED;
+      this.absorbBakeGroupIntoSelection();
     }
   }
 
   private onPickRegion(e: CustomEvent) {
     if (this.pointerDevice.isDragging || this.movable.isDisable) return;
+    // GM Alt highlight punches through masks — do not box-select the cover itself.
+    if (this.selection.canvasHighlight
+      && this.movable.tabletopObject instanceof GameTableMask
+      && PeerCursor.myCursor?.isGMMode) {
+      return;
+    }
 
     let x: number = e.detail.x;
     let y: number = e.detail.y;
@@ -126,6 +223,7 @@ export class MovableSelectionSynchronizer {
 
   prepareMove() {
     this.beginUndoCapture();
+    this.absorbBakeGroupIntoSelection();
 
     if (!this.shouldSynchronize()) return;
 
@@ -140,6 +238,31 @@ export class MovableSelectionSynchronizer {
         this.trackUndoTarget(movable);
       }
     }
+  }
+
+  /** Multi-box model parts share bakeGroupId — select siblings so they drag as one. */
+  private absorbBakeGroupIntoSelection() {
+    const obj = this.movable.tabletopObject;
+    if (!(obj instanceof Terrain) || !obj.bakeGroupId) return;
+    if (this.movable.state === SelectionState.NONE) return;
+    for (const sibling of terrainsInBakeGroup(obj.bakeGroupId)) {
+      if (sibling === obj) continue;
+      if (this.selection.state(sibling) === SelectionState.NONE) {
+        this.selection.add(sibling, SelectionState.SELECTED);
+      }
+    }
+  }
+
+  private syncBakeGroupSelectionAfterToggle() {
+    const obj = this.movable.tabletopObject;
+    if (!(obj instanceof Terrain) || !obj.bakeGroupId) return;
+    if (this.movable.state === SelectionState.NONE) {
+      for (const sibling of terrainsInBakeGroup(obj.bakeGroupId)) {
+        this.selection.remove(sibling);
+      }
+      return;
+    }
+    this.absorbBakeGroupIntoSelection();
   }
 
   updateMove(delta: PointerCoordinate) {
@@ -205,7 +328,19 @@ export class MovableSelectionSynchronizer {
       return zindexA - zindexB;
     }).filter(movable => movable.state === SelectionState.MAGNETIC && movable !== this.movable);
 
-    let polygonal = 360 / movables.length;
+    // Bake-group parts must keep modeled spacing — do not ring-scatter them.
+    const dragTerrain = this.movable.tabletopObject instanceof Terrain
+      ? this.movable.tabletopObject
+      : null;
+    const bakeGroupId = dragTerrain?.bakeGroupId || '';
+    if (bakeGroupId) {
+      movables = movables.filter(m => {
+        const t = m.tabletopObject;
+        return !(t instanceof Terrain && t.bakeGroupId === bakeGroupId);
+      });
+    }
+
+    let polygonal = 360 / Math.max(1, movables.length);
     let angle = Math.random() * 360;
     let distance = Math.min(Math.max((this.movable.width + this.movable.height) / 2, 50), 75);
     let center = { x: this.movable.posX + this.movable.width / 2, y: this.movable.posY + this.movable.height / 2, z: this.movable.posZ };
@@ -319,6 +454,30 @@ export class MovableSelectionSynchronizer {
   }
 
   static congregate(center: PointerCoordinate, targets: TabletopObject[]) {
+    const bakeGrouped = targets.filter(
+      (t): t is Terrain => t instanceof Terrain && !!t.bakeGroupId,
+    );
+    if (bakeGrouped.length >= 2) {
+      const byId = new Map<string, Terrain[]>();
+      for (const t of bakeGrouped) {
+        const list = byId.get(t.bakeGroupId) || [];
+        list.push(t);
+        byId.set(t.bakeGroupId, list);
+      }
+      let assembled = false;
+      for (const [, parts] of byId) {
+        if (parts.length >= 2) {
+          assembleBakeGroupAt(parts, center);
+          assembled = true;
+        }
+      }
+      // Non-grouped leftovers still ring-gather.
+      const groupedIds = new Set(bakeGrouped.map(t => t.identifier));
+      targets = targets.filter(t => !groupedIds.has(t.identifier));
+      if (!targets.length) return;
+      if (assembled && targets.length < 2) return;
+    }
+
     let objects = targets.sort((a, b) => {
       let zindexA = (a as any).zindex;
       let zindexB = (b as any).zindex;
@@ -360,6 +519,7 @@ export class MovableSelectionSynchronizer {
         if (MovableSelectionSynchronizer.isLocked(object)) continue;
         object.location.x += dx;
         object.location.y += dy;
+        MovableSelectionSynchronizer.syncTerrainFloor(object);
         object.update();
         moved = true;
         continue;
@@ -368,6 +528,7 @@ export class MovableSelectionSynchronizer {
         if (movable.isDisable) continue;
         movable.posX += dx;
         movable.posY += dy;
+        MovableSelectionSynchronizer.syncTerrainFloor(movable);
         moved = true;
       }
     }
@@ -394,6 +555,7 @@ export class MovableSelectionSynchronizer {
         const half = (size * grid) / 2;
         object.location.x = x - half;
         object.location.y = y - half;
+        MovableSelectionSynchronizer.syncTerrainFloor(object);
         object.update();
         moved = true;
         continue;
@@ -405,6 +567,7 @@ export class MovableSelectionSynchronizer {
         movable.setAnimatedTransition(true, durationMs);
         movable.posX = x - movable.width / 2;
         movable.posY = y - movable.height / 2;
+        MovableSelectionSynchronizer.syncTerrainFloor(movable);
         moved = true;
       }
     }

@@ -1,0 +1,5 @@
+.card-settings .text-body {
+  max-height: 72px;
+  min-height: 36px !important;
+  resize: vertical;
+}

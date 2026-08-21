@@ -6,7 +6,7 @@ import { DataElement } from './data-element';
 import { PeerCursor } from './peer-cursor';
 import { TabletopObject } from './tabletop-object';
 import { EventSystem, Network } from './core/system';
-import { moveToBackmost, moveToTopmost } from './tabletop-object-util';
+import { moveToBackmost, moveToTopmost, moveToTopmostInTier } from './tabletop-object-util';
 
 @SyncObject('card-stack')
 export class CardStack extends TabletopObject {
@@ -18,14 +18,12 @@ export class CardStack extends TabletopObject {
   
   get name(): string { return this.getCommonValue('name', ''); }
   get ownerName(): string {
-    let object = PeerCursor.findByUserId(this.owner);
-    return object ? object.name : '';
+    return PeerCursor.findByUserId(this.owner)?.name || '';
   }
   get ownerColor(): string {
-    let object = PeerCursor.findByUserId(this.owner);
-    return object ? object.color : '#444444';
+    return PeerCursor.findByUserId(this.owner)?.color || '#444444';
   }
-  get hasOwner(): boolean { return 0 < this.owner.length; }
+  get hasOwner(): boolean { return !!(this.owner && this.owner.length); }
   get ownerIsOnline(): boolean { return this.hasOwner && Network.peers.some(peer => peer.userId === this.owner && peer.isOpen); }
 
   private get cardRoot(): ObjectNode {
@@ -68,7 +66,7 @@ export class CardStack extends TabletopObject {
       card.rotate += this.rotate;
       if (360 < card.rotate) card.rotate -= 360;
       this.setSamePositionFor(card);
-      card.toTopmost();
+      card.raiseInTier();
     }
     return card;
   }
@@ -162,18 +160,33 @@ export class CardStack extends TabletopObject {
   }
 
   toTopmost() {
-    moveToTopmost(this, ['card']);
+    moveToTopmost(this);
+  }
+
+  raiseInTier() {
+    moveToTopmostInTier(this);
   }
 
   toBackmost() {
-    moveToBackmost(this, ['card']);
+    moveToBackmost(this);
   }
 
   // override
-  setLocation(location: string) {
-    super.setLocation(location);
+  setLocation(location: string, tableIdentifier?: string) {
+    super.setLocation(location, tableIdentifier);
     let cards = this.cards;
-    for (let card of cards) card.setLocation(location);
+    if (location === 'table') {
+      const tableId = tableIdentifier || this.tableIdentifier || TabletopObject.resolveViewTableIdentifier();
+      for (let card of cards) {
+        card.addToTable(tableId, {
+          x: this.location.x,
+          y: this.location.y,
+          posZ: this.posZ,
+        });
+      }
+    } else {
+      for (let card of cards) card.setLocation(location);
+    }
   }
 
   private setSamePositionFor(card: Card) {
@@ -181,6 +194,13 @@ export class CardStack extends TabletopObject {
     card.location.x = this.location.x;
     card.location.y = this.location.y;
     card.posZ = this.posZ;
+    if (this.location.name === 'table') {
+      card.tablePlacements = this.tablePlacements;
+      card.tableIdentifier = this.tableIdentifier;
+    } else {
+      card.tableIdentifier = '';
+      card.tablePlacements = '';
+    }
   }
 
   static create(name: string, identifier?: string): CardStack {

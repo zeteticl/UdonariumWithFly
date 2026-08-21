@@ -4,23 +4,30 @@
   grid-template-columns: 7.5em 1fr 3.2em auto;
 }
 
+.settings-list {
+  min-height: 140px;
+}
+
 .settings-list option.is-invalid-audio {
   color: #c0392b;
 }
 
+/* Keep preview + name fields side-by-side in typical panel widths. */
 .cutin-basic {
   display: flex;
-  gap: 12px;
+  gap: 6px;
   align-items: flex-start;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .cutin-preview {
-  flex: 0 0 160px;
+  flex: 0 0 96px;
+  width: 96px;
+  max-width: 96px;
 }
 
 .cutin-image-frame {
-  height: 160px;
+  height: 96px;
 }
 
 .cutin-image-frame img {
@@ -51,22 +58,35 @@
 }
 
 .cutin-video-badge .material-icons {
-  font-size: 32px;
+  font-size: 28px;
 }
 
 .cutin-basic-fields {
-  flex: 1 1 220px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cutin-basic-fields .field-row.wrap {
+  flex-wrap: nowrap;
+}
+
+.cutin-basic-fields .field-row.wrap .field {
   min-width: 0;
 }
 
 .tag-input {
   width: 4.5em;
+  max-width: 100%;
 }
 
 .duration-wrap {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+.duration-wrap input[type='number'] {
+  width: 4.5em;
 }
 
 .duration-wrap .unit {
@@ -84,16 +104,23 @@
   margin-top: 10px;
   padding-top: 8px;
   border-top: 1px solid #e2d3bf;
+  flex-wrap: wrap;
 }
 
 .send-to-field {
   flex-direction: row;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
 .send-to-field span {
   font-size: 12px;
+}
+
+.send-to-field select {
+  min-width: 0;
+  max-width: 12em;
 }
 
 .media-row {
@@ -138,4 +165,21 @@
 
 .self-only {
   vertical-align: text-top;
+}
+
+/* Only stack preview above fields when the panel is truly narrow. */
+@container (max-width: 480px) {
+  .cutin-basic {
+    flex-wrap: wrap;
+  }
+
+  .cutin-preview {
+    flex: 0 0 auto;
+    width: 120px;
+    max-width: 100%;
+  }
+
+  .cutin-basic-fields .field-row.wrap {
+    flex-wrap: wrap;
+  }
 }

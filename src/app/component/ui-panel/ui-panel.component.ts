@@ -1,6 +1,9 @@
 import { animate, keyframes, style, transition, trigger } from '@angular/animations';
-import { Component, ElementRef, EventEmitter, HostListener, Input, OnInit, Output, ViewChild, ViewContainerRef } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, OnDestroy, OnInit, Output, ViewChild, ViewContainerRef } from '@angular/core';
 import { PeerCursor } from '@udonarium/peer-cursor';
+import { ChatWindowComponent } from 'component/chat-window/chat-window.component';
+import { MobileLayoutService, MobileSheetSnap } from 'service/mobile-layout.service';
+import { MobileSheetChrome } from 'service/mobile-sheet-chrome';
 import { PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 
@@ -26,7 +29,7 @@ import { PointerDeviceService } from 'service/pointer-device.service';
     ],
     standalone: false
 })
-export class UIPanelComponent implements OnInit {
+export class UIPanelComponent implements OnInit, OnDestroy {
   @ViewChild('draggablePanel', { static: true }) draggablePanel: ElementRef<HTMLElement>;
   @ViewChild('scrollablePanel', { static: true }) scrollablePanel: ElementRef<HTMLDivElement>;
   @ViewChild('content', { read: ViewContainerRef, static: true }) content: ViewContainerRef;
@@ -41,6 +44,15 @@ export class UIPanelComponent implements OnInit {
   @Input() set isAbleFullScreenButton(isAbleFullScreenButton: boolean) { this.panelService.isAbleFullScreenButton = isAbleFullScreenButton; }
   @Input() set isAbleCloseButton(isAbleCloseButton: boolean) { this.panelService.isAbleCloseButton = isAbleCloseButton; }
   @Input() set isAbleRotateButton(isAbleRotateButton: boolean) { this.panelService.isAbleRotateButton = isAbleRotateButton; }
+  /** Persist size under this key (fixed left menu, etc.). */
+  @Input() set geometryKey(key: string) {
+    this.panelService.geometryKey = key || null;
+    const g = key ? PanelService.getGeometry(key) : null;
+    if (g && g.width >= 100 && g.height >= 100) {
+      this.panelService.width = g.width;
+      this.panelService.height = g.height;
+    }
+  }
 
   @Output() rotateEvent = new EventEmitter<boolean>();
 
@@ -72,16 +84,44 @@ export class UIPanelComponent implements OnInit {
   isMinimized: boolean = false;
   isFullScreen: boolean = false;
   isHorizontal: boolean = false;
+  /** Set by PanelService.open on phone/tablet sheets. Desktop panels stay false. */
+  isMobileSheet: boolean = false;
+  /** Bottom half-sheet (e.g. chat) — leaves map visible above. Always true on mobile. */
+  isMobileSheetHalf: boolean = false;
+  private readonly sheetChrome: MobileSheetChrome;
+
+  /** peek | half — only meaningful when isMobileSheet (no fullscreen). */
+  get mobileSheetSnap(): MobileSheetSnap { return this.sheetChrome.snap; }
+  set mobileSheetSnap(v: MobileSheetSnap) { this.sheetChrome.snap = v; }
+  /** True after user drags sheet height away from peek/half snaps. */
+  get isSheetCustomHeight(): boolean { return this.sheetChrome.isCustomHeight; }
+  set isSheetCustomHeight(v: boolean) { this.sheetChrome.isCustomHeight = v; }
 
   get isPointerDragging(): boolean { return this.pointerDeviceService.isDragging || this.pointerDeviceService.isTablePickGesture; }
 
   constructor(
     public panelService: PanelService,
-    private pointerDeviceService: PointerDeviceService
-  ) { }
+    private pointerDeviceService: PointerDeviceService,
+    private mobileLayout: MobileLayoutService,
+  ) {
+    this.sheetChrome = new MobileSheetChrome(this.mobileLayout, {
+      heightForSnap: (snap) => this.mobileLayout.sheetHeightPx(snap),
+      applyHeight: (h) => {
+        this.height = h;
+        this.top = Math.max(0, this.mobileLayout.viewportHeight - h - this.mobileLayout.bottomChromePx);
+        this.isMobileSheetHalf = true;
+      },
+      currentHeight: () => this.draggablePanel?.nativeElement?.offsetHeight || this.height,
+      onResizeEnd: () => this.syncMobileSheetGeometryAfterResize(),
+    });
+  }
 
   ngOnInit() {
     this.panelService.scrollablePanel = this.scrollablePanel.nativeElement;
+  }
+
+  ngOnDestroy() {
+    this.sheetChrome.destroy();
   }
 
   /** Suppress browser context menu on panels (custom menus handle right-click). */
@@ -99,6 +139,15 @@ export class UIPanelComponent implements OnInit {
   }
 
   toggleMinimize(e: Event = null) {
+    if (this.isMobileSheet) {
+      if (e) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+      // − collapses to peek; restore expands to half (same as title snap).
+      this.sheetChrome.toggleSnap();
+      return;
+    }
     if (e) {
       e.stopPropagation();
       e.preventDefault();
@@ -126,17 +175,6 @@ export class UIPanelComponent implements OnInit {
     }
     this.isMinimized = !this.isMinimized;
     this.isFullScreen = false;
-
-    /*
-    if (this.isMinimized) {
-      this.isMinimized = false;
-      //this.height = this.preHeight;
-    } else {
-      //this.preHeight = panel.offsetHeight;
-      this.isMinimized = true;
-      //this.height = this.titleBar.nativeElement.offsetHeight;
-    }
-    */
   }
 
   toggleFullScreen(e: Event = null) {
@@ -249,6 +287,89 @@ export class UIPanelComponent implements OnInit {
       e.preventDefault();
     }
     if (this.panelService) this.panelService.close();
+  }
+
+  /** Desktop: dblclick title minimizes/restores. Mobile sheets: no-op (minimize chrome is hidden). */
+  onTitleDblClick(e: Event) {
+    if (this.isMobileSheet) {
+      this.notOperaion(e);
+      return;
+    }
+    if (this.isFullScreen) this.toggleFullScreen(e);
+    else this.toggleMinimize(e);
+  }
+
+  /** Mobile: tap title toggles peek ↔ half (skip if user just dragged the resize handle). */
+  onMobileTitleTap(e: Event) {
+    if (!this.isMobileSheet) return;
+    const t = e.target as HTMLElement | null;
+    if (t?.closest('button, .sheet-resize-bar')) return;
+    if (this.sheetChrome.didDrag) {
+      this.sheetChrome.didDrag = false;
+      return;
+    }
+    e.stopPropagation();
+    this.sheetChrome.toggleSnap();
+  }
+
+  /** Drag the top handle to set a custom sheet height (bottom-anchored). */
+  startSheetResize(e: PointerEvent) {
+    if (!this.isMobileSheet) return;
+    this.sheetChrome.startResize(e);
+  }
+
+  /** Enter custom-height mode before drag so snap CSS !important does not block resize. */
+  onPanelResizeStart() {
+    if (!this.isMobileSheet) return;
+    const panel = this.draggablePanel?.nativeElement;
+    if (panel) this.height = panel.offsetHeight;
+    this.isSheetCustomHeight = true;
+  }
+
+  /** After sheet handle resize — clamp + lock fit (geometry persistence is desktop-only). */
+  private syncMobileSheetGeometryAfterResize() {
+    if (!this.isMobileSheet || this.isMinimized || this.isFullScreen) return;
+    const panel = this.draggablePanel?.nativeElement;
+    if (!panel) return;
+    const prevH = this.height;
+    const clamped = this.sheetChrome.clamp(panel.offsetHeight);
+    this.isSheetCustomHeight = true;
+    this.height = clamped;
+    this.top = Math.max(0, this.mobileLayout.viewportHeight - clamped - this.mobileLayout.bottomChromePx);
+    if (clamped !== prevH) this.panelService.lockFitToContent();
+  }
+
+  /** Sync Angular bindings after drag/resize so CD does not snap size back; persist panel geometry. */
+  onPanelGeometryEnd() {
+    if (this.isMinimized || this.isFullScreen) return;
+    const panel = this.draggablePanel?.nativeElement;
+    if (!panel) return;
+    const prevW = this.width;
+    const prevH = this.height;
+    if (this.isMobileSheet) {
+      const clamped = this.sheetChrome.clamp(panel.offsetHeight);
+      this.isSheetCustomHeight = true;
+      this.height = clamped;
+      this.top = Math.max(0, this.mobileLayout.viewportHeight - clamped - this.mobileLayout.bottomChromePx);
+      // Only lock content-fit when the user actually changed size (not mere drag-move).
+      if (clamped !== prevH) this.panelService.lockFitToContent();
+      return;
+    }
+    this.left = panel.offsetLeft;
+    this.top = panel.offsetTop;
+    this.width = panel.offsetWidth;
+    this.height = panel.offsetHeight;
+    if (this.width !== prevW || this.height !== prevH) {
+      this.panelService.lockFitToContent();
+    }
+    if (this.panelService.tourPanelId === 'menu.chat') {
+      ChatWindowComponent.saveGeometry(this.width, this.height, this.left, this.top);
+      return;
+    }
+    const key = this.panelService.geometryKey || this.panelService.tourPanelId;
+    if (key) {
+      PanelService.saveGeometry(key, this.width, this.height, this.left, this.top);
+    }
   }
 
   notOperaion(e: Event = null) {

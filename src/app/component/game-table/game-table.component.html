@@ -79,21 +79,28 @@
           <ng-container *ngIf="!terrain.detailDataElement || terrain.detailDataElement.children.length <= 0"><terrain class="is-3d" [style.z-index]="z + (terrain.height > 0 ? 0 : 10000)" [terrain]="terrain"></terrain></ng-container>
         </ng-container>
       </div>
-      <div class="is-fill is-3d is-pointer-events-none">
-        <ng-container *ngFor="let mask of tableMasks; trackBy: trackByGameObject; index as z">
-          <ng-container *ngIf="mask.detailDataElement && 0 < mask.detailDataElement.children.length"><game-table-mask class="is-3d" [gameTableMask]="mask" [appTooltip]="mask" [ngStyle]="{'z-index': z, 'transform': 'translateZ(' + (z * 0.0001) +'px)'}"></game-table-mask></ng-container>
-          <ng-container *ngIf="!mask.detailDataElement || mask.detailDataElement.children.length <= 0"><game-table-mask class="is-3d" [gameTableMask]="mask" [ngStyle]="{'z-index': z, 'transform': 'translateZ(' + (z * 0.0001) +'px)'}"></game-table-mask></ng-container>
+      <!--
+        Shared [ ] among card / note / mask / character: dense zindex.
+        Stable DOM (id order) — never reorder on [ ] (that flashed every token).
+        2D paint: CSS z-index (layer-flat-2d). 3D paint: micro translateZ on movable.
+        Hosts stay transform-free (0×0 hosts with translateZ break tall-note hit tests).
+        Hosts are pointer-events:none so only real content steals hits.
+      -->
+      <ng-container *ngFor="let piece of desktopLayerPieces; trackBy: trackByLayerPiece">
+        <ng-container *ngIf="isLayerMask(piece)">
+          <game-table-mask *ngIf="piece.detailDataElement && 0 < piece.detailDataElement.children.length" class="is-3d layer-peer-host" [class.layer-flat-2d]="isTable2DMode" [attr.data-stack-id]="piece.identifier" [gameTableMask]="piece" [appTooltip]="piece" [ngStyle]="layerHostStyle(piece.zindex)"></game-table-mask>
+          <game-table-mask *ngIf="!piece.detailDataElement || piece.detailDataElement.children.length <= 0" class="is-3d layer-peer-host" [class.layer-flat-2d]="isTable2DMode" [attr.data-stack-id]="piece.identifier" [gameTableMask]="piece" [ngStyle]="layerHostStyle(piece.zindex)"></game-table-mask>
         </ng-container>
-      </div>
-      <ng-container *ngFor="let textNote of textNotes; trackBy: trackByGameObject">
-        <text-note *ngIf="textNote.text != null && textNote.text.trim() != ''"class="is-3d" [textNote]="textNote" [appTooltip]="textNote" [style.z-index]="textNote.zindex"></text-note>
-        <text-note *ngIf="textNote.text == null || textNote.text.trim() === ''" class="is-3d" [textNote]="textNote" [style.z-index]="textNote.zindex"></text-note>
+        <ng-container *ngIf="isLayerNote(piece)">
+          <text-note *ngIf="piece.text != null && piece.text.trim() != ''" class="is-3d layer-peer-host" [class.layer-flat-2d]="isTable2DMode" [attr.data-stack-id]="piece.identifier" [textNote]="piece" [appTooltip]="piece" [ngStyle]="layerHostStyle(piece.zindex)"></text-note>
+          <text-note *ngIf="piece.text == null || piece.text.trim() === ''" class="is-3d layer-peer-host" [class.layer-flat-2d]="isTable2DMode" [attr.data-stack-id]="piece.identifier" [textNote]="piece" [ngStyle]="layerHostStyle(piece.zindex)"></text-note>
+        </ng-container>
+        <card-stack *ngIf="isLayerCardStack(piece)" class="is-3d layer-peer-host" [class.layer-flat-2d]="isTable2DMode" [attr.data-stack-id]="piece.identifier" [cardStack]="piece" [appTooltip]="piece" [ngStyle]="layerHostStyle(piece.zindex)"></card-stack>
+        <card *ngIf="isLayerCard(piece)" class="is-3d layer-peer-host" [class.layer-flat-2d]="isTable2DMode" [attr.data-stack-id]="piece.identifier" [card]="piece" [appTooltip]="piece" [ngStyle]="layerHostStyle(piece.zindex)"></card>
+        <game-character *ngIf="isLayerCharacter(piece) && piece.character" class="is-3d layer-peer-host" [class.layer-flat-2d]="isTable2DMode" [attr.data-fb-id]="piece.identifier" [attr.data-fb-name]="piece.name" [attr.data-stack-id]="piece.identifier" [style.visibility]="piece.isLoaded && isTokenRevealedByVision(piece) ? 'visible' : 'hidden'" [ngStyle]="layerHostStyle(piece.zindex)" [characterToken]="piece" [gameCharacter]="piece.character" [appTooltip]="piece"></game-character>
       </ng-container>
-      <card-stack class="is-3d" *ngFor="let cardStack of cardStacks; trackBy: trackByGameObject" [cardStack]="cardStack" [appTooltip]="cardStack" [ngStyle]="{'z-index' : cardStack.zindex, 'transform': 'translateZ(' + (cardStack.zindex * 0.001) +'px)'}"></card-stack>
-      <card class="is-3d" *ngFor="let card of cards; trackBy: trackByGameObject" [card]="card" [appTooltip]="card" [ngStyle]="{'z-index' : card.zindex, 'transform': 'translateZ(' + (card.zindex * 0.001) +'px)'}"></card>
-      <range class="is-3d" *ngFor="let range of ranges; trackBy: trackByGameObject" [range]="range" [style.z-index]="range.zindex" [appTooltip]="range"></range>
-      <dice-symbol class="is-3d" *ngFor="let diceSymbol of diceSymbols; trackBy: trackByGameObject" [diceSymbol]="diceSymbol" [appTooltip]="diceSymbol"></dice-symbol>
-      <ng-container *ngFor="let character of characters; trackBy: trackByGameObject"><ng-container *ngIf="character && (character.isVisible || isGMMode)"><game-character class="is-3d" [style.display]="character.isLoaded ? '' : 'none'" [gameCharacter]="character" [appTooltip]="character"></game-character></ng-container></ng-container>
+      <range class="is-3d" *ngFor="let range of ranges; trackBy: trackByGameObject" [range]="range" [attr.data-stack-id]="range.identifier" [appTooltip]="range"></range>
+      <dice-symbol class="is-3d" *ngFor="let diceSymbol of diceSymbols; trackBy: trackByGameObject" [attr.data-stack-id]="diceSymbol.identifier" [diceSymbol]="diceSymbol" [appTooltip]="diceSymbol"></dice-symbol>
       <peer-cursor *ngFor="let cursor of peerCursors; trackBy: trackByGameObject" class="is-3d" [cursor]="cursor" [style.display]="isCursorHidIn(cursor) && !isGMMode ? 'none' : ''"></peer-cursor>
       <canvas class="fx-canvas is-fill is-pointer-events-none" #fxCanvas
         [ngStyle]="{'transform': 'translateZ(' + (gridHeight + 2) + 'px)', 'clip': clipCss}"></canvas>
@@ -133,6 +140,19 @@
         <div *ngFor="let light of lights" class="light-marker" [class.selected]="isLightSelected(light)"
           [style.left.px]="light.x - 8" [style.top.px]="light.y - 8" title="{{ light.name }}"></div>
       </div>
+      <div *ngIf="!isTable2DMode" class="clue-strings-3d is-pointer-events-none is-3d">
+        <div *ngFor="let link of clueLinks; trackBy: trackByGameObject"
+          class="clue-string-beam is-3d"
+          [ngStyle]="clueStringBeamStyle(link)"></div>
+      </div>
+      <svg *ngIf="isTable2DMode" class="clue-strings-layer is-fill is-pointer-events-none is-3d"
+        [attr.width]="tablePixelWidth" [attr.height]="tablePixelHeight"
+        [ngStyle]="{'transform': 'translateZ(' + clueStringsZ + 'px)'}">
+        <path *ngFor="let link of clueLinks; trackBy: trackByGameObject"
+          class="clue-string"
+          [attr.d]="cluePathD(link)"
+          [attr.stroke]="link.color || '#c62828'" />
+      </svg>
       <div *ngIf="pathWaypoints.length" class="path-waypoints is-pointer-events-none is-3d"
         [ngStyle]="{'transform': 'translateZ(' + (gridHeight + 2.3) + 'px)'}">
         <svg class="path-line is-fill" [attr.width]="tablePixelWidth" [attr.height]="tablePixelHeight">
@@ -144,6 +164,13 @@
           [style.left.px]="p.x" [style.top.px]="p.y">{{ i + 1 }}</div>
       </div>
     </div>
+  </div>
+  <!-- Foundry-style Alt: screen AABB outlines (above peers). pointer-events none. -->
+  <div class="canvas-highlight-layer is-pointer-events-none" *ngIf="canvasHighlightActive"
+    aria-hidden="true">
+    <div class="canvas-highlight-box" *ngFor="let box of canvasHighlightBoxes; trackBy: trackByHighlightBox"
+      [style.left.px]="box.left" [style.top.px]="box.top"
+      [style.width.px]="box.width" [style.height.px]="box.height"></div>
   </div>
 </div>
 <div class="pick-area" #pickArea></div>
@@ -158,3 +185,41 @@
 </div>
 <div class="path-move-hud" *ngIf="showPathMoveHud">{{ 'tip.pathMove.hud' | i18n }}</div>
 <div class="vision-banner" *ngIf="showVisionBanner">{{ 'tip.vision.noCharacter' | i18n }}</div>
+<aside class="debug-pose" *ngIf="showDebugPose">
+  <header class="debug-pose-hd">
+    <span>DEBUG pose</span>
+    <span class="debug-pose-hint">Ctrl+Shift+D</span>
+    <button type="button" class="debug-pose-close" (click)="setShowDebugPose(false)" aria-label="Close">×</button>
+  </header>
+  <pre id="udon-debug-pose-body" class="debug-pose-body"></pre>
+</aside>
+
+<!-- Mobile map HUD: fixed TR zoom slider. -->
+<div class="map-zoom-hud" *ngIf="showMapActionHud"
+  (pointerdown)="$event.stopPropagation()"
+  (touchstart)="$event.stopPropagation()"
+  (mousedown)="$event.stopPropagation()"
+  (contextmenu)="$event.preventDefault(); $event.stopPropagation()">
+  <div class="map-hud-zoom"
+    (pointerdown)="$event.stopPropagation()"
+    (touchstart)="$event.stopPropagation()"
+    (mousedown)="$event.stopPropagation()"
+    (contextmenu)="$event.preventDefault(); $event.stopPropagation()"
+    (wheel)="$event.stopPropagation()">
+    <button type="button" class="map-hud-zoom-reset"
+      (click)="resetZoomSlider()"
+      (contextmenu)="$event.preventDefault(); $event.stopPropagation()"
+      [attr.title]="'view.zoomReset' | i18n">{{ zoomSliderValue > 0 ? '+' : '' }}{{ zoomSliderValue }}</button>
+    <input
+      class="map-hud-zoom-range"
+      type="range"
+      min="-100"
+      max="100"
+      step="1"
+      [value]="zoomSliderValue"
+      (input)="onZoomSliderInput($event)"
+      (contextmenu)="$event.preventDefault(); $event.stopPropagation()"
+      [attr.aria-label]="'view.zoom' | i18n"
+    />
+  </div>
+</div>

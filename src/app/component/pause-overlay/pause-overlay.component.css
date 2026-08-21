@@ -1,0 +1,20 @@
+.pause-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 18000;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pause-watermark {
+  font-family: "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  font-size: clamp(48px, 12vw, 120px);
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: rgba(255, 255, 255, 0.22);
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.35);
+  user-select: none;
+  transform: translateY(-4%);
+}

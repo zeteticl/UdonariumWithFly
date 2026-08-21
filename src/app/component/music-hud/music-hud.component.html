@@ -1,0 +1,90 @@
+<div class="music-hud" *ngIf="visible" [class.is-collapsed]="collapsed" [style.left.px]="left" [style.top.px]="top"
+  (contextmenu)="onHudContextMenu($event)">
+  <!-- Chrome row: drag (left) and collapse (right) stay fixed; middle swaps. -->
+  <div class="hud-chrome" (pointerdown)="startDrag($event)">
+    <button type="button" class="hud-drag" [attr.title]="'musicHud.move' | i18n" [attr.aria-label]="'musicHud.move' | i18n">
+      <i class="material-icons">drag_indicator</i>
+    </button>
+
+    <div class="hud-middle" *ngIf="collapsed">
+      <button
+        type="button"
+        class="slot-play"
+        *ngFor="let i of slotIndexes"
+        [class.is-on]="isPlaying(i)"
+        [class.is-paused]="isPaused(i)"
+        [class.is-empty]="!hasAudio(i)"
+        (pointerdown)="$event.stopPropagation()"
+        (click)="togglePlay(i, $event)"
+        (contextmenu)="onSlotContextMenu(i, $event)"
+        [disabled]="!canControl"
+        [attr.title]="trackName(i) + ' · ' + displayName(i) + ' · ' + playButtonTitle(i)"
+      >
+        <i class="material-icons">{{ playButtonIcon(i) }}</i>
+      </button>
+    </div>
+
+    <div class="hud-middle hud-middle-expanded" *ngIf="!collapsed">
+      <span class="hud-title">{{ 'musicHud.title' | i18n }}</span>
+      <button type="button" class="hud-open" (pointerdown)="$event.stopPropagation()" (click)="openLibrary()"
+        [attr.title]="'musicHud.openLibrary' | i18n">
+        <i class="material-icons">library_music</i>
+      </button>
+    </div>
+
+    <button type="button" class="hud-collapse" (pointerdown)="$event.stopPropagation()" (click)="toggleCollapsed()"
+      [attr.title]="(collapsed ? 'musicHud.expand' : 'musicHud.collapse') | i18n">
+      <i class="material-icons">{{ collapsed ? 'expand_more' : 'expand_less' }}</i>
+    </button>
+  </div>
+
+  <div class="slot-list" *ngIf="!collapsed">
+    <div
+      class="slot-row"
+      *ngFor="let i of slotIndexes"
+      [class.is-playing]="isPlaying(i)"
+      [class.is-paused]="isPaused(i)"
+      [class.is-drop-target]="dropSlotIndex === i"
+      (dragover)="onSlotDragOver($event, i)"
+      (dragleave)="onSlotDragLeave($event, i)"
+      (drop)="onSlotDrop($event, i)"
+      (contextmenu)="onSlotContextMenu(i, $event)"
+      [attr.title]="canControl ? (('musicHud.dropHint' | i18n)) : null"
+    >
+      <span class="slot-badge">{{ trackName(i) }}</span>
+      <button
+        type="button"
+        class="slot-name"
+        (click)="onNameClick(i, $event)"
+        (contextmenu)="onSlotContextMenu(i, $event)"
+        [disabled]="!canControl"
+        [attr.title]="canControl ? (('musicHud.pickAudio' | i18n) + ': ' + displayName(i)) : displayName(i)"
+      >{{ displayName(i) }}</button>
+      <button
+        type="button"
+        class="slot-play"
+        [class.is-on]="isPlaying(i)"
+        [class.is-paused]="isPaused(i)"
+        [class.is-empty]="!hasAudio(i)"
+        (click)="togglePlay(i, $event)"
+        (contextmenu)="onSlotContextMenu(i, $event)"
+        [disabled]="!canControl"
+        [attr.title]="playButtonTitle(i)"
+      >
+        <i class="material-icons">{{ playButtonIcon(i) }}</i>
+      </button>
+      <input
+        *ngIf="isTrackActive(i)"
+        class="slot-scrub"
+        type="range"
+        min="0"
+        [max]="trackDuration(i) || 1"
+        step="0.1"
+        [ngModel]="trackProgress(i)"
+        (ngModelChange)="seekTrack(i, $event)"
+        [disabled]="!canControl"
+        [attr.title]="formatTime(trackProgress(i)) + ' / ' + formatTime(trackDuration(i))"
+      />
+    </div>
+  </div>
+</div>

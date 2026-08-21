@@ -3,9 +3,12 @@ import lzbase62 from 'lzbase62';
 
 import { CryptoUtil } from '../util/crypto-util';
 import { MutablePeerSessionState, PeerSessionGrade, PeerSessionState } from './peer-session-state';
+import { ROOM_AUTH_MARKER_V3, roomNameHasMeshLock } from '@udonarium/room-mesh-lock';
 
 const Base62 = base('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
 const roomIdPattern = /^(\w{6})(\w{3})(\w*)-(\w*)/i;
+/** packRoomName flags: '2'=V3 display||blob, '0'=base62(utf8), '1'=lzbase62, bare=legacy lz. */
+const V3_MARKER = ROOM_AUTH_MARKER_V3;
 
 export interface IPeerContext {
   readonly peerId: string;
@@ -13,12 +16,16 @@ export interface IPeerContext {
   readonly roomId: string;
   readonly roomName: string;
   readonly password: string;
+  /** SkyWay channel key when omitted from peerId (V3 mesh lock). */
+  readonly meshPassword: string;
   readonly digestUserId: string;
   readonly digestPassword: string;
   readonly isOpen: boolean;
   readonly isRoom: boolean;
   readonly hasPassword: boolean;
   readonly session: PeerSessionState;
+  /** Password used for SkyWay channel hashing. */
+  readonly channelPassword: string;
 }
 
 export class PeerContext implements IPeerContext {
@@ -27,6 +34,8 @@ export class PeerContext implements IPeerContext {
   roomId: string = '';
   roomName: string = '';
   password: string = '';
+  /** Not embedded in peerId; used only for SkyWay channel name when mesh-locked. */
+  meshPassword: string = '';
   digestUserId: string = '';
   digestPassword: string = '';
   isOpen: boolean = false;
@@ -34,6 +43,7 @@ export class PeerContext implements IPeerContext {
 
   get isRoom(): boolean { return 0 < this.roomId.length; }
   get hasPassword(): boolean { return 0 < this.password.length + this.digestPassword.length; }
+  get channelPassword(): string { return this.meshPassword || this.password; }
 
   private constructor(peerId: string) {
     this.parse(peerId);
@@ -47,7 +57,7 @@ export class PeerContext implements IPeerContext {
       if (isRoom) {
         this.digestUserId = regArray[1];
         this.roomId = regArray[2];
-        this.roomName = lzbase62.decompress(regArray[3]);
+        this.roomName = unpackRoomName(regArray[3]);
         this.digestPassword = regArray[4];
         return;
       }
@@ -112,14 +122,24 @@ export class PeerContext implements IPeerContext {
   }
 
   private static _createRoom(userId: string = '', roomId: string = '', roomName: string = '', password: string = ''): PeerContext {
+    // V3 mesh lock: channel key stays in meshPassword; peerId omits digestPassword so
+    // CJK display names + seals fit under SkyWay's ~64-char peerId limit.
+    let peerIdPassword = password;
+    let meshPassword = '';
+    if (password && roomNameHasMeshLock(roomName)) {
+      meshPassword = password;
+      peerIdPassword = '';
+    }
+
     let digestUserId = calcDigest(userId, 6);
-    let checksumedRoomId = calcChecksumedRoomId(roomId, roomName, password);
-    let digestPassword = calcDigestPassword(digestUserId, checksumedRoomId, roomName, password);
-    let peerId = `${digestUserId}${checksumedRoomId}${lzbase62.compress(roomName)}-${digestPassword}`;
+    let checksumedRoomId = calcChecksumedRoomId(roomId, roomName, peerIdPassword);
+    let digestPassword = calcDigestPassword(digestUserId, checksumedRoomId, roomName, peerIdPassword);
+    let peerId = `${digestUserId}${checksumedRoomId}${packRoomName(roomName)}-${digestPassword}`;
 
     let peer = new PeerContext(peerId);
     peer.userId = userId;
-    peer.password = password;
+    peer.password = peerIdPassword;
+    peer.meshPassword = meshPassword;
     return peer;
   }
 
@@ -131,6 +151,59 @@ export class PeerContext implements IPeerContext {
 
     return k;
   }
+}
+
+function isV3RoomName(roomName: string): boolean {
+  return !!roomName && roomName.indexOf(V3_MARKER) >= 0;
+}
+
+/**
+ * V3 open-gate flag `*` is not \w and is rejected by the token backend / SkyWay peerId rules.
+ * Map to `o` only inside the packed peerId blob (hex digests/seals never contain `o`).
+ */
+const V3_OPEN_GATE_PACKED = 'o';
+
+/**
+ * Pack roomName into peerId-safe \w chars.
+ * V3: only Base62-encode the display name; keep ASCII auth blob raw (avoids 4/3 expansion).
+ */
+function packRoomName(roomName: string): string {
+  if (isV3RoomName(roomName)) {
+    const i = roomName.indexOf(V3_MARKER);
+    const display = roomName.slice(0, i);
+    const blob = roomName.slice(i + V3_MARKER.length).replace(/\*/g, V3_OPEN_GATE_PACKED);
+    const dispB62 = Base62.encode(new TextEncoder().encode(display));
+    if (dispB62.length > 99) {
+      // Fallback: whole-string pack (will likely fail length check upstream).
+      return '0' + Base62.encode(new TextEncoder().encode(roomName));
+    }
+    return '2' + String(dispB62.length).padStart(2, '0') + dispB62 + blob;
+  }
+
+  const utf8 = new TextEncoder().encode(roomName);
+  const raw = '0' + Base62.encode(utf8);
+  const compressed = '1' + lzbase62.compress(roomName);
+  return raw.length < compressed.length ? raw : compressed;
+}
+
+function unpackRoomName(packed: string): string {
+  if (!packed) return '';
+  const flag = packed.charAt(0);
+  if (flag === '2') {
+    const len = parseInt(packed.slice(1, 3), 10);
+    if (!Number.isFinite(len) || len < 0) return '';
+    const dispB62 = packed.slice(3, 3 + len);
+    const blob = packed.slice(3 + len).replace(/o/g, '*');
+    const display = new TextDecoder().decode(Base62.decode(dispB62));
+    return display + V3_MARKER + blob;
+  }
+  if (flag === '0') {
+    const bytes = Base62.decode(packed.slice(1));
+    return new TextDecoder().decode(bytes);
+  }
+  if (flag === '1') return lzbase62.decompress(packed.slice(1));
+  // Legacy peerIds (no flag): lzbase62 only.
+  return lzbase62.decompress(packed);
 }
 
 function calcDigestUserId(userId: string): string {

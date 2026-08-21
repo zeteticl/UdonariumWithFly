@@ -1,12 +1,92 @@
-<div class="log" [style.minHeight.px]="minScrollHeight" #logContainer>
+<div class="log" [class.tutorial-mode]="showSampleMessages" [style.minHeight.px]="minScrollHeight" #logContainer>
   <div class="virtual-scroll-container" [style.marginBottom.px]="bottomSpace" #messageContainer>
     <ng-container *ngIf="!isEmpty">
       <ng-container *ngFor="let chatMessage of chatMessages; trackBy: trackByChatMessage">
-        <chat-message *ngIf="chatMessage.isDisplayable" [chatMessage]="chatMessage" [compact]="compact" [leftOnly]="leftOnly" [@.disabled]="compact || checkAnimated(chatMessage)"></chat-message>
+        <chat-message *ngIf="chatMessage.isDisplayable" [chatMessage]="chatMessage" [compact]="compact" [leftOnly]="leftOnly" [@.disabled]="compact || chatMessage.isOperationLog || checkAnimated(chatMessage)"></chat-message>
       </ng-container>
     </ng-container>
     <ng-container *ngIf="showSampleMessages">
-      <chat-message *ngFor="let chatMessage of sampleMessages" [chatMessage]="chatMessage" [compact]="compact" [@.disabled]="compact || checkAnimated(chatMessage)"></chat-message>
+      <div class="tutorial-cards" [class.compact]="compact">
+        <div class="tutorial-welcome">
+          <div class="tutorial-welcome-label">
+            <i class="material-icons" aria-hidden="true">school</i>
+            <span>{{ tutorialWelcomeTitle }}</span>
+          </div>
+          <div class="tutorial-welcome-text">
+            <ng-container *ngTemplateOutlet="segList; context: { $implicit: tutorialWelcomeSegs }"></ng-container>
+          </div>
+        </div>
+        <div
+          class="tutorial-card"
+          *ngFor="let card of tutorialCards"
+          [class.open]="isCardOpen(card.id)"
+          [attr.data-card]="card.id"
+        >
+          <button
+            type="button"
+            class="tutorial-card-head"
+            (click)="toggleTutorialCard(card.id)"
+            [attr.aria-expanded]="isCardOpen(card.id)"
+          >
+            <span class="tutorial-card-icon" aria-hidden="true">
+              <i class="material-icons">{{ card.icon }}</i>
+            </span>
+            <span class="tutorial-card-copy">
+              <span class="tutorial-card-title">{{ card.title }}</span>
+              <span class="tutorial-card-hint">{{ card.hint }}</span>
+            </span>
+            <span class="tutorial-card-toggle">
+              {{ isCardOpen(card.id) ? cardCollapseLabel : cardExpandLabel }}
+              <i class="material-icons">{{ isCardOpen(card.id) ? 'expand_less' : 'expand_more' }}</i>
+            </span>
+          </button>
+          <div class="tutorial-card-body" *ngIf="isCardOpen(card.id)">
+            <section class="tutorial-block" *ngFor="let block of card.blocks">
+              <h4 class="tutorial-block-title" *ngIf="block.titleSegs.length">
+                <ng-container *ngTemplateOutlet="segList; context: { $implicit: block.titleSegs }"></ng-container>
+              </h4>
+              <ul class="tutorial-lines">
+                <li
+                  *ngFor="let line of block.lines"
+                  [class.is-bullet]="line.isBullet && !line.columns"
+                  [class.is-control]="!!line.columns"
+                >
+                  <div class="tut-row" *ngIf="line.columns; else plainLine">
+                    <div class="tut-label">
+                      <ng-container *ngTemplateOutlet="segList; context: { $implicit: line.columns.label }"></ng-container>
+                    </div>
+                    <div class="tut-keys">
+                      <ng-container *ngTemplateOutlet="segList; context: { $implicit: line.columns.control }"></ng-container>
+                    </div>
+                  </div>
+                  <ng-template #plainLine>
+                    <div class="tut-row tut-plain">
+                      <ng-container *ngTemplateOutlet="segList; context: { $implicit: line.segs }"></ng-container>
+                    </div>
+                  </ng-template>
+                </li>
+              </ul>
+            </section>
+          </div>
+        </div>
+      </div>
     </ng-container>
   </div>
 </div>
+
+<ng-template #segList let-segs>
+  <ng-container *ngFor="let seg of segs">
+    <kbd *ngIf="seg.kind === 'kbd'" class="tut-kbd">{{ seg.text }}</kbd>
+    <span *ngIf="seg.kind === 'sep'" class="tut-kbd-sep">{{ seg.text }}</span>
+    <span *ngIf="seg.kind === 'ver'" class="tut-ver">{{ seg.text }}</span>
+    <a
+      *ngIf="seg.kind === 'link'"
+      class="tut-link"
+      [href]="seg.href"
+      target="_blank"
+      rel="noopener noreferrer"
+      (click)="onTutorialLinkClick($event, seg.href)"
+    >{{ seg.text }}</a>
+    <span *ngIf="seg.kind === 'text'">{{ seg.text }}</span>
+  </ng-container>
+</ng-template>

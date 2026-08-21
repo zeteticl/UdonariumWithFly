@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { CharacterToken } from '@udonarium/character-token';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { DataElement } from '@udonarium/data-element';
 import { GameCharacter } from '@udonarium/game-character';
@@ -218,12 +219,12 @@ export class CombatTrackerComponent implements OnInit, OnDestroy {
   }
 
   get selectedCharacterCount(): number {
-    return this.selectionService.objects.filter(o => o instanceof GameCharacter).length;
+    return this.bodiesFromSelection().length;
   }
 
   addSelected() {
     if (this.isGuest) return;
-    const chars = this.selectionService.objects.filter((o): o is GameCharacter => o instanceof GameCharacter);
+    const chars = this.bodiesFromSelection();
     if (!chars.length) return;
     this.tracker.addCombatants(chars.map(obj => ({
       characterIdentifier: obj.identifier,
@@ -237,7 +238,7 @@ export class CombatTrackerComponent implements OnInit, OnDestroy {
 
   addAllOnTable() {
     if (this.isGuest) return;
-    const chars = this.tabletopService.characters.filter(ch => ch.location?.name === 'table');
+    const chars = CharacterToken.bodiesWithTokenOnView();
     if (!chars.length) return;
     this.tracker.addCombatants(chars.map(obj => ({
       characterIdentifier: obj.identifier,
@@ -395,11 +396,25 @@ export class CombatTrackerComponent implements OnInit, OnDestroy {
   }
 
   focusCombatant(c: CombatantData) {
-    const ch = this.characterOf(c);
-    if (!ch || ch.location?.name !== 'table') return;
-    EventSystem.trigger('FOCUS_TABLETOP_OBJECT', { x: ch.location.x, y: ch.location.y, z: ch.posZ || 0 });
+    const tok = CharacterToken.focusTokenForCharacter(c.characterIdentifier);
+    if (!tok) return;
+    EventSystem.trigger('FOCUS_TABLETOP_OBJECT', { x: tok.location.x, y: tok.location.y, z: tok.posZ || 0 });
     this.selectionService.clear();
-    this.selectionService.add(ch);
+    this.selectionService.add(tok);
+  }
+
+  /** Unique bodies from selected Tokens and/or GameCharacters. */
+  private bodiesFromSelection(): GameCharacter[] {
+    const byId = new Map<string, GameCharacter>();
+    for (const o of this.selectionService.objects) {
+      if (o instanceof CharacterToken) {
+        const body = o.character;
+        if (body) byId.set(body.identifier, body);
+      } else if (o instanceof GameCharacter) {
+        byId.set(o.identifier, o);
+      }
+    }
+    return Array.from(byId.values());
   }
 
   private logRoll(name: string, roll: number) {

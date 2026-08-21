@@ -1,65 +1,81 @@
 <div class="component is-3d is-grab is-pointer-events-none" [style.width.px]="size * gridSize"
   [style.height.px]="size * gridSize" appMovable [movable.option]="movableOption" [movable.disable]="isMoveLocked"
-  (movable.ondragstart)="onMove()" (movable.ondragend)="onMoved()">
-  <div class="component-content is-3d" [@bounceInOut]="'in'">
+  (movable.onstart)="onInteractStart()" (movable.ondragstart)="onMove()" (movable.ondragend)="onMoved()">
+  <div class="is-3d slope-align" [style.transform]="slopeAlignTransform || null">
+  <div class="component-content is-3d" [@bounceInOut]="'in'" [@.disabled]="skipEnterBounce">
     <div class="component-content is-3d is-pointer-events-auto" appRotable [rotable.option]="rotableOption"
       [rotable.disable]="isMoveLocked" (rotable.ondragstart)="onMove()" (rotable.ondragend)="onMoved()"
       (dblclick)="onDoubleClick($event)">
-      <div class="pedestal-grab rotate-grab">
-        <div class="pedestal-grab-border">
-          <div class="material-icons of-front">autorenew</div>
-          <div class="material-icons of-back">autorenew</div>
+      <ng-container *ngIf="!hasTokenFrame">
+        <div class="pedestal-grab rotate-grab">
+          <div class="pedestal-grab-border">
+            <div class="material-icons of-front">autorenew</div>
+            <div class="material-icons of-back">autorenew</div>
+          </div>
         </div>
-      </div>
-      <div class="floor-ring is-pointer-events-none" *ngIf="floorRingUrl"
-        [style.background-image]="'url(' + floorRingUrl + ')'"
-        [style.animation-duration.s]="(8 / floorRingSpeed)"
-        [style.filter]="floorRingColor ? 'drop-shadow(0 0 4px ' + floorRingColor + ')' : ''"></div>
-      <div [@switchImagePedestal]="gameCharacter.currntImageIndex" class="pedestal-inner" [ngClass]="{'selected': selected, 'not-inventory': !gameCharacter.isInventoryIndicate, 'is-hide-in-pedestal': isHideIn}"></div>
-      <div *ngIf="isSelected" class="selected-highlight" [ngClass]="{'is-magnetic': isMagnetic}"></div>
-      <div [@switchImagePedestal]="gameCharacter.currntImageIndex" class="pedestal-outer"></div>
-      <div class="is-pointer-events-none is-3d" style="transform-origin: center bottom" [style.transform]="'translateX(' + shadowTranslateX + 'px) translateY(' + characterShadowOffset + 'px) scale(1.0, 0.66)'">
+        <div class="floor-ring is-pointer-events-none" *ngIf="floorRingUrl"
+          [style.background-image]="'url(' + floorRingUrl + ')'"
+          [style.animation-duration.s]="(8 / floorRingSpeed)"
+          [style.filter]="floorRingColor ? 'drop-shadow(0 0 4px ' + floorRingColor + ')' : ''"></div>
+        <div [@switchImagePedestal]="gameCharacter.currntImageIndex" class="pedestal-inner"
+          [ngClass]="{
+            'selected': selected,
+            'not-inventory': !gameCharacter.isInventoryIndicate && !gameCharacter.isTemporaryCopy,
+            'is-temporary': gameCharacter.isTemporaryCopy,
+            'is-hide-in-pedestal': isHideIn
+          }"></div>
+        <div *ngIf="isSelected" class="selected-highlight"
+          [ngClass]="{'is-magnetic': isMagnetic, 'is-temporary': gameCharacter.isTemporaryCopy}"></div>
+        <div [@switchImagePedestal]="gameCharacter.currntImageIndex" class="pedestal-outer"></div>
+      </ng-container>
+      <div *ngIf="hasTokenFrame && isSelected" class="selected-highlight"
+        [ngClass]="{'is-magnetic': isMagnetic, 'is-temporary': gameCharacter.isTemporaryCopy}"></div>
+      <div *ngIf="!is2DMode" class="is-pointer-events-none is-3d" style="transform-origin: center bottom" [style.transform]="'translateX(' + shadowTranslateX + 'px) translateY(' + characterShadowOffset + 'px) scale(1.0, 0.66)'">
         <div class="image-box is-3d" [style.width.px]="characterShadowImageWidth" [style.height.px]="characterShadowImageHeight" style="pointer-events: none"
           style="transform-origin: center 66%" [style.transform]="'rotateZ(' + roll + 'deg)'">
           <div class="aura is-3d" style="pointer-events: none;" [ngClass]="{black: aura == 0, blue: aura == 1, green: aura == 2, cyan: aura == 3, red: aura == 4, magenta: aura == 5, yellow: aura == 6, white: aura == 7}">
             <div class="is-3d" style="pointer-events: none; transition: transform 132ms 0s ease;"
               [ngStyle]="{'transform': 'scaleX(' + (isInverse ? '-1' : '1') + ')'}">
-                <img *ngIf="isDropShadow && (0 < imageFile.url.length || 0 < shadowImageFile.url.length)" [style.height.px]="characterShadowImageHeight" class="image drop-shadow is-3d chrome-smooth-image-trick" style="pointer-events: none" [src]="((0 < shadowImageFile.url.length) ? shadowImageFile.url : imageFile.url) | safe: 'resourceUrl'"
+                <img *ngIf="isDropShadow && (0 < imageFile?.url?.length || 0 < shadowImageFile?.url?.length)" [style.height.px]="characterShadowImageHeight" class="image drop-shadow is-3d chrome-smooth-image-trick" style="pointer-events: none" [src]="((0 < shadowImageFile?.url?.length) ? shadowImageFile.url : imageFile.url) | safe: 'resourceUrl'"
                   [style.filter]="'brightness(0) blur(' + shadowBlurPx + 'px)' + (isHideIn ? ' invert(85%)' : '')"
                   [ngStyle]="{'opacity': shadowOpacity}" [@switchImageShadow]="gameCharacter.currntImageIndex">
             </div>
           </div>
         </div>
       </div>
-      <div class="upright-transform is-fit-width is-3d" [ngClass]="{fall: altitude == 0}"
-        [ngStyle]="{'transform': 'rotateY(90deg) rotateZ(-90deg) rotateY(-90deg) translateY(-50%) translateY(' + (-altitude) * gridSize +'px)'}">
+      <div class="upright-transform is-fit-width is-3d"
+        [ngClass]="{fall: altitude == 0 && !is2DMode, 'is-flat-2d': is2DMode}"
+        [ngStyle]="{'transform': uprightTransform}">
         <div class="rotate-frame is-3d" style="position: absolute" [style.transform-origin]="'center ' + (-characterImageHeight * 0.333) + 'px'"
-          appRotable [rotable.option]="rollOption" [rotable.disable]="isMoveLocked"
+          appRotable [rotable.option]="rollOption" [rotable.disable]="isRollLocked"
           (rotable.ondragstart)="onMove()" (rotable.ondragend)="onMoved()">
-          <div class="rotate-inner is-3d" [style.transform]="'translateZ(' + (-size * gridSize / 2) + 'px)'">
-            <div *ngIf="isGMMode && isHideIn && 0 < ownerName.length" class="owner-tag is-nowrap is-black-background is-3d"
+          <div class="rotate-inner is-3d" [style.transform]="is2DMode ? null : ('translateZ(' + (-size * gridSize / 2) + 'px)')">
+            <div *ngIf="isGMMode && isHideIn && 0 < ownerName?.length" class="owner-tag is-nowrap is-black-background is-3d"
               [ngStyle]="{'background-color': ownerColor + 'dd', 'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) translateY(6px) rotateX(' + nameTagRotate + 'deg)'}">
               <div class="fornt-tag is-3d" style="color: whitesmoke"><b>{{ownerName}}</b></div>
               <div class="back-tag is-3d" style="color: whitesmoke"><b>{{ownerName}}</b></div>
             </div>
-            <div *ngIf="0 < name.length || statusEntries.length" class="name-tag is-black-background is-3d" [ngClass]="{'is-hide-in-tag': isHideIn, 'has-status-icons': statusEntries.length}"
+            <div *ngIf="showFloatingName || statusEntries.length" class="name-tag is-black-background is-3d"
+              [ngClass]="{'is-hide-in-tag': isHideIn, 'has-status-icons': statusEntries.length, 'is-above-frame': hasTokenFrame, 'is-name-wrap': nameTagWrap}"
               [style.max-width.px]="nameTagMaxWidth"
               [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) rotateX(' + nameTagRotate + 'deg)'}">
-              <div class="fornt-tag is-3d name-tag-row">
+              <div class="fornt-tag is-3d name-tag-stack">
                 <span class="status-icons-inline" *ngIf="statusEntries.length">
-                  <span *ngFor="let s of statusEntries" class="status-badge" [title]="statusName(s.id)">
+                  <span *ngFor="let s of statusEntries" class="status-badge" [title]="statusName(s.id)"
+                    (contextmenu)="onStatusBadgeContextMenu($event, s.id)">
                     <i class="material-icons status-icon">{{ statusIcon(s.id) }}</i><sup *ngIf="s.level">{{ s.level }}</sup>
                   </span>
                 </span>
-                <span class="has-length-limit name-text" *ngIf="0 < name.length">{{name}}</span>
+                <span class="name-text" *ngIf="showFloatingName">{{name}}</span>
               </div>
-              <div class="back-tag is-3d name-tag-row">
+              <div class="back-tag is-3d name-tag-stack">
                 <span class="status-icons-inline" *ngIf="statusEntries.length">
-                  <span *ngFor="let s of statusEntries" class="status-badge" [title]="statusName(s.id)">
+                  <span *ngFor="let s of statusEntries" class="status-badge" [title]="statusName(s.id)"
+                    (contextmenu)="onStatusBadgeContextMenu($event, s.id)">
                     <i class="material-icons status-icon">{{ statusIcon(s.id) }}</i><sup *ngIf="s.level">{{ s.level }}</sup>
                   </span>
                 </span>
-                <span class="has-length-limit name-text" *ngIf="0 < name.length">{{name}}</span>
+                <span class="name-text" *ngIf="showFloatingName">{{name}}</span>
               </div>
             </div>
             <div class="is-3d aura" [@switchImage]="gameCharacter.currntImageIndex"
@@ -67,11 +83,29 @@
               <div class="inverser is-3d"
                 [style.opacity]="imageEffectOpacity"
                 [style.transform]="imageEffectTransform">
-                <span class="image-box is-3d" [style.width.px]="characterImageWidth" [style.height.px]="characterImageHeight" [style.transform]="'translateX(' + ((size * gridSize - characterImageWidth) / 2) + 'px)'">
-                  <img #characterImage *ngIf="0 < imageFile.url.length" class="image is-3d chrome-smooth-image-trick" [src]="imageFile.url | safe: 'resourceUrl'" [ngClass]="{'is-hide-in': isHideIn}"
-                    [style.height.px]="characterImageHeight"
+                <span class="image-box is-3d"
+                  [class.token-frame]="hasTokenFrame"
+                  [class.polaroid]="tokenFrame === 'polaroid'"
+                  [class.photo]="tokenFrame === 'photo'"
+                  [class.card]="tokenFrame === 'card'"
+                  [class.has-caption]="hasTokenFrame && tokenFrame === 'polaroid' && isShowName"
+                  [class.is-framed-2d]="hasTokenFrame"
+                  [class.has-push-pin]="pushPin"
+                  [style.width.px]="tokenBoxWidthPx"
+                  [style.height.px]="tokenBoxHeightPx"
+                  [style.transform]="is2DMode ? null : ('translateX(' + ((size * gridSize - characterImageWidth) / 2) + 'px)')">
+                  <img #characterImage *ngIf="0 < imageFile?.url?.length" class="image is-3d chrome-smooth-image-trick" [src]="imageFile.url | safe: 'resourceUrl'" [ngClass]="{'is-hide-in': isHideIn}"
+                    [style.height.px]="(is2DMode || hasTokenFrame) ? null : characterImageHeight"
                     [style.filter]="imageEffectFilter"
                     [style.opacity]="hasInvisibleStatus ? 0.35 : null" (load)="onImageLoad()">
+                  <span class="token-frame-caption" *ngIf="showPolaroidCaption">{{ tokenFrameCaption }}</span>
+                  <span *ngIf="pushPin" class="push-pin is-3d"
+                    [style.left.px]="pushPinLeft"
+                    [style.top.px]="pushPinTop"
+                    [style.transform]="'translateZ(4px) rotate(' + pushPinAngle + 'deg)'">
+                    <img class="push-pin-img" alt="" draggable="false" [src]="pushPinSrc" />
+                    <i class="push-pin-tip" [attr.data-clue-pin]="gameCharacter.identifier" aria-hidden="true"></i>
+                  </span>
                   <div *ngIf="gameCharacter.isMatrix" class="matrix-rain is-3d" aria-hidden="true">
                     <span *ngFor="let col of matrixRainColumns; trackBy: trackByMatrixCol"
                       class="matrix-rain-col"
@@ -84,7 +118,7 @@
                 </span>
               </div>
             </div>
-            <div class="grab-group is-3d">
+            <div class="grab-group is-3d" *ngIf="!is2DMode">
               <div class="rotate-grab rotate-grab-icon of-top is-3d"
                 [ngStyle]="{'transform': 'translateX(-50%) translateX(' + size * gridSize / 2 +'px) translateY(' + (-characterImageHeight - (isGMMode && isHideIn ? 20 : 0)) + 'px)'}">
                 <i class="material-icons">autorenew</i>
@@ -104,20 +138,27 @@
             <div class="is-3d">
               <p class="is-3d chat-bubble-buyo" [style.min-width.px]="dialogChatBubbleMinWidth" [style.border-color]="dialogColor" style="position: absolute; backface-visibility: hidden"
                 [ngClass]="{'emote': isEmote, rubied: isRubied, 'is-whisper': isWhisper}"><span class="face-icon-box is-3d"
-                  *ngIf="!isEmote && isUseFaceIcon && 0 < dialogFaceIcon?.url.length">
+                  *ngIf="!isEmote && isUseFaceIcon && 0 < dialogFaceIcon?.url?.length">
                   <img class="face-icon is-3d" [style.border-color]="dialogColor" [src]="dialogFaceIcon.url | safe: 'resourceUrl'">
                 </span><span [innerHTML]="dialogText | safe: 'html'"></span></p>
               <p class="is-3d chat-bubble-buyo back" [style.min-width.px]="dialogChatBubbleMinWidth" [style.border-color]="dialogColor" style="backface-visibility: hidden; transform: rotateY(-180deg)"
                 [ngClass]="{'emote': isEmote, rubied: isRubied, 'is-whisper': isWhisper}"><span class="face-icon-box is-3d"
-                  *ngIf="!isEmote && isUseFaceIcon && 0 < dialogFaceIcon?.url.length">
+                  *ngIf="!isEmote && isUseFaceIcon && 0 < dialogFaceIcon?.url?.length">
                   <img class="face-icon is-3d" [style.border-color]="dialogColor" [src]="dialogFaceIcon.url | safe: 'resourceUrl'">
                 </span><span [innerHTML]="dialogText | safe: 'html'"></span></p>
             </div>
           </div>
         </div>
       </div>
+      <!-- After upright/frame so the ring paints above photo/polaroid chrome (not under it). -->
+      <div class="combat-turn-ring is-pointer-events-none"
+        *ngIf="combatTurnMark"
+        [class.is-current]="combatTurnMark === 'current'"
+        [class.is-next]="combatTurnMark === 'next'"
+        [class.is-flat-2d]="is2DMode"
+        [class.is-over-frame]="hasTokenFrame"></div>
     </div>
-    <div class="is-3d" *ngIf="isAltitudeIndicate && (altitude <= -0.5 || 0.5 <= altitude)"
+    <div class="is-3d" *ngIf="!is2DMode && isAltitudeIndicate && (altitude <= -0.5 || 0.5 <= altitude)"
       style="display: flex; flex-flow: column nowrap; justify-content: space-between; border-left: 2px dashed black; transform-origin: top left"
       [style.height.px]="math.abs(altitude * gridSize) - (altitude > 0 ? 0 : chatBubbleAltitude + 4)"
       [ngStyle]="{transform: 'translateX(' + (size * gridSize / 2) + 'px) translateY(' + (-size * gridSize / 2) + 'px) rotateX(-90deg) translateY(' + (altitude > 0 ? -altitude * gridSize : 0) + 'px) rotateY(' + (viewRotateZ) + 'deg)'}">
@@ -134,5 +175,6 @@
         <span class="elevation-indicator is-3d" style="position: absolute; transform: rotateY(-180deg)"><i>{{ elevation }}</i></span>
       </div>
     </div>
+  </div>
   </div>
 </div>

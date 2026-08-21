@@ -1,8 +1,8 @@
-<div class="settings-ui">
+<div class="settings-ui dense" *ngIf="character" appFitPanel [fitMinHeight]="320" [fitMaxHeight]="620">
   <section class="card">
     <header class="card-head">
-      <h3></h3>
-      <button type="button" class="btn btn-sm" (click)="helpStandSeteing()">?</button>
+      <h3>{{ 'stand.common' | i18n }}</h3>
+      <button type="button" class="btn btn-sm" (click)="helpStandSeteing()" [title]="'stand.helpTitle' | i18n">?</button>
     </header>
     <div class="slider-row">
       <span class="slider-label">{{ 'stand.posLabel' | i18n }}</span>
@@ -24,64 +24,64 @@
     </div>
     <div class="check-row">
       <label>
-        <input
-          type="checkbox"
-          [(ngModel)]="isSortNameList"
-        />
+        <input type="checkbox" [(ngModel)]="isSortNameList" />
         {{ 'stand.sortNameList' | i18n }}
       </label>
-    </div>
-  </section>
-
-  <section
-    class="card overview-card"
-    [class.is-selected]="overviewIndex == -1"
-  >
-    <label class="overview-option">
-      <input
-        type="radio"
-        name="{{panelId}}_overviewIndex"
-        value="-1"
-        [checked]="overviewIndex == -1"
-        (click)="overviewIndex = -1"
-      >
-      {{ 'stand.noOverview' | i18n }}
-    </label>
-  </section>
-
-  <section
-    *ngFor="let standElement of standElements; let i = index"
-    class="card stand-entry"
-    [class.is-selected]="overviewIndex == i"
-  >
-    <div class="stand-entry-row">
-      <label class="stand-radio">
+      <label class="overview-option" [class.is-selected]="overviewIndex == -1">
         <input
           type="radio"
           name="{{panelId}}_overviewIndex"
-          [value]="i"
-          [checked]="overviewIndex == i"
-          (click)="overviewIndex = i"
+          value="-1"
+          [checked]="overviewIndex == -1"
+          (click)="overviewIndex = -1"
         >
+        {{ 'stand.noOverview' | i18n }}
       </label>
-      <div class="stand-element-wrap">
-        <stand-element
-          #standElementComponent
-          [standElement]="standElement"
-          [imageList]="imageList"
-          [gameCharacter]="character"
-        ></stand-element>
-      </div>
-      <div class="stand-entry-actions">
-        <button type="button" class="btn btn-danger btn-sm" (click)="delele(standElement, i)">×</button>
-        <button type="button" class="btn btn-sm" (click)="upStandIndex(standElement)">↑</button>
-        <button type="button" class="btn btn-sm" (click)="downStandIndex(standElement)">↓</button>
-      </div>
     </div>
   </section>
 
-  <footer class="actions">
-    <button type="button" class="btn btn-primary" (click)="add()">{{ 'stand.add' | i18n }}</button>
-    <button *ngIf="standSettingXML" type="button" class="btn" (click)="restore()">{{ 'stand.restore' | i18n }}</button>
-  </footer>
+  <section class="card list-card">
+    <header class="card-head">
+      <h3>{{ 'stand.list' | i18n }}</h3>
+    </header>
+
+    <div class="stand-list">
+      <div
+        *ngFor="let standElement of standElements; let i = index"
+        class="stand-entry"
+        [class.is-selected]="overviewIndex == i"
+      >
+        <div class="stand-entry-row">
+          <label class="stand-radio">
+            <input
+              type="radio"
+              name="{{panelId}}_overviewIndex"
+              [value]="i"
+              [checked]="overviewIndex == i"
+              (click)="overviewIndex = i"
+            >
+          </label>
+          <div class="stand-element-wrap">
+            <stand-element
+              #standElementComponent
+              [standElement]="standElement"
+              [imageList]="imageList"
+              [gameCharacter]="character"
+            ></stand-element>
+          </div>
+          <div class="stand-entry-actions">
+            <button type="button" class="btn btn-danger btn-sm" (click)="delele(standElement, i)">×</button>
+            <button type="button" class="btn btn-sm" (click)="upStandIndex(standElement)">↑</button>
+            <button type="button" class="btn btn-sm" (click)="downStandIndex(standElement)">↓</button>
+          </div>
+        </div>
+      </div>
+      <p *ngIf="!standElements.length" class="stand-empty">{{ 'stand.listEmpty' | i18n }}</p>
+    </div>
+
+    <footer class="actions">
+      <button type="button" class="btn btn-primary" (click)="add()">{{ 'stand.add' | i18n }}</button>
+      <button *ngIf="standSettingXML" type="button" class="btn" (click)="restore()">{{ 'stand.restore' | i18n }}</button>
+    </footer>
+  </section>
 </div>

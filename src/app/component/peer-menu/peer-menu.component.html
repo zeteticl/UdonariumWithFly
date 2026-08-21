@@ -1,192 +1,242 @@
-<div class="lang-row">
-  <label class="lang-label">{{ 'peer.language' | i18n }}</label>
-  <select class="lang-select" [ngModel]="i18n.locale" (ngModelChange)="onLocaleChange($event)">
-    <option *ngFor="let loc of i18n.locales" [value]="loc.id">{{ loc.nativeLabel }}</option>
-  </select>
-</div>
-<div *ngIf="myPeer">
-  <div style="display: flex; align-items: flex-end; margin-bottom: 4px">
-    <span *ngIf="myPeer.image" class="image cover" [style.background-image]="'url(' + myPeer.image.url + ')' | safe: 'style' "
-      (click)="changeIcon()" style="cursor: pointer">
-    </span>
-    <div>
-      <div class="identity-row" [ngClass]="{'i-am-gm': isGMMode}">
-        <span class="identity-label">{{ 'peer.currentRole' | i18n }}<b>{{ currentRoleLabel }}</b></span>
-        <button type="button" (click)="switchIdentity()">{{ 'peer.switchIdentity' | i18n }}</button>
-      </div>
-      <button (click)="changeIcon()">{{ 'peer.changeIcon' | i18n }}</button>
+<div class="settings-ui dense peer-menu" appFitPanel [fitMinHeight]="320" [fitMaxHeight]="560">
+  <section class="card card-dense">
+    <div class="lang-row">
+      <label class="lang-label">{{ 'peer.language' | i18n }}</label>
+      <select class="lang-select" [ngModel]="i18n.locale" (ngModelChange)="onLocaleChange($event)">
+        <option *ngFor="let loc of i18n.locales" [value]="loc.id">{{ loc.nativeLabel }}</option>
+      </select>
     </div>
-  </div>
-  <div>
-    {{ 'peer.colorAndName' | i18n }}<input type="color" style="width:1em; margin-right: 0.5em" [(ngModel)]="myPeerColor">　<input [(ngModel)]="myPeerName" [style.color]="myPeerColor" style="font-weight: bolder;" [placeholder]="'peer.nicknamePlaceholder' | i18n" /><br>
-    <small>{{ 'peer.saveHint' | i18n }}</small><br>
-    <span style="font-size: smaller; margin-left: 1em">{{ 'peer.whiteColorHint' | i18n }}</span>
-  </div>
-</div>
-<div>
-  <div [ngClass]="{'cant-use-private-session': !canUsePrivateSession}">{{ 'peer.yourId' | i18n }}
-    <span>
-      <ng-container *ngIf="networkService.isOpen">
+  </section>
+
+  <section class="card card-dense" *ngIf="myPeer">
+    <div class="profile-row">
+      <span *ngIf="myPeer.image" class="image cover" [style.background-image]="'url(' + myPeer.image.url + ')' | safe: 'style'"
+        (click)="changeIcon()" role="button" tabindex="0"></span>
+      <div class="profile-meta">
+        <div class="identity-row" [ngClass]="{'i-am-gm': isGMMode}">
+          <span class="identity-label">{{ 'peer.currentRole' | i18n }}<b>{{ currentRoleLabel }}</b></span>
+          <button type="button" class="btn btn-sm" (click)="switchIdentity()">{{ 'peer.switchIdentity' | i18n }}</button>
+        </div>
+      </div>
+    </div>
+    <div class="field-row wrap name-row">
+      <label class="field">
+        <span>{{ 'peer.colorAndName' | i18n }}</span>
+        <span class="name-inputs">
+          <input type="color" class="color-input" [(ngModel)]="myPeerColor" />
+          <input type="text" [(ngModel)]="myPeerName" [style.color]="myPeerColor" [placeholder]="'peer.nicknamePlaceholder' | i18n" />
+        </span>
+      </label>
+    </div>
+  </section>
+
+  <section class="card card-dense">
+    <div class="id-line" [ngClass]="{'cant-use-private-session': !canUsePrivateSession}">
+      <span>{{ 'peer.yourId' | i18n }}</span>
+      <ng-container *ngIf="networkService.isOpen; else offlineBlock">
         <span class="id-input-container">
           <span class="id-spacer">{{ networkService.peer.userId }}</span>
           <input class="id-input" type="text" value="{{ networkService.peer.userId }}" readonly>
         </span>
-        <button *ngIf="isAbleClipboardCopy && canUsePrivateSession" (click)="copyPeerId()" [disabled]="isCopied" [title]="'peer.copyToClipboard' | i18n"><b class="material-icons" style="font-size: 1em; vertical-align: bottom">content_copy</b></button>
-        <span [@fadeInOut]="isCopied" class="copied" [style.color]="myPeerColor"> {{ isCopied ? ('peer.copied' | i18n) : '' }}</span>
+        <button type="button" class="btn btn-sm" *ngIf="isAbleClipboardCopy() && canUsePrivateSession" (click)="copyPeerId()" [disabled]="isCopied" [title]="'peer.copyToClipboard' | i18n">
+          <i class="material-icons">content_copy</i>
+        </button>
+        <span [@fadeInOut]="isCopied" class="copied" [style.color]="myPeerColor">{{ isCopied ? ('peer.copied' | i18n) : '' }}</span>
       </ng-container>
-    </span>
-    <span *ngIf="!networkService.isOpen" style="font-weight: bold">{{ 'peer.offline' | i18n }}</span>
-  </div>
-</div>
-<ng-container *ngIf="networkService.peer.isRoom">
-  <hr/>
-  <div>{{ 'peer.roomName' | i18n }}
-    <span>
-      <ng-container *ngIf="networkService.isOpen">
-        <span class="id-input-container">
-          <span class="id-spacer room-data">{{ displayRoomLabel }}</span>
-          <input class="id-input room-data" type="text" value="{{ displayRoomLabel }}" readonly>
-        </span>
-        <button *ngIf="isAbleClipboardCopy" (click)="copyRoomName()" [disabled]="isRoomNameCopied" [title]="'peer.copyToClipboard' | i18n"><b class="material-icons" style="font-size: 1em; vertical-align: bottom">content_copy</b></button>
-        <span [@fadeInOut]="isRoomNameCopied" class="copied" [style.color]="myPeerColor"> {{ isRoomNameCopied ? ('peer.copied' | i18n) : '' }}</span>
-      </ng-container>
-    </span>
-  </div>
-  <div *ngIf="isRoleAuthRoom" style="font-size: 12px; color: #64748b; margin-top: 2px;">
-    {{ 'peer.roleAuthHint' | i18n }}
-  </div>
-  <div *ngIf="isRoleAuthRoom" class="invite-block">
-    <div class="invite-label">{{ 'peer.copyInvite.title' | i18n }}</div>
-    <div class="invite-row">
-      <button type="button" *ngIf="isAbleClipboardCopy()"
-        (click)="copyInvite('gm')"
-        [disabled]="!isInviteRoleAvailable('gm') || inviteCopiedRole === 'gm'"
-        [title]="'peer.copyInvite.gm' | i18n">
-        <b class="material-icons" style="font-size: 1em; vertical-align: middle">link</b>
-        {{ 'peer.copyInvite.gm' | i18n }}
-      </button>
-      <button type="button" *ngIf="isAbleClipboardCopy()"
-        (click)="copyInvite('user')"
-        [disabled]="!isInviteRoleAvailable('user') || inviteCopiedRole === 'user'"
-        [title]="'peer.copyInvite.user' | i18n">
-        <b class="material-icons" style="font-size: 1em; vertical-align: middle">link</b>
-        {{ 'peer.copyInvite.user' | i18n }}
-      </button>
-      <button type="button" *ngIf="isAbleClipboardCopy()"
-        (click)="copyInvite('guest')"
-        [disabled]="!isInviteRoleAvailable('guest') || inviteCopiedRole === 'guest'"
-        [title]="'peer.copyInvite.guest' | i18n">
-        <b class="material-icons" style="font-size: 1em; vertical-align: middle">link</b>
-        {{ 'peer.copyInvite.guest' | i18n }}
-      </button>
-      <span *ngIf="inviteCopiedRole" [@fadeInOut]="!!inviteCopiedRole" class="copied" [style.color]="myPeerColor">
-        {{ 'peer.copyInvite.copied' | i18n }}
-      </span>
+      <ng-template #offlineBlock><b>{{ 'peer.offline' | i18n }}</b></ng-template>
     </div>
-  </div>
-  <ng-container *ngIf="networkService.peer.password">
-    <div>
-      {{ 'peer.password' | i18n }}
-      <label sytle="white-space: nowrap">
-        <input name="show-hide-password" type="checkbox" value="Show Hides" class="show-hides" [attr.title]="'peer.showPassword' | i18n" checked="{{ isPasswordOpen ? 'checked' : '' }}" (click)="onPasswordOpen($event)">
-        <b class="material-icons show-hides" [ngClass]="{'red-eye': isPasswordOpen}" style="font-size: smaller">{{ isPasswordOpen ? 'visibility' : 'visibility_off' }}</b>：
-      </label>
-      <div style="display: inline">
-        <span *ngIf="isPasswordOpen" class="id-input-container">
-          <span class="id-spacer room-data">{{ networkService.peer.password }}</span>
-          <input class="id-input room-data" type="text" value="{{ networkService.peer.password }}" readonly>
+
+    <ng-container *ngIf="networkService.peer.isRoom">
+      <div class="id-line">
+        <span>{{ 'peer.roomName' | i18n }}</span>
+        <ng-container *ngIf="networkService.isOpen">
+          <span class="id-input-container">
+            <span class="id-spacer room-data">{{ displayRoomLabel }}</span>
+            <input class="id-input room-data" type="text" value="{{ displayRoomLabel }}" readonly>
+          </span>
+          <button type="button" class="btn btn-sm" *ngIf="isAbleClipboardCopy()" (click)="copyRoomName()" [disabled]="isRoomNameCopied" [title]="'peer.copyToClipboard' | i18n">
+            <i class="material-icons">content_copy</i>
+          </button>
+          <span [@fadeInOut]="isRoomNameCopied" class="copied" [style.color]="myPeerColor">{{ isRoomNameCopied ? ('peer.copied' | i18n) : '' }}</span>
+        </ng-container>
+      </div>
+      <p class="hint" *ngIf="isRoleAuthRoom">{{ 'peer.roleAuthHint' | i18n }}</p>
+      <div *ngIf="isRoleAuthRoom" class="invite-block">
+        <div class="invite-label">{{ 'peer.copyInvite.title' | i18n }}</div>
+        <div class="invite-row actions">
+          <button type="button" class="btn btn-sm" *ngIf="isAbleClipboardCopy()"
+            (click)="copyInvite('gm')"
+            [disabled]="!isInviteRoleAvailable('gm') || inviteCopiedRole === 'gm'"
+            [title]="'peer.copyInvite.gm' | i18n">
+            <i class="material-icons">link</i>{{ 'peer.copyInvite.gm' | i18n }}
+          </button>
+          <button type="button" class="btn btn-sm" *ngIf="isAbleClipboardCopy()"
+            (click)="copyInvite('user')"
+            [disabled]="!isInviteRoleAvailable('user') || inviteCopiedRole === 'user'"
+            [title]="'peer.copyInvite.user' | i18n">
+            <i class="material-icons">link</i>{{ 'peer.copyInvite.user' | i18n }}
+          </button>
+          <button type="button" class="btn btn-sm" *ngIf="isAbleClipboardCopy()"
+            (click)="copyInvite('guest')"
+            [disabled]="!isInviteRoleAvailable('guest') || inviteCopiedRole === 'guest'"
+            [title]="'peer.copyInvite.guest' | i18n">
+            <i class="material-icons">link</i>{{ 'peer.copyInvite.guest' | i18n }}
+          </button>
+          <span *ngIf="inviteCopiedRole" [@fadeInOut]="!!inviteCopiedRole" class="copied" [style.color]="myPeerColor">
+            {{ 'peer.copyInvite.copied' | i18n }}
+          </span>
+        </div>
+      </div>
+      <ng-container *ngIf="networkService.peer.password">
+        <div class="id-line">
+          <span>{{ 'peer.password' | i18n }}</span>
+          <label class="pwd-toggle">
+            <input name="show-hide-password" type="checkbox" class="show-hides" [attr.title]="'peer.showPassword' | i18n" [checked]="isPasswordOpen" (click)="onPasswordOpen($event)">
+            <i class="material-icons show-hides" [ngClass]="{'red-eye': isPasswordOpen}">{{ isPasswordOpen ? 'visibility' : 'visibility_off' }}</i>
+          </label>
+          <span *ngIf="isPasswordOpen" class="id-input-container">
+            <span class="id-spacer room-data">{{ networkService.peer.password }}</span>
+            <input class="id-input room-data" type="text" value="{{ networkService.peer.password }}" readonly>
+          </span>
+          <span *ngIf="!isPasswordOpen" class="masked-password" draggable="false">{{ maskedPassword }}</span>
+          <button type="button" class="btn btn-sm" *ngIf="isAbleClipboardCopy()" (click)="copyPassword()" [disabled]="isPasswordCopied || isRoomInfoCopied" [title]="'peer.copyToClipboard' | i18n">
+            <i class="material-icons">content_copy</i>
+          </button>
+          <span [@fadeInOut]="isPasswordCopied" class="copied" [style.color]="myPeerColor">{{ isPasswordCopied ? ('peer.copied' | i18n) : '' }}</span>
+        </div>
+        <button type="button" class="btn btn-sm" *ngIf="isAbleClipboardCopy()" (click)="copyRoomInfo()" [disabled]="isPasswordCopied || isRoomInfoCopied">
+          <i class="material-icons">content_copy</i>{{ 'peer.copyRoomInfo' | i18n }}
+        </button>
+        <span [@fadeInOut]="isRoomInfoCopied" class="copied" [style.color]="myPeerColor">{{ isRoomInfoCopied ? ('peer.copied' | i18n) : '' }}</span>
+      </ng-container>
+    </ng-container>
+  </section>
+
+  <section class="card card-dense room-actions">
+    <!-- ZIP save/load: always available in a room (not gated by File System Access / folder backup). -->
+    <div class="room-zip-row actions" *ngIf="!GuestMode() && networkService.peer.isRoom">
+      <button type="button" class="btn btn-sm" (click)="downloadZip()"
+        [disabled]="isDownloadingZip">
+        <i class="material-icons">sd_storage</i>
+        {{ isDownloadingZip ? (downloadZipPercent + '%') : ('menu.downloadZip' | i18n) }}
+      </button>
+      <button type="button" class="btn btn-sm" (click)="loadZip()"
+        [disabled]="!canLoadZip"
+        [title]="canLoadZip ? ('menu.loadZip' | i18n) : ('peer.loadData.gmOnly' | i18n)">
+        <i class="material-icons">open_in_browser</i>
+        {{ 'menu.loadZip' | i18n }}<ng-container *ngIf="!canLoadZip">（{{ 'peer.loadData.gmOnly' | i18n }}）</ng-container>
+      </button>
+    </div>
+    <div class="room-zip-row actions" *ngIf="!GuestMode() && folderBackup.isSupported">
+      <button type="button" class="btn btn-sm" *ngIf="folderBackup.needsBind || folderBackup.hasError" (click)="bindFolderBackup()">
+        <i class="material-icons">folder</i>
+        {{ (folderBackup.status === 'needAuth' || folderBackup.hasError ? 'menu.folderBackup.reauth' : 'menu.folderBackup.bind') | i18n }}
+      </button>
+      <button type="button" class="btn btn-sm" *ngIf="networkService.peer.isRoom && folderBackup.isReady" (click)="saveFolderBackup()"
+        [disabled]="folderBackup.status === 'writing'">
+        <i class="material-icons">save</i>{{ 'menu.folderBackup.saveRoom' | i18n }}
+      </button>
+      <button type="button" class="btn btn-sm" *ngIf="folderBackup.canLoadFromFolder"
+        (click)="loadFolderBackup()"
+        [disabled]="!canLoadRoom"
+        [title]="canLoadRoom
+          ? ('menu.folderBackup.autoStoreHint' | i18n)
+          : ('peer.loadData.gmOnly' | i18n)">
+        <i class="material-icons">folder_open</i>
+        {{ 'menu.folderBackup.loadRoom' | i18n }}<ng-container *ngIf="!canLoadRoom">（{{ 'peer.loadData.gmOnly' | i18n }}）</ng-container>
+      </button>
+      <span class="folder-status" *ngIf="folderBackup.isReady || folderBackup.status === 'writing'">
+        {{ folderBackup.status === 'writing'
+          ? ('menu.folderBackup.status.writing' | i18n)
+          : ('menu.folderBackup.status.ready' | i18n:{ name: folderBackup.folderName || '-' }) }}
+      </span>
+      <span class="folder-status folder-error" *ngIf="folderBackup.hasError || folderBackup.status === 'needAuth'">
+        {{ folderBackup.hasError
+          ? ('menu.folderBackup.status.error' | i18n)
+          : ('menu.folderBackup.status.needAuth' | i18n) }}
+        <ng-container *ngIf="folderBackup.lastError"> — {{ folderBackup.lastError }}</ng-container>
+      </span>
+      <p class="hint folder-auto-hint" *ngIf="folderBackup.isReady || folderBackup.status === 'writing'">
+        {{ 'menu.folderBackup.autoStoreHint' | i18n }}
+      </p>
+    </div>
+    <div class="connect-actions actions">
+      <ng-container *ngIf="!networkService.peer.isRoom && canUsePrivateSession && !isGMMode && !isGMHold">
+        <input type="text" [(ngModel)]="targetUserId" [placeholder]="'peer.targetIdPlaceholder' | i18n" name="targetUserId" />
+        <button type="button" class="btn btn-sm btn-primary" (click)="connectPeer()" [disabled]="!networkService.isOpen || targetUserId == null || targetUserId == ''">{{ 'peer.privateConnect' | i18n }}</button>
+      </ng-container>
+      <button type="button" class="btn btn-sm btn-primary" (click)="showLobby()" [disabled]="!networkService.isOpen">
+        <i class="material-icons">meeting_room</i>{{ 'peer.lobby' | i18n }}
+      </button>
+      <button type="button" class="btn btn-sm" (click)="showCreateRoom()" [disabled]="!networkService.isOpen">
+        <i class="material-icons">room_preferences</i>{{ 'lobby.createRoom' | i18n }}
+      </button>
+      <button type="button" class="btn btn-sm" *ngIf="isGMMode && networkService.peer.isRoom && isRoleAuthRoom" (click)="editRoomPasswords()">
+        <i class="material-icons">edit</i>{{ 'peer.editRoomPasswords' | i18n }}
+      </button>
+    </div>
+    <p class="hint" *ngIf="help">{{ help }}</p>
+    <ng-container *ngIf="!networkService.peer.isRoom">
+      <p class="hint" *ngIf="networkService.peers.length < 1 && canUsePrivateSession && !isGMMode && !isGMHold">{{ 'peer.helpPrivateShare' | i18n }}</p>
+      <p class="hint" *ngIf="(isGMMode || isGMHold) && canUsePrivateSession">{{ 'peer.helpGmNoConnect' | i18n }}</p>
+    </ng-container>
+    <ng-container *ngIf="networkService.peer.isRoom && canUsePrivateSession && !isGMMode && !isGMHold">
+      <p class="hint">{{ 'peer.helpNoPrivateInRoom' | i18n }}</p>
+    </ng-container>
+  </section>
+
+  <section class="card card-dense" *ngIf="networkService.peers.length">
+    <header class="card-head">
+      <h3>{{ 'peer.connectionStatusTitle' | i18n }}</h3>
+    </header>
+    <p class="hint health-legend">
+      <span class="health">（{{ 'peer.healthGood' | i18n }} </span>
+      <i class="material-icons health health-blue">sentiment_very_satisfied</i>
+      <span class="health"> ＞ </span>
+      <i class="material-icons health health-green">sentiment_dissatisfied</i>
+      <span class="health"> ＞ </span>
+      <i class="material-icons health health-yellow">mood_bad</i>
+      <span class="health"> ＞ </span>
+      <i class="material-icons health health-red">sentiment_very_dissatisfied</i>
+      <span class="health"> {{ 'peer.healthBad' | i18n }}）</span>
+    </p>
+    <div class="peer-info" *ngFor="let peer of networkService.peers">
+      <span *ngIf="!peer.isOpen">{{ 'peer.connecting' | i18n }}</span>
+      <span class="peer-row">
+        <span [ngClass]="{'is-gm-mode': findPeerIsGMMode(peer.peerId)}">
+          <i class="{{'material-icons health ' + healthClass(peer.session.health)}}">{{ healthIcon(peer.session.health) }}</i>
+          <span class="peer-id">{{ findUserId(peer.peerId) }}</span>
+          [<span *ngIf="findPeerImageUrl(peer.peerId)" class="cover mini-icon" [style.background-image]="'url(' + findPeerImageUrl(peer.peerId) + ')' | safe: 'style'"></span><b [style.color]="findPeerColor(peer.peerId)">{{ findPeerName(peer.peerId) }}</b>]
         </span>
-        <div style="display: inline" *ngIf="!isPasswordOpen" class="masked-password" draggable="false">{{ maskedPassword }}</div>
-        <button *ngIf="isAbleClipboardCopy" (click)="copyPassword()" [disabled]="isPasswordCopied || isRoomInfoCopied" [title]="'peer.copyToClipboard' | i18n"><b class="material-icons" style="font-size: 1em; vertical-align: bottom">content_copy</b></button>
-        <span [@fadeInOut]="isPasswordCopied" class="copied" [style.color]="myPeerColor"> {{ isPasswordCopied ? ('peer.copied' | i18n) : '' }}</span>
-        <br /><button *ngIf="isAbleClipboardCopy" style="margin-top: 2px; margin-left: 0px" (click)="copyRoomInfo()" [disabled]="isPasswordCopied || isRoomInfoCopied"><b class="material-icons" style="font-size: 1em; vertical-align: middle">content_copy</b><b style="margin-left: 2px; display: inline-block; font-size: smaller">{{ 'peer.copyRoomInfo' | i18n }}</b></button><span [@fadeInOut]="isRoomInfoCopied" class="copied" [style.color]="myPeerColor"> {{ isRoomInfoCopied ? ('peer.copied' | i18n) : '' }}</span>
+        <button
+          *ngIf="isGMMode"
+          type="button"
+          class="btn btn-sm btn-danger kick-btn"
+          [disabled]="!peer.isOpen"
+          [attr.title]="'peer.kick' | i18n"
+          (click)="kickPeer(peer)"
+        >
+          <i class="material-icons">person_remove</i>{{ 'peer.kick' | i18n }}
+        </button>
+      </span>
+      <div class="session-info" [style.border-left-color]="findPeerColor(peer.peerId)">
+        <span>{{ 'peer.sessionStatus' | i18n }}
+          {{ 'peer.grade' | i18n }}:{{ stringFromSessionGrade(peer.session.grade) }} ({{ candidateLabel(peer.session.description) }})
+          {{ 'peer.health' | i18n }}:{{ (peer.session.health * 100).toFixed(0) }}%
+          {{ 'peer.speed' | i18n }}:{{ (peer.session.speed * 100).toFixed(0) }}%
+          {{ 'peer.ping' | i18n:{ n: peer.session.ping.toFixed(1) } }}</span>
       </div>
     </div>
-  </ng-container>
-</ng-container>
-<div class="room-actions">
-  <div class="room-zip-row" *ngIf="!GuestMode() && folderBackup.isSupported">
-    <button type="button" *ngIf="folderBackup.needsBind || folderBackup.hasError" (click)="bindFolderBackup()">
-      <i class="material-icons" style="font-size: 1em; vertical-align: middle">folder</i>
-      {{ (folderBackup.status === 'needAuth' || folderBackup.hasError ? 'menu.folderBackup.reauth' : 'menu.folderBackup.bind') | i18n }}
-    </button>
-    <button type="button" *ngIf="networkService.peer.isRoom" (click)="saveFolderBackup()"
-      [disabled]="folderBackup.status === 'writing'">
-      <i class="material-icons" style="font-size: 1em; vertical-align: middle">save</i>
-      {{ 'menu.folderBackup.saveRoom' | i18n }}
-    </button>
-    <button type="button" (click)="loadFolderBackup()">
-      <i class="material-icons" style="font-size: 1em; vertical-align: middle">folder_open</i>
-      {{ 'menu.folderBackup.loadRoom' | i18n }}
-    </button>
-    <button type="button" *ngIf="networkService.peer.isRoom" (click)="loadZip()">
-      <i class="material-icons" style="font-size: 1em; vertical-align: middle">open_in_browser</i>
-      {{ 'menu.loadZip' | i18n }}
-    </button>
-    <button type="button" *ngIf="networkService.peer.isRoom" (click)="downloadZip()"
-      [disabled]="isDownloadingZip">
-      <i class="material-icons" style="font-size: 1em; vertical-align: middle">sd_storage</i>
-      {{ isDownloadingZip ? (downloadZipPercent + '%') : ('menu.downloadZip' | i18n) }}
-    </button>
-    <span class="folder-status" *ngIf="folderBackup.isReady || folderBackup.status === 'writing'">
-      {{ folderBackup.status === 'writing'
-        ? ('menu.folderBackup.status.writing' | i18n)
-        : ('menu.folderBackup.status.ready' | i18n:{ name: folderBackup.folderName || '-' }) }}
-    </span>
-    <span class="folder-status folder-error" *ngIf="folderBackup.hasError || folderBackup.status === 'needAuth'">
-      {{ folderBackup.hasError
-        ? ('menu.folderBackup.status.error' | i18n)
-        : ('menu.folderBackup.status.needAuth' | i18n) }}
-      <ng-container *ngIf="folderBackup.lastError"> — {{ folderBackup.lastError }}</ng-container>
-    </span>
-    <div class="folder-auto-hint" *ngIf="folderBackup.isReady || folderBackup.status === 'writing'">
-      {{ 'menu.folderBackup.autoStoreHint' | i18n }}
-    </div>
-  </div>
-  <div class="connect-actions">
-    <ng-container *ngIf="!networkService.peer.isRoom && canUsePrivateSession && !isGMMode && !isGMHold">
-      <input [(ngModel)]="targetUserId" [placeholder]="'peer.targetIdPlaceholder' | i18n" name="targetUserId" />
-      <button (click)="connectPeer()" [disabled]="!networkService.isOpen || targetUserId == null || targetUserId == ''">{{ 'peer.privateConnect' | i18n }}</button>
-    </ng-container>
-    <button *ngIf="networkService.peers.length < 1" (click)="showLobby()" [disabled]="!networkService.isOpen"><i class="material-icons" style="vertical-align: bottom">meeting_room</i>{{ 'peer.lobby' | i18n }}</button>
-    <button *ngIf="networkService.peers.length < 1" (click)="showCreateRoom()" [disabled]="!networkService.isOpen"><i class="material-icons" style="vertical-align: bottom">room_preferences</i>{{ 'lobby.createRoom' | i18n }}</button>
-    <button *ngIf="isGMMode && networkService.peer.isRoom && isRoleAuthRoom" type="button" (click)="editRoomPasswords()">
-      <i class="material-icons" style="font-size: 1em; vertical-align: middle">edit</i>
-      {{ 'peer.editRoomPasswords' | i18n }}
-    </button>
-    <button *ngIf="isGMMode" type="button" (click)="openPermissionManage()">
-      <i class="material-icons" style="font-size: 1em; vertical-align: middle">admin_panel_settings</i>
-      {{ 'peer.permissionManage' | i18n }}
-    </button>
-  </div>
-  <div><span style="font-size: 12px;">{{help}}</span></div>
-  <ng-container *ngIf="!networkService.peer.isRoom">
-    <div style="font-size: 12px" *ngIf="networkService.peers.length < 1 && canUsePrivateSession && !isGMMode && !isGMHold">{{ 'peer.helpPrivateShare' | i18n }}</div>
-    <div style="font-size: 12px" *ngIf="networkService.peers.length < 1">{{ 'peer.helpSoloTest' | i18n }}</div>
-    <div style="font-size: 12px" *ngIf="(isGMMode || isGMHold) && canUsePrivateSession">{{ 'peer.helpGmNoConnect' | i18n }}</div>
-  </ng-container>
-  <ng-container *ngIf="networkService.peer.isRoom && canUsePrivateSession && !isGMMode && !isGMHold">
-    <div style="font-size: 12px">{{ 'peer.helpNoPrivateInRoom' | i18n }}</div>
-  </ng-container>
-</div>
-<hr/>
-<div *ngFor="let peer of networkService.peers; index as i">
-  <div *ngIf="i == 0" style="font-weight: bold">{{ 'peer.connectionStatusTitle' | i18n }}<span class="health">（{{ 'peer.healthGood' | i18n }} </span><i class="material-icons health health-blue">sentiment_very_satisfied</i><span class="health"> ＞ </span><i class="material-icons health health-green">sentiment_dissatisfied</i><span class="health"> ＞ </span><i class="material-icons health health-yellow">mood_bad</i><span class="health"> ＞ </span><i class="material-icons health health-red">sentiment_very_dissatisfied</i><span class="health"> {{ 'peer.healthBad' | i18n }}）</span>：</div>
-  <div class="peer-info">
-    <span *ngIf="!peer.isOpen">{{ 'peer.connecting' | i18n }}</span>
-    <span>
-      <span [ngClass]="{'is-gm-mode': findPeerIsGMMode(peer.peerId)}">
-        <i class="{{'material-icons health ' + healthClass(peer.session.health)}}" style="margin-right: 2px">{{ healthIcon(peer.session.health) }}</i>
-        <span style="margin-right: 3px">{{findUserId(peer.peerId)}}</span>
-        [<span *ngIf="findPeerImageUrl(peer.peerId)" class="cover mini-icon" [style.background-image]="'url(' + findPeerImageUrl(peer.peerId) + ')' | safe: 'style'"></span><span><b [style.color]="findPeerColor(peer.peerId)">{{findPeerName(peer.peerId)}}</b></span>]
-      </span>
-    </span>
-    <div class="session-info" [style.border-left-color]="findPeerColor(peer.peerId)">
-      <span>{{ 'peer.sessionStatus' | i18n }}
-        {{ 'peer.grade' | i18n }}:{{stringFromSessionGrade(peer.session.grade)}} ({{ candidateLabel(peer.session.description) }})
-        {{ 'peer.health' | i18n }}:{{(peer.session.health * 100).toFixed(0)}}%
-        {{ 'peer.speed' | i18n }}:{{(peer.session.speed * 100).toFixed(0)}}%
-        {{ 'peer.ping' | i18n:{ n: peer.session.ping.toFixed(1) } }}</span>
-    </div>
+  </section>
+
+  <div class="app-version">
+    <span>{{ 'peer.version' | i18n:{ version: appVersionDisplay } }}</span>
+    <i *ngIf="appUpdate.isUpdateReady" class="material-icons app-update-icon"
+      role="button" tabindex="0"
+      (click)="confirmApplyUpdate($event)"
+      (keydown.enter)="confirmApplyUpdate($event)"
+      (keydown.space)="confirmApplyUpdate($event)"
+      [attr.title]="'update.readyHint' | i18n"
+      [attr.aria-label]="'update.readyHint' | i18n">system_update</i>
   </div>
 </div>

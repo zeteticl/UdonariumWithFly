@@ -1,3 +1,5 @@
+import { isInteractiveControlTarget } from '@udonarium/tabletop-interact';
+
 type Callback = (srcEvent: TouchEvent | MouseEvent | PointerEvent) => void;
 
 export class ObjectInteractGesture {
@@ -34,6 +36,10 @@ export class ObjectInteractGesture {
   }
 
   private onInteract(ev: HammerInput) {
+    // Rapid taps on nested controls (PDF next, video, etc.) must not open details.
+    const src = ev.srcEvent;
+    const target = (src as any)?.target ?? ev.target;
+    if (isInteractiveControlTarget(target)) return;
     if (this.isEnable && this.oninteract) this.oninteract(ev.srcEvent);
   }
 }

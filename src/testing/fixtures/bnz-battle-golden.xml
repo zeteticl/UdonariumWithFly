@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Minimal golden excerpt from BNZ fly_data (3D battle + dual-map monster C). -->
+<room syncId="golden_bnz_room">
+  <game-table name="戰場地圖（3D）" width="20" height="15" gridSize="50" selected="true" is2DMode="false" weatherType="none" darkness="0" showInNavigation="true" playerCanView="true" syncId="gameTable"/>
+  <game-table name="線索版（2D）" width="31" height="17" gridSize="50" selected="false" is2DMode="true" weatherType="none" darkness="0" showInNavigation="true" playerCanView="true" syncId="gameTable_clue2d"/>
+  <character rotate="0" visionRange="6" brightLight="0" dimLight="0" statusesJson="[]" floorRing="none" pushPin="false" location.name="table" location.x="250" location.y="450" posZ="0" tableIdentifier="gameTable" tablePlacements="{&quot;gameTable&quot;:{&quot;x&quot;:250,&quot;y&quot;:450,&quot;posZ&quot;:0}}" aura="-1" syncId="testCharacter_1">
+    <data name="character" syncId="character_testCharacter_1">
+      <data name="image" syncId="image_testCharacter_1">
+        <data type="image" name="imageIdentifier" syncId="imageIdentifier_testCharacter_1"/>
+      </data>
+      <data name="common" syncId="common_testCharacter_1">
+        <data name="name" syncId="name_testCharacter_1">怪物A</data>
+        <data name="size" syncId="size_testCharacter_1">1</data>
+        <data name="height" syncId="height_testCharacter_1">0</data>
+        <data name="altitude" syncId="altitude_testCharacter_1">0</data>
+      </data>
+      <data name="detail" syncId="detail_testCharacter_1"/>
+    </data>
+  </character>
+  <character rotate="0" visionRange="6" brightLight="0" dimLight="0" statusesJson="[]" floorRing="none" pushPin="true" pushPinAngle="13" pushPinStyle="2" location.name="table" location.x="175" location.y="225" posZ="0" tableIdentifier="gameTable" tablePlacements="{&quot;gameTable&quot;:{&quot;x&quot;:175,&quot;y&quot;:225,&quot;posZ&quot;:0},&quot;gameTable_clue2d&quot;:{&quot;x&quot;:175,&quot;y&quot;:400,&quot;posZ&quot;:0}}" aura="-1" syncId="testCharacter_3">
+    <data name="character" syncId="character_testCharacter_3">
+      <data name="image" syncId="image_testCharacter_3">
+        <data type="image" name="imageIdentifier" syncId="imageIdentifier_testCharacter_3"/>
+      </data>
+      <data name="common" syncId="common_testCharacter_3">
+        <data name="name" syncId="name_testCharacter_3">怪物C</data>
+        <data name="size" syncId="size_testCharacter_3">3</data>
+        <data name="height" syncId="height_testCharacter_3">0</data>
+        <data name="altitude" syncId="altitude_testCharacter_3">0</data>
+      </data>
+      <data name="detail" syncId="detail_testCharacter_3"/>
+    </data>
+  </character>
+  <clue-link fromIdentifier="testCharacter_3" toIdentifier="testCharacter_1" sag="0.22" color="#c62828" tableIdentifier="gameTable" syncId="battleClueLink_1"/>
+</room>

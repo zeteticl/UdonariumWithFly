@@ -1,0 +1,150 @@
+<div class="settings-ui dense object-settings terrain-settings" *ngIf="terrain; else emptyBlock" appFitPanel [fitMinHeight]="240">
+  <section class="card card-dense">
+    <div class="title-row">
+      <label class="field grow">
+        <span>{{ 'terrain.settings.name' | i18n }}</span>
+        <input type="text" [(ngModel)]="terrain.name" [disabled]="GuestMode()" />
+      </label>
+    </div>
+    <div class="image-grid">
+      <div class="image-slot">
+        <span class="image-label">{{ 'sheet.changeFloorImage' | i18n }}</span>
+        <button type="button" class="image-frame" [class.image-frame-empty]="!terrain.floorImage?.url"
+          (click)="openImage('floor')" [disabled]="GuestMode()">
+          <img *ngIf="terrain.floorImage?.url" [src]="terrain.floorImage.url | safe: 'resourceUrl'" alt="" />
+          <i *ngIf="!terrain.floorImage?.url" class="material-icons">add_photo_alternate</i>
+        </button>
+      </div>
+      <div class="image-slot">
+        <span class="image-label">{{ 'sheet.changeWallImage' | i18n }}</span>
+        <button type="button" class="image-frame" [class.image-frame-empty]="!terrain.wallImage?.url"
+          (click)="openImage('wall')" [disabled]="GuestMode()">
+          <img *ngIf="terrain.wallImage?.url" [src]="terrain.wallImage.url | safe: 'resourceUrl'" alt="" />
+          <i *ngIf="!terrain.wallImage?.url" class="material-icons">add_photo_alternate</i>
+        </button>
+      </div>
+    </div>
+    <div class="field-row wrap">
+      <label class="field">
+        <span>{{ 'note.fieldWidth' | i18n }}</span>
+        <input type="number" [min]="sizeMin" step="0.1" [ngModel]="terrain.width"
+          (ngModelChange)="onWidthChange($event)" [disabled]="GuestMode()" />
+      </label>
+      <label class="field">
+        <span>{{ 'terrain.settings.depth' | i18n }}</span>
+        <input type="number" [min]="sizeMin" step="0.1" [ngModel]="terrain.depth"
+          (ngModelChange)="onDepthChange($event)" [disabled]="GuestMode()" />
+      </label>
+      <label class="field">
+        <span>{{ 'note.fieldHeight' | i18n }}</span>
+        <input type="number" min="0" step="0.1" [ngModel]="terrain.height"
+          (ngModelChange)="onHeightChange($event)" [disabled]="GuestMode()" />
+      </label>
+      <label class="field field-check">
+        <span>{{ 'terrain.settings.lockAspect' | i18n }}</span>
+        <input type="checkbox" [(ngModel)]="lockAspectRatio" [disabled]="GuestMode()" />
+      </label>
+      <label class="field">
+        <span>{{ 'mask.fieldAltitude' | i18n }}</span>
+        <input type="number" step="0.5" [(ngModel)]="terrain.altitude" [disabled]="GuestMode()" />
+      </label>
+    </div>
+    <div class="field-row wrap" *ngIf="hasBakeCrop">
+      <button type="button" class="btn btn-sm" (click)="openBakeCrop()" [disabled]="GuestMode()">
+        {{ 'terrain.settings.cropPreview' | i18n }}
+      </button>
+    </div>
+  </section>
+
+  <section class="card card-dense">
+    <button type="button" class="btn btn-sm" (click)="showFaceImages = !showFaceImages">
+      {{ (showFaceImages ? 'terrain.settings.hideFaces' : 'terrain.settings.showFaces') | i18n }}
+    </button>
+    <div class="image-grid face-grid" *ngIf="showFaceImages">
+      <div class="image-slot" *ngFor="let slot of faceSlots">
+        <span class="image-label">{{ slot.labelKey | i18n }}
+          <small *ngIf="!faceIsOverride(slot.face)"> ({{ 'terrain.settings.faceFallback' | i18n }})</small>
+        </span>
+        <button type="button" class="image-frame" [class.image-frame-empty]="!facePreviewUrl(slot.face)"
+          (click)="openImage(slot.face)" [disabled]="GuestMode()">
+          <img *ngIf="facePreviewUrl(slot.face)" [src]="facePreviewUrl(slot.face) | safe: 'resourceUrl'" alt="" />
+          <i *ngIf="!facePreviewUrl(slot.face)" class="material-icons">add_photo_alternate</i>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card card-dense">
+    <div class="field-row wrap">
+      <label class="field grow">
+        <span>{{ 'terrain.settings.mode' | i18n }}</span>
+        <select [ngModel]="terrain.mode" (ngModelChange)="setMode(+$event)" [disabled]="GuestMode()">
+          <option *ngFor="let opt of modeOptions" [ngValue]="opt.value">{{ opt.labelKey | i18n }}</option>
+        </select>
+      </label>
+      <label class="field grow">
+        <span>{{ 'terrain.settings.slope' | i18n }}</span>
+        <select [ngModel]="terrain.slopeDirection" (ngModelChange)="setSlopeDirection(+$event)"
+          [disabled]="GuestMode() || !terrain.isSlope">
+          <option *ngFor="let opt of slopeOptions" [ngValue]="opt.value">{{ opt.labelKey | i18n }}</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>{{ 'terrain.settings.slopeDegrees' | i18n }}</span>
+        <input type="number" [min]="slopeDegMin" [max]="slopeDegMax" step="0.5"
+          [ngModel]="slopeDeg" (ngModelChange)="setSlopeDeg($event)"
+          [disabled]="GuestMode() || !terrain.isSlope" />
+      </label>
+    </div>
+    <div class="check-row tight">
+      <label><input type="checkbox" [ngModel]="terrain.isSlope" (ngModelChange)="setAppearanceFlag('isSlope', $event)" [disabled]="GuestMode()" /> {{ 'terrain.settings.isSlope' | i18n }}</label>
+      <label><input type="checkbox" [(ngModel)]="lockSlopeDegrees" [disabled]="GuestMode() || !terrain.isSlope" /> {{ 'terrain.settings.lockSlopeDegrees' | i18n }}</label>
+      <label><input type="checkbox" [ngModel]="terrain.isSurfaceShading" (ngModelChange)="setAppearanceFlag('isSurfaceShading', $event)" [disabled]="GuestMode()" /> {{ 'terrain.settings.surfaceShading' | i18n }}</label>
+      <label><input type="checkbox" [ngModel]="terrain.isDropShadow" (ngModelChange)="setAppearanceFlag('isDropShadow', $event)" [disabled]="GuestMode()" /> {{ 'terrain.settings.dropShadow' | i18n }}</label>
+      <label><input type="checkbox" [ngModel]="terrain.isInteract" (ngModelChange)="setAppearanceFlag('isInteract', $event)" [disabled]="GuestMode()" /> {{ 'terrain.settings.interact' | i18n }}</label>
+      <label><input type="checkbox" [ngModel]="terrain.affectsLight" (ngModelChange)="setAppearanceFlag('affectsLight', $event)" [disabled]="GuestMode()" /> {{ 'terrain.settings.affectsLight' | i18n }}</label>
+      <label><input type="checkbox" [ngModel]="terrain.isLocked" (ngModelChange)="setAppearanceFlag('isLocked', $event)" [disabled]="GuestMode()" /> {{ 'terrain.settings.locked' | i18n }}</label>
+      <label><input type="checkbox" [ngModel]="terrain.isAltitudeIndicate" (ngModelChange)="setAppearanceFlag('isAltitudeIndicate', $event)" [disabled]="GuestMode()" /> {{ 'terrain.settings.altitudeIndicate' | i18n }}</label>
+      <label><input type="checkbox" [ngModel]="terrain.mirrorWallTop" (ngModelChange)="setAppearanceFlag('mirrorWallTop', $event)" [disabled]="GuestMode()" /> {{ 'terrain.settings.mirrorWallTop' | i18n }}</label>
+      <label><input type="checkbox" [ngModel]="terrain.mirrorWallLeft" (ngModelChange)="setAppearanceFlag('mirrorWallLeft', $event)" [disabled]="GuestMode()" /> {{ 'terrain.settings.mirrorWallLeft' | i18n }}</label>
+    </div>
+  </section>
+
+  <section class="card card-dense">
+    <div class="field-row wrap">
+      <label class="field grow">
+        <span>{{ 'terrain.settings.neonType' | i18n }}</span>
+        <select [ngModel]="terrain.neonType" (ngModelChange)="setNeonType(+$event)" [disabled]="GuestMode()">
+          <option *ngFor="let opt of neonOptions" [ngValue]="opt.value">{{ opt.labelKey | i18n }}</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>{{ 'terrain.settings.neonColor' | i18n }}</span>
+        <input type="color" [ngModel]="neonColorInput" (ngModelChange)="setNeonColor($event)"
+          [disabled]="GuestMode() || terrain.neonType === 0" />
+      </label>
+    </div>
+    <div class="check-row tight neon-presets" *ngIf="terrain.neonType !== 0">
+      <button type="button" class="btn btn-sm" *ngFor="let p of neonPresets"
+        (click)="setNeonColor(p.value)" [disabled]="GuestMode()">{{ p.labelKey | i18n }}</button>
+    </div>
+    <div class="check-row tight">
+      <label><input type="checkbox" [ngModel]="terrain.neonOnWalls" (ngModelChange)="setAppearanceFlag('neonOnWalls', $event)" [disabled]="GuestMode() || terrain.neonType === 0" /> {{ 'terrain.settings.neonOnWalls' | i18n }}</label>
+      <label><input type="checkbox" [ngModel]="terrain.neonOnFloor" (ngModelChange)="setAppearanceFlag('neonOnFloor', $event)" [disabled]="GuestMode() || terrain.neonType === 0" /> {{ 'terrain.settings.neonOnFloor' | i18n }}</label>
+    </div>
+  </section>
+
+  <section class="card card-dense footer-actions actions tight">
+    <button type="button" class="btn btn-sm" (click)="importXml()" [disabled]="GuestMode()">{{ 'sheet.import' | i18n }}</button>
+    <button type="button" class="btn btn-sm" [disabled]="isSaveing || GuestMode()" (click)="saveToXML()">
+      {{ isSaveing ? (progresPercent + '%') : ('sheet.download' | i18n) }}
+    </button>
+    <button type="button" class="btn btn-sm" *ngIf="canExportBakeGroup"
+      [disabled]="isSaveing || GuestMode()" (click)="saveGroupToXML()">
+      {{ isSaveing ? (progresPercent + '%') : ('terrain.settings.exportGroup' | i18n) }}
+    </button>
+  </section>
+</div>
+<ng-template #emptyBlock>
+  <div class="settings-ui empty-hint">{{ 'terrain.settingsEmpty' | i18n }}</div>
+</ng-template>

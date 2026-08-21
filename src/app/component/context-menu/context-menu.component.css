@@ -1,5 +1,9 @@
 :host {
   display: block;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .component {
@@ -16,15 +20,27 @@
   -moz-user-select: none;
   -webkit-user-select: none;
   user-select: none;
+  -webkit-touch-callout: none;
 
   -moz-user-drag: none;
   -webkit-user-drag: none;
   z-index: 2000000;
 }
+
+/* Keep altitude / editable fields selectable for typing. */
+.component input[type="number"],
+.component input[type="text"],
+.component input[type="search"],
+.component textarea {
+  -moz-user-select: text;
+  -webkit-user-select: text;
+  user-select: text;
+}
 .submenu-panel {
   position: absolute;
   left: calc(100% - 4px);
   top: -16px;
+  z-index: 2;
 }
 .icons-panel {
   padding-bottom: 2px;
@@ -40,8 +56,36 @@
   pointer-events: none;
 }
 .is-max-limit {
-  max-height: 100%;
+  /* Width only — do not clamp height to the viewport or long menus get cut / submenus clip. */
   max-width: 100%;
+}
+
+/* Desktop: size to all items; never flex-grow (that stretched menus to the viewport). */
+.sheet-body {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  /* Keep overflow visible so nested submenus are not clipped. */
+  overflow: visible;
+}
+
+/* Mobile action sheet only: fill sheet height and scroll the action list. */
+.sheet-body.is-sheet-fill {
+  flex: 1 1 auto;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.sheet-actions {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: visible;
+}
+
+.sheet-body.is-sheet-fill .sheet-actions {
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .title{
   overflow: hidden;
@@ -55,9 +99,20 @@
   color: #444;
   border-bottom: 1px solid #AAA;
 }
+
+.title-row {
+  display: contents;
+}
+
+.title-row .title {
+  /* desktop: same as lone .title */
+}
 .menu-title {
   display: inline-block;
   cursor: pointer;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Visual only — clicks go to the row so label text also toggles. */
@@ -91,6 +146,9 @@ ul > li {
   padding: 2px 20px;
   font-size: 12px;
   color: #444;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 ul > li.disabled {
   cursor: default;
@@ -118,8 +176,13 @@ td.altitude {
 }
 
 input.altitude {
-  writing-mode: bt-lr;   
+  /* Native vertical slider (colored). appearance:none previously blanked it white. */
+  writing-mode: bt-lr;
+  writing-mode: vertical-lr;
+  direction: rtl;
   appearance: slider-vertical;
+  -webkit-appearance: slider-vertical;
+  accent-color: #4b5563;
   width: 8px;
   height: 100%;
   padding: 3px;
@@ -205,4 +268,379 @@ input.altitude {
 .hotkey {
   float: right;
   font-size: smaller;
+}
+
+/* —— Mobile: same dark chrome as bottom nav / sheets (desktop cream unchanged) —— */
+:host-context(html.udon-mobile-layout) .component {
+  background: var(--udon-chrome-bg-solid, #2a2a2a);
+  border: 1px solid var(--udon-chrome-border, #555);
+  color: var(--udon-chrome-text, #e8e8e8);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
+}
+
+:host-context(html.udon-mobile-layout) .title {
+  color: var(--udon-chrome-muted, #aaa);
+  border-bottom-color: var(--udon-chrome-border, #555);
+}
+
+:host-context(html.udon-mobile-layout) ul > li {
+  color: var(--udon-chrome-text, #e8e8e8);
+  padding: 10px 16px;
+  font-size: 14px;
+  min-height: 44px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+}
+
+/* Icon grids (faces etc.) stay compact — do not apply action-row touch sizing. */
+:host-context(html.udon-mobile-layout) .icons-panel ul > li {
+  padding: 1px 0;
+  min-height: 0;
+  font-size: 12px;
+  display: block;
+  align-items: initial;
+}
+
+:host-context(html.udon-mobile-layout) ul > li.hasHighlight:active,
+:host-context(html.udon-mobile-layout) ul > li.hasHighlight:hover {
+  color: #fff;
+  background-color: var(--udon-chrome-active, rgba(255, 255, 255, 0.1));
+}
+
+:host-context(html.udon-mobile-layout) hr.separator {
+  background-color: var(--udon-chrome-border, #555);
+}
+
+:host-context(html.udon-mobile-layout) .ruler,
+:host-context(html.udon-mobile-layout) .altitude-view {
+  color: var(--udon-chrome-muted, #aaa);
+}
+
+:host-context(html.udon-mobile-layout) .disabled .menu-title,
+:host-context(html.udon-mobile-layout) .disabled .material-icons {
+  color: #777;
+}
+
+/* More / toolbox / long-press: bottom action sheet — denser than generic touch rows */
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet {
+  left: var(--udon-left-chrome, 0px) !important;
+  right: 0 !important;
+  width: calc(100vw - var(--udon-left-chrome, 0px)) !important;
+  top: auto !important;
+  bottom: calc(var(--udon-bottom-chrome, 56px)) !important;
+  max-width: none;
+  /* Height set by JS: 4 button rows + separators (half) / 2 rows (peek). */
+  height: 360px;
+  max-height: calc(100dvh - var(--udon-bottom-chrome, 56px) - 8px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  white-space: normal;
+  border-radius: var(--udon-chrome-radius, 12px) var(--udon-chrome-radius, 12px) 0 0;
+  border-bottom: none;
+  padding-bottom: 2px;
+  box-sizing: border-box;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet.is-sheet-resizing {
+  transition: none;
+  touch-action: none;
+}
+
+/* Temporary measure mode: hug content instead of stretching the body. */
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet.is-sheet-fit {
+  height: auto !important;
+  max-height: none !important;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet.is-sheet-fit .sheet-body,
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet.is-sheet-fit .sheet-body.is-sheet-fill {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet.is-sheet-fit .sheet-body.is-sheet-fill .sheet-actions {
+  overflow: visible;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-resize-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .title {
+  max-width: none;
+  font-size: 14px;
+  padding: 8px 12px;
+  text-align: left;
+  flex: 1 1 auto;
+  min-width: 0;
+  border-bottom: none;
+  margin: 0;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 2px;
+  border-bottom: 1px solid var(--udon-chrome-border, #555);
+  padding: 0 4px 0 2px;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-back,
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-minimize,
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-close {
+  flex: 0 0 auto;
+  min-width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0 8px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--udon-chrome-text, #e8e8e8);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-back {
+  padding-left: 4px;
+  padding-right: 10px;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-title-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  margin-left: auto;
+  gap: 0;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-minimize,
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-close {
+  width: 40px;
+  padding: 0;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-back:active,
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-minimize:active,
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-close:active {
+  background: var(--udon-chrome-active, rgba(255, 255, 255, 0.1));
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-back .material-icons {
+  font-size: 20px;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-nav-label {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-actions.is-icon-grid > ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-actions.is-icon-grid > ul > li.is-grid-icon {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 4px 2px;
+  margin: 0;
+  border: 1px solid var(--udon-chrome-border, #555);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-actions.is-icon-grid > ul > li.is-grid-icon:active {
+  background: var(--udon-chrome-active, rgba(255, 255, 255, 0.1));
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-actions.is-icon-grid > ul > li:not(.is-grid-icon) {
+  grid-column: 1 / -1;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-actions.is-icon-grid .grid-icon-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  max-width: 100% !important;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-actions.is-icon-grid .grid-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-actions.is-icon-grid .grid-icon-label {
+  font-size: 10px;
+  line-height: 1.15;
+  white-space: normal;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-actions.is-icon-grid .grid-sub-hint {
+  font-size: 12px;
+  opacity: 0.7;
+  position: absolute;
+  right: 2px;
+  top: 2px;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-actions.is-icon-grid .menu-check {
+  margin: 0;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet ul {
+  padding: 0;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet ul > li {
+  padding: 5px 12px;
+  font-size: 13px;
+  min-height: 34px;
+  line-height: 1.25;
+  /* Title + arrow on first row; nested submenu wraps to full width (avoid side squeeze/deform). */
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet ul > li:not(.is-grid-icon) > .menu-title {
+  flex: 1 1 auto;
+  width: auto !important;
+  max-width: calc(100% - 28px);
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet ul > li > context-menu {
+  flex: 1 1 100%;
+  width: 100%;
+  max-width: 100%;
+  display: block;
+  min-width: 0;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet ul > li:has(> hr.separator) {
+  min-height: 0;
+  padding: 2px 0;
+  display: block;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet hr.separator {
+  margin: 0 8px;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .menu-title .material-icons {
+  font-size: 1.15em !important;
+  padding-left: 0 !important;
+  vertical-align: middle;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .sub-menu-arrow {
+  position: static;
+  flex: 0 0 auto;
+  margin-left: 4px;
+  transform: none;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .menu-title:not(.icon-menu) {
+  max-width: none;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .menu-check {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  margin: 0 6px 0 0;
+  vertical-align: middle;
+  accent-color: #8ab4f8;
+}
+
+/* Nested submenu inside a sheet: accordion row, not a second docked sheet. */
+:host-context(html.udon-mobile-layout) .component.is-mobile-action-sheet .submenu-panel,
+:host-context(html.udon-mobile-layout) .component.is-mobile-inline-submenu,
+:host-context(html.udon-mobile-layout) .component.submenu-panel.is-mobile-inline-submenu {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  display: block;
+  box-shadow: none;
+  border: none;
+  border-top: 1px solid var(--udon-chrome-border, #555);
+  border-radius: 0;
+  padding: 0;
+  white-space: normal;
+  box-sizing: border-box;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-inline-submenu .title {
+  max-width: none;
+  text-align: left;
+  padding: 6px 12px 2px;
+  font-size: 11px;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-inline-submenu .sheet-body {
+  flex: 0 0 auto;
+  overflow: visible;
+  width: 100%;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-inline-submenu ul > li {
+  padding-left: 28px;
+  flex-wrap: wrap;
+}
+
+:host-context(html.udon-mobile-layout) .component.is-mobile-inline-submenu ul > li > context-menu {
+  flex: 1 1 100%;
+  width: 100%;
+  display: block;
 }

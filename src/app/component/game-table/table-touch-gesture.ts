@@ -12,6 +12,9 @@ export enum TableTouchGestureEvent {
   ROTATE = 'rotate',
 }
 
+/** While multi-touch recognizers compete, lock to one dominant view gesture. */
+type MultiTouchLock = 'none' | 'rotate' | 'pinch';
+
 export class TableTouchGesture {
   private hammer: HammerManager = null;
   private deltaHammerDeltaX: number = 0;
@@ -26,6 +29,16 @@ export class TableTouchGesture {
 
   private tappedPanTimer: NodeJS.Timeout = null;
   private tappedPanCenter: HammerPoint = { x: 0, y: 0 };
+
+  /** Mobile: once rotate or pinch wins, keep it until fingers lift. */
+  private multiTouchLock: MultiTouchLock = 'none';
+
+  /**
+   * When true (phones / tablets), 1-finger drag always pans.
+   * Tap-then-drag vertical zoom is disabled — pinch zooms instead.
+   * Desktop mouse path does not use this class.
+   */
+  simplePan = false;
 
   onstart: Callback = null;
   onend: Callback = null;
@@ -70,12 +83,24 @@ export class TableTouchGesture {
     this.hammer.on('pinchmove', this.onPinchMove.bind(this));
     this.hammer.on('rotatemove', this.onRotateMove.bind(this));
 
-    // Workaround：iOS 上 contextmenu 不會觸發。
+    // Long-press → contextmenu (iOS / some Android lack native).
+    // Mobile (simplePan): empty-table long-press is ping (pointer hold), not add-menu.
+    // Object long-press still opens the object menu.
     let ua = window.navigator.userAgent.toLowerCase();
-    let isiOS = ua.indexOf('iphone') > -1 || ua.indexOf('ipad') > -1 || ua.indexOf('macintosh') > -1 && 'ontouchend' in document;
-    if (!isiOS) return;
-    this.hammer.add(new Hammer.Press({ time: 251 }));
+    let needsSyntheticContextMenu =
+      ua.indexOf('iphone') > -1 || ua.indexOf('ipad') > -1
+      || (ua.indexOf('macintosh') > -1 && 'ontouchend' in document)
+      || ua.indexOf('android') > -1;
+    if (!needsSyntheticContextMenu) return;
+    this.hammer.add(new Hammer.Press({ time: 550 }));
     this.hammer.on('press', ev => {
+      if (this.simplePan) {
+        const t = ev.target;
+        const onObject = t instanceof Element && !!t.closest(
+          '[appMovable], [appRotable], [appResizable], game-character, card, card-stack, dice-symbol, text-note, terrain, game-table-mask, range'
+        );
+        if (!onObject) return;
+      }
       let event = new MouseEvent('contextmenu', {
         bubbles: true,
         cancelable: true,
@@ -88,12 +113,14 @@ export class TableTouchGesture {
 
   private onHammer(ev: HammerInput) {
     if (ev.isFirst) {
+      this.multiTouchLock = 'none';
       this.deltaHammerScale = ev.scale;
       this.deltaHammerRotation = ev.rotation;
       this.deltaHammerDeltaX = ev.deltaX;
       this.deltaHammerDeltaY = ev.deltaY;
       if (this.onstart) this.onstart(ev.srcEvent);
     } else if (ev.isFinal) {
+      this.multiTouchLock = 'none';
       if (this.onend) this.onend(ev.srcEvent);
     } else {
       this.deltaHammerScale = ev.scale - this.prevHammerScale;
@@ -106,7 +133,7 @@ export class TableTouchGesture {
     this.prevHammerDeltaX = ev.deltaX;
     this.prevHammerDeltaY = ev.deltaY;
 
-    if (this.tappedPanTimer == null || ev.eventType != Hammer.INPUT_START) return;
+    if (this.simplePan || this.tappedPanTimer == null || ev.eventType != Hammer.INPUT_START) return;
     let distance = MathUtil.sqrMagnitude(this.tappedPanCenter, ev.center);
     if (50 ** 2 < distance) {
       this.clearTappedPanTimer();
@@ -114,12 +141,21 @@ export class TableTouchGesture {
   }
 
   private onTap(ev: HammerInput) {
+    if (this.simplePan) {
+      if (this.ongesture) this.ongesture(ev.srcEvent);
+      return;
+    }
     this.tappedPanCenter = ev.center;
     this.tappedPanTimer = setTimeout(() => { this.tappedPanTimer = null; }, 400);
     if (this.ongesture) this.ongesture(ev.srcEvent);
   }
 
   private onTappedPanStart(ev: HammerInput) {
+    if (this.simplePan) {
+      // Enable transform mode once; do not spam gesture (would clear object isDragging).
+      if (this.ongesture) this.ongesture(ev.srcEvent);
+      return;
+    }
     if (this.tappedPanTimer == null) return;
     this.clearTappedPanTimer(false);
     if (this.ongesture) this.ongesture(ev.srcEvent);
@@ -130,10 +166,14 @@ export class TableTouchGesture {
   }
 
   private onTappedPanMove(ev: HammerInput) {
-    if (this.tappedPanTimer == null) {
+    // pan1p still fires during 2-finger gestures via recognizeWith — leave view to pan2p/pinch.
+    if (this.touchCount(ev) >= 2) return;
+
+    if (this.simplePan || this.tappedPanTimer == null) {
       let transformX = this.deltaHammerDeltaX;
       let transformY = this.deltaHammerDeltaY;
       let transformZ = 0;
+      // Pan must not call ongesture each move — that clears pointerDevice.isDragging mid object-drag.
       if (this.ontransform) this.ontransform(transformX, transformY, transformZ, 0, 0, 0, TableTouchGestureEvent.PAN, ev.srcEvent);
     } else {
       this.clearTappedPanTimer(false);
@@ -146,23 +186,52 @@ export class TableTouchGesture {
 
   private onPanMove(ev: HammerInput) {
     this.clearTappedPanTimer();
-    let rotateX = -this.deltaHammerDeltaY / window.innerHeight * 100;
     if (this.ongesture) this.ongesture(ev.srcEvent);
+    if (this.simplePan) {
+      // Mobile two-finger drag = middle-mouse free rotate (yaw + pitch). Pinch zooms.
+      if (this.multiTouchLock === 'pinch') return;
+      if (this.multiTouchLock === 'none') this.multiTouchLock = 'rotate';
+      const rotateZ = -this.deltaHammerDeltaX / 5;
+      const rotateX = -this.deltaHammerDeltaY / 5;
+      if (this.ontransform) {
+        this.ontransform(0, 0, 0, rotateX, 0, rotateZ, TableTouchGestureEvent.ROTATE, ev.srcEvent);
+      }
+      return;
+    }
+    // Desktop touch path: two-finger vertical = pitch.
+    const rotateX = -this.deltaHammerDeltaY / window.innerHeight * 100;
     if (this.ontransform) this.ontransform(0, 0, 0, rotateX, 0, 0, TableTouchGestureEvent.ROTATE, ev.srcEvent);
   }
 
   private onPinchMove(ev: HammerInput) {
     this.clearTappedPanTimer();
-    let transformZ = this.deltaHammerScale * 500;
+    // Ignore tiny scale jitter while two-finger pan/rotate dominates.
+    if (Math.abs(this.deltaHammerScale) < 0.008) return;
+    if (this.simplePan) {
+      // Finger distance drifts during a rotate swipe on iOS — require clearer pinch intent.
+      if (this.multiTouchLock === 'rotate') return;
+      if (this.multiTouchLock === 'none') {
+        if (Math.abs(this.deltaHammerScale) < 0.02) return;
+        this.multiTouchLock = 'pinch';
+      }
+    }
+    const transformZ = this.deltaHammerScale * 500;
     if (this.ongesture) this.ongesture(ev.srcEvent);
     if (this.ontransform) this.ontransform(0, 0, transformZ, 0, 0, 0, TableTouchGestureEvent.PINCH, ev.srcEvent);
   }
 
   private onRotateMove(ev: HammerInput) {
     this.clearTappedPanTimer();
-    let rotateZ = this.deltaHammerRotation;
+    // Mobile simplePan: 2-finger drag already applies yaw+pitch — skip Hammer yaw-only rotate.
+    if (this.simplePan) return;
+    const rotateZ = this.deltaHammerRotation;
     if (this.ongesture) this.ongesture(ev.srcEvent);
     if (this.ontransform) this.ontransform(0, 0, 0, 0, 0, rotateZ, TableTouchGestureEvent.ROTATE, ev.srcEvent);
+  }
+
+  private touchCount(ev: HammerInput): number {
+    const src = ev.srcEvent;
+    return src instanceof TouchEvent ? src.touches.length : 0;
   }
 
   private clearTappedPanTimer(needsSetNull: boolean = true) {

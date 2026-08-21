@@ -1,0 +1,59 @@
+<nav class="scene-nav" *ngIf="tables.length > 0" [class.is-collapsed]="collapsed">
+  <button type="button" class="scene-nav-toggle" (click)="collapsed = !collapsed" [attr.title]="collapsed ? ('table.navExpand' | i18n) : ('table.navCollapse' | i18n)">
+    <i class="material-icons">{{ collapsed ? 'expand_more' : 'expand_less' }}</i>
+  </button>
+  <div class="scene-nav-track" *ngIf="!collapsed">
+    <div
+      class="scene-chip-wrap"
+      *ngFor="let table of tables"
+      [class.is-menu-open]="isMenuOpen(table)"
+      (mouseenter)="onChipEnter(table)"
+      (mouseleave)="onChipLeave($event, table)"
+    >
+      <button
+        type="button"
+        class="scene-chip"
+        [class.is-active]="isActive(table)"
+        [class.is-viewed]="isViewed(table)"
+        [class.is-locked]="!canView(table)"
+        [disabled]="!canView(table) && !isGM"
+        [attr.title]="chipTitle(table)"
+        (click)="onChipClick(table, $event)"
+      >
+        <span class="scene-chip-dot is-active-dot" *ngIf="isActive(table)" aria-hidden="true"></span>
+        <span class="scene-chip-name">{{ table.name || ('table.unnamed' | i18n) }}</span>
+      </button>
+      <div class="scene-presence" *ngIf="peersOn(table).length" aria-hidden="true">
+        <span
+          class="presence-dot"
+          *ngFor="let peer of peersOn(table)"
+          [style.background-color]="peer.color"
+          [attr.title]="peerDotTitle(peer)"
+        ></span>
+      </div>
+      <div class="scene-menu-bridge" *ngIf="isMenuOpen(table)" aria-hidden="true"></div>
+      <div class="scene-chip-menu" *ngIf="isMenuOpen(table)" role="menu">
+        <button type="button" role="menuitem" *ngIf="isGM" (mousedown)="viewTable(table, $event)">
+          {{ 'table.activate' | i18n }}
+        </button>
+        <button type="button" role="menuitem" *ngIf="isGM" (mousedown)="summonAll(table, $event)">
+          {{ 'table.summonAll' | i18n }}
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          *ngIf="isGM && isViewed(table)"
+          (mousedown)="saveCurrentScene(table, $event)"
+        >
+          {{ 'scenePreset.saveAsScene' | i18n }}
+        </button>
+        <button type="button" role="menuitem" *ngIf="isGM" (mousedown)="hideFromHud(table, $event)">
+          {{ 'table.hideFromHud' | i18n }}
+        </button>
+        <button type="button" role="menuitem" *ngIf="!isGuest()" (mousedown)="openMapSettings(table, $event)">
+          {{ 'table.mapSettings' | i18n }}
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>

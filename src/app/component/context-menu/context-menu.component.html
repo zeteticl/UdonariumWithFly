@@ -1,10 +1,43 @@
-<div style="display: flex; flex-direction: column" class="component" [ngClass]="{'icons-panel': isIconsMenu, 'submenu-panel': isSubmenu, 'is-max-limit': !isSubmenu, 'pointer-events-none': isPointerDragging}"
+<div style="display: flex; flex-direction: column" class="component" [ngClass]="{'icons-panel': isIconsMenu, 'submenu-panel': isSubmenu, 'is-max-limit': !isSubmenu, 'pointer-events-none': isPointerDragging, 'is-sheet-resizing': sheetResizing}"
   (mouseleave)="hideSubMenu()"  #root>
-  <div *ngIf="(!isIconsMenu && 0 < title.length) || altitudeHande"><div class="title" [style.color]="titleColor" [style.font-weight]="titleBold ? 'bolder' : 'normal'">{{title}}<span style="font-size: small;" *ngIf="altitudeHande"> ({{ 'common.altitude' | i18n }} <input type="number" step="0.1" style="font-size: small; width:3.6em; text-align:right" [(ngModel)]="altitudeHande.altitude" [disabled]="!altitudeHande.isHaveAltitude || isAltitudeDisabled">)</span></div></div>
-  <div style="display: flex; align-items: center">
+  <div *ngIf="isMobileActionSheet && !isSubmenu" class="sheet-resize-bar"
+    (pointerdown)="startSheetResize($event)"
+    [attr.title]="'hud.resizeSheet' | i18n"
+    [attr.aria-label]="'hud.resizeSheet' | i18n">
+    <div class="sheet-handle" aria-hidden="true"></div>
+  </div>
+  <div *ngIf="(!isIconsMenu && 0 < title?.length) || altitudeHande || canDrillBack || isMobileActionSheet" class="title-row">
+    <button *ngIf="canDrillBack" type="button" class="sheet-back"
+      (click)="drillBack($event)"
+      [attr.title]="'menu.back' | i18n"
+      [attr.aria-label]="'menu.back' | i18n">
+      <i class="material-icons" aria-hidden="true">arrow_back</i>
+      <span class="sheet-nav-label">{{ 'menu.back' | i18n }}</span>
+    </button>
+    <div class="title" [style.color]="titleColorStyle" [style.font-weight]="titleBold ? 'bolder' : 'normal'">
+      {{title}}<span style="font-size: small;" *ngIf="altitudeHande"> ({{ 'common.altitude' | i18n }} <input type="number" step="0.1" style="font-size: small; width:3.6em; text-align:right" [(ngModel)]="altitudeHande.altitude" [disabled]="!altitudeHande.isHaveAltitude || isAltitudeDisabled">)</span>
+    </div>
+    <div *ngIf="isMobileActionSheet && !isSubmenu" class="sheet-title-actions">
+      <!-- One snap toggle (like ui-panel): − at half → peek; □ at peek → half. Then X. -->
+      <button type="button" class="sheet-minimize"
+        (click)="toggleSheetSnap($event)"
+        [attr.title]="(isSheetPeek ? 'note.expand' : 'note.collapse') | i18n"
+        [attr.aria-label]="(isSheetPeek ? 'note.expand' : 'note.collapse') | i18n">
+        <i class="material-icons" aria-hidden="true" [style.font-size.px]="isSheetPeek ? 12 : 14">{{ isSheetPeek ? 'crop_din' : 'minimize' }}</i>
+      </button>
+      <button type="button" class="sheet-close"
+        (click)="close()"
+        [attr.title]="'common.close' | i18n"
+        [attr.aria-label]="'common.close' | i18n">
+        <i class="material-icons" aria-hidden="true" style="font-size: 14px">close</i>
+      </button>
+    </div>
+  </div>
+  <!-- is-sheet-fill only for mobile action sheets; desktop sizes to all items and keeps overflow visible for submenus. -->
+  <div class="sheet-body" [class.is-sheet-fill]="isMobileActionSheet">
     <div *ngIf="altitudeHande" class="altitude ruler" style="display: flex; align-self: stretch; flex-direction: column; align-content: center"><div style="margin-top: 2em;">{{ 'common.altitudeHigh' | i18n }}</div><div style="align-self: center; margin-top: auto; margin-bottom: auto">0</div><div style="margin-bottom: 2em;">{{ 'common.altitudeLow' | i18n }}</div></div>
     <div *ngIf="altitudeHande" class="altitude"><input #altitudeSlider class="altitude" title="{{altitudeHande.altitude}}" [(ngModel)]="altitudeHande.altitude" type="range" max="12" min="-12" step="0.5" orient="vertical" [disabled]="!altitudeHande.isHaveAltitude || isAltitudeDisabled"></div>
-    <div style="flex-grow: 1">
+    <div class="sheet-actions" [class.is-icon-grid]="showIconGrid">
       <ul>
         <ng-container *ngFor="let action of actions">
           <ng-container *ngIf="action">
@@ -16,31 +49,52 @@
   </div>
 </div>
 <ng-template #actionMenu let-action="action">
-  <li [ngClass]="{'has-color': action.color, 'hasHighlight': !(action.disabled || action.icon || (action.altitudeHande && action.altitudeHande.altitude == 0)), 'disabled': (action.disabled || (action.altitudeHande && action.altitudeHande.altitude == 0))}"
-      [style.padding-left.em]="action.icon ? 0 : (action.level ? (action.level + 1.5) : 1.5) - (altitudeHande ? 0.5 : 0)"
+  <li [ngClass]="{
+        'has-color': action.color,
+        'hasHighlight': !(action.disabled || action.icon || (action.altitudeHande && !action.subActions && action.altitudeHande.altitude == 0)),
+        'disabled': (action.disabled || (action.altitudeHande && !action.subActions && action.altitudeHande.altitude == 0)),
+        'has-material-icon': !!action.materialIcon,
+        'is-grid-icon': showIconGrid && action.type !== 'separator'
+      }"
+      [style.padding-left.em]="showIconGrid ? null : (action.icon ? 0 : (action.level ? (action.level + 1.5) : 1.5))"
       [style.color]="action.color ? action.color : ''" 
       [style.text-align]="action.center ? 'center': ''"
-      [attr.title]="action.tip || null"
-      (click)="(action.disabled || (action.altitudeHande && action.altitudeHande.altitude == 0)) ? false : doAction(action)"
-      (mouseenter)="(action.disabled || (action.altitudeHande && action.altitudeHande.altitude == 0)) ? false : showSubMenu(action)">
-    <div class="menu-title" [ngClass]="{'icon-menu': action.icon, default: action.default}" style="width: 100%">
-      <span *ngIf="action.error" title="{{action.error}}">⚠️</span>
-      <!-- Decorative only: whole row (text included) toggles via li click. -->
-      <input *ngIf="action.name && action.checkBox == 'check' && action.name.indexOf('☑') == 0" type="checkbox" class="menu-check" tabindex="-1" checked/>
-      <input *ngIf="action.name && action.checkBox == 'check' && action.name.indexOf('☐') == 0" type="checkbox" class="menu-check" tabindex="-1"/>
-      <input *ngIf="action.name && action.checkBox == 'radio' && action.name.indexOf('◉') == 0" type="radio" class="menu-check" tabindex="-1" checked/>
-      <input *ngIf="action.name && action.checkBox == 'radio' && action.name.indexOf('○') == 0" type="radio" class="menu-check" tabindex="-1"/>
-      <span *ngIf="action.sampleColor" class="color-indicator" [style.color]="action.sampleColor">■</span>
-      <span *ngIf="action.materialIcon" style="vertical-align: top"><i style="font-size: 150%; padding-left: 2px;" class="material-icons">{{action.materialIcon}}</i></span>
-      <span [innerHTML]="actionNameHtmlEscape(action.name, action.checkBox) | safe: 'html'"></span><sup *ngIf="action.selfOnly" class="self-only">*</sup>
-      <span *ngIf="action.hotkey != ''" class="hotkey" [innerHtml]="action.hotkey"></span>
-      <span *ngIf="action.icon && 0 < action.icon?.url.length" class="imagebox"><img class="image" [src]="action.icon.url | safe: 'resourceUrl'"></span>
-      <i *ngIf="action.isOuterLink" class="material-icons" style="font-size: 1rem">open_in_new</i>
+      [attr.title]="action.tip || action.name || null"
+      (click)="(action.disabled || (action.altitudeHande && !action.subActions && action.altitudeHande.altitude == 0)) ? false : doAction(action, $event)"
+      (mouseenter)="(action.disabled || (action.altitudeHande && !action.subActions && action.altitudeHande.altitude == 0)) ? false : showSubMenu(action)">
+    <div class="menu-title" [ngClass]="{'icon-menu': action.icon, default: action.default, 'grid-icon-title': showIconGrid}" style="width: 100%">
+      <ng-container *ngIf="showIconGrid; else listMenuContent">
+        <i *ngIf="action.materialIcon" class="material-icons grid-icon">{{action.materialIcon}}</i>
+        <span *ngIf="!action.materialIcon && action.error" class="grid-icon-extra" title="{{action.error}}">⚠️</span>
+        <input *ngIf="!action.materialIcon && action.name && action.checkBox == 'check' && action.name.indexOf('☑') == 0" type="checkbox" class="menu-check" tabindex="-1" checked/>
+        <input *ngIf="!action.materialIcon && action.name && action.checkBox == 'check' && action.name.indexOf('☐') == 0" type="checkbox" class="menu-check" tabindex="-1"/>
+        <input *ngIf="!action.materialIcon && action.name && action.checkBox == 'radio' && action.name.indexOf('◉') == 0" type="radio" class="menu-check" tabindex="-1" checked/>
+        <input *ngIf="!action.materialIcon && action.name && action.checkBox == 'radio' && action.name.indexOf('○') == 0" type="radio" class="menu-check" tabindex="-1"/>
+        <span *ngIf="action.sampleColor" class="color-indicator" [style.color]="action.sampleColor">■</span>
+        <span class="grid-icon-label" [innerHTML]="actionNameHtmlEscape(action.name, action.checkBox) | safe: 'html'"></span>
+        <sup *ngIf="action.selfOnly" class="self-only">*</sup>
+        <i *ngIf="action.subActions && !action.disabled" class="material-icons grid-sub-hint">chevron_right</i>
+      </ng-container>
+      <ng-template #listMenuContent>
+        <span *ngIf="action.error" title="{{action.error}}">⚠️</span>
+        <!-- Decorative only: whole row (text included) toggles via li click. -->
+        <input *ngIf="action.name && action.checkBox == 'check' && action.name.indexOf('☑') == 0" type="checkbox" class="menu-check" tabindex="-1" checked/>
+        <input *ngIf="action.name && action.checkBox == 'check' && action.name.indexOf('☐') == 0" type="checkbox" class="menu-check" tabindex="-1"/>
+        <input *ngIf="action.name && action.checkBox == 'radio' && action.name.indexOf('◉') == 0" type="radio" class="menu-check" tabindex="-1" checked/>
+        <input *ngIf="action.name && action.checkBox == 'radio' && action.name.indexOf('○') == 0" type="radio" class="menu-check" tabindex="-1"/>
+        <span *ngIf="action.sampleColor" class="color-indicator" [style.color]="action.sampleColor">■</span>
+        <span *ngIf="action.materialIcon" style="vertical-align: top"><i style="font-size: 150%; padding-left: 2px;" class="material-icons">{{action.materialIcon}}</i></span>
+        <span [innerHTML]="actionNameHtmlEscape(action.name, action.checkBox) | safe: 'html'"></span><sup *ngIf="action.selfOnly" class="self-only">*</sup>
+        <span *ngIf="action.hotkey" class="hotkey">({{ action.hotkey }})</span>
+        <span *ngIf="action.icon && 0 < action.icon?.url.length" class="imagebox"><img class="image" [src]="action.icon.url | safe: 'resourceUrl'"></span>
+        <i *ngIf="action.isOuterLink" class="material-icons" style="font-size: 1rem">open_in_new</i>
+      </ng-template>
     </div>
-    <div *ngIf="action.subActions && !action.disabled" class="sub-menu-arrow">
-      <i class="material-icons" style="font-size: 1em; vertical-align: bottom;">arrow_forward_ios</i>
+    <div *ngIf="!showIconGrid && action.subActions && !action.disabled" class="sub-menu-arrow">
+      <i class="material-icons" style="font-size: 1em; vertical-align: bottom;">{{ isMobileActionSheet ? 'chevron_right' : 'arrow_forward_ios' }}</i>
     </div>
-    <context-menu *ngIf="subMenu && parentMenu === action" [title]="action.name" [actions]="subMenu" [isSubmenu]="true"></context-menu>
+    <!-- Desktop / floating: nested flyout. Mobile sheet uses drillInto instead. -->
+    <context-menu *ngIf="!isMobileActionSheet && subMenu && parentMenu === action" [title]="action.name" [actions]="subMenu" [isSubmenu]="true"></context-menu>
   </li>
 </ng-template>
 <ng-template #separator let-action="action">

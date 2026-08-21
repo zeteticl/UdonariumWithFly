@@ -3,7 +3,33 @@
 .combat-tracker {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
+}
+
+/* Sticky eye-level turn bar (scrolls with .scrollable-panel). */
+.combat-controls {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  margin: 0;
+  padding: 8px 10px;
+  background: linear-gradient(180deg, #fff8ee 0%, #efe0c8 100%);
+  border-color: #8a6a45;
+  box-shadow: 0 2px 8px rgba(60, 40, 20, 0.18);
+}
+
+.combat-controls.is-running {
+  border-color: #5c4630;
+  background: linear-gradient(180deg, #fff3df 0%, #e8d0a8 100%);
+}
+
+.combat-controls .controls {
+  gap: 6px;
+  padding-top: 0;
+}
+
+.combat-controls .btn {
+  font-weight: 700;
 }
 
 .enc-nav {
@@ -24,8 +50,8 @@
 }
 
 .tool-actions {
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: 4px;
+  padding-top: 4px;
   border-top: 1px solid #e2d3bf;
 }
 
@@ -36,7 +62,7 @@
 
 .current-body {
   display: flex;
-  gap: 10px;
+  gap: 6px;
   align-items: stretch;
 }
 
@@ -83,8 +109,8 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 360px;
-  overflow: auto;
+  /* Let the panel scroll so sticky turn controls stay visible. */
+  overflow: visible;
 }
 
 .combatant-list li {
@@ -334,6 +360,54 @@
   flex-shrink: 0;
 }
 
-.controls {
-  padding-top: 0;
+/* —— Mobile Play: denser combat sheet —— */
+:host-context(html.udon-mobile-layout) .combat-tracker {
+  gap: 4px;
+}
+
+:host-context(html.udon-mobile-layout) .combat-controls {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  padding: 6px 8px;
+}
+
+:host-context(html.udon-mobile-layout) .combat-controls .btn {
+  min-height: 32px;
+  font-size: 12px;
+}
+
+:host-context(html.udon-mobile-layout) .tool-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 2px;
+  padding-top: 4px;
+}
+
+:host-context(html.udon-mobile-layout) .tool-actions .btn,
+:host-context(html.udon-mobile-layout) .btn.btn-sm {
+  min-height: 30px;
+  padding: 2px 6px;
+  font-size: 11px;
+  gap: 2px;
+}
+
+:host-context(html.udon-mobile-layout) .field-row {
+  gap: 4px;
+}
+
+:host-context(html.udon-mobile-layout) .enc-name {
+  min-height: 30px;
+  font-size: 13px;
+  padding: 2px 5px;
+}
+
+:host-context(html.udon-mobile-layout) .enc-nav {
+  gap: 3px;
+  margin-bottom: 2px;
+}
+
+:host-context(html.udon-mobile-layout) .current-body {
+  gap: 4px;
 }

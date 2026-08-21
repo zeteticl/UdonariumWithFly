@@ -21,6 +21,8 @@ export class GuidedTourComponent implements OnInit, OnDestroy {
     hole: null,
     bubbleLeft: 24,
     bubbleTop: 24,
+    bubbleWidth: 320,
+    isMobile: false,
   };
 
   private sub: Subscription;
@@ -51,6 +53,13 @@ export class GuidedTourComponent implements OnInit, OnDestroy {
   get canNext(): boolean {
     if (this.state.phase === 'welcome') return true;
     return this.state.actionDone || this.state.current?.require === 'ack';
+  }
+
+  get stepBodyKey(): string {
+    const step = this.state.current;
+    if (!step) return '';
+    if (this.state.isMobile && step.bodyKeyMobile) return step.bodyKeyMobile;
+    return step.bodyKey;
   }
 
   onLocaleChange(locale: AppLocale) {

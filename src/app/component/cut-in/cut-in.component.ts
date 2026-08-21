@@ -7,6 +7,8 @@ import { ImageFile, ImageState } from '@udonarium/core/file-storage/image-file';
 import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
 import { EventSystem } from '@udonarium/core/system';
 import { CutIn } from '@udonarium/cut-in';
+import { Jukebox } from '@udonarium/Jukebox';
+import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
 import { PeerCursor } from '@udonarium/peer-cursor';
 import { ContextMenuSeparator, ContextMenuService } from 'service/context-menu.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
@@ -138,6 +140,23 @@ export class CutInComponent implements OnInit, OnDestroy {
   private _dragging = false;
 
   private readonly audioPlayer = new AudioPlayer();
+  private duckHeld = false;
+
+  private jukebox(): Jukebox | null {
+    return ObjectStore.instance.get<Jukebox>('Jukebox') || null;
+  }
+
+  private beginMusicDuck() {
+    if (this.duckHeld || this.isTest) return;
+    this.jukebox()?.beginDuck();
+    this.duckHeld = true;
+  }
+
+  private endMusicDuck() {
+    if (!this.duckHeld) return;
+    this.jukebox()?.endDuck();
+    this.duckHeld = false;
+  }
   
   constructor(
     private pointerDeviceService: PointerDeviceService,
@@ -167,6 +186,7 @@ export class CutInComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.endMusicDuck();
     EventSystem.unregister(this, 'UPDATE_AUDIO_RESOURE');
     EventSystem.unregister(this, 'CHANGE_JUKEBOX_VOLUME');
     EventSystem.unregister(this, 'PLAY_VIDEO_CUT_IN');
@@ -410,6 +430,7 @@ export class CutInComponent implements OnInit, OnDestroy {
     } else {
       this.ngZone.run(() => {
         this._isVisible = true;
+        if (this.cutIn.videoId || this.cutIn.audioIdentifier) this.beginMusicDuck();
         if (!this.cutIn.videoId) this._play();
       });
       if (this.cutIn.duration > 0) {
@@ -428,7 +449,10 @@ export class CutInComponent implements OnInit, OnDestroy {
     if (audio && audio.isReady) {
       this.audioPlayer.volumeType = this.isTest ? VolumeType.AUDITION : VolumeType.MASTER;
       this.audioPlayer.loop = this.cutIn.endedActionType == 2;
-      if (!this.cutIn.videoId) this.audioPlayer.play(audio);
+      if (!this.cutIn.videoId) {
+        this.beginMusicDuck();
+        this.audioPlayer.play(audio);
+      }
     } else {
       EventSystem.register(this)
       .on('UPDATE_AUDIO_RESOURE', -100, event => {
@@ -444,6 +468,7 @@ export class CutInComponent implements OnInit, OnDestroy {
 
   stop() {
     EventSystem.unregister(this, 'UPDATE_AUDIO_RESOURE');
+    this.endMusicDuck();
     this.ngZone.run(() => {
       this._isVisible = false;
       this._dragging = false;
@@ -453,6 +478,7 @@ export class CutInComponent implements OnInit, OnDestroy {
 
   end() {
     this._isEnd = true;
+    this.endMusicDuck();
     this.audioPlayer.stop();
   }
 

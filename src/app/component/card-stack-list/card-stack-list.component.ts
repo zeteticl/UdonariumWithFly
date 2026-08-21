@@ -6,7 +6,7 @@ import { EventSystem, Network } from '@udonarium/core/system';
 import { I18nService } from 'service/i18n.service';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 
-import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
+import { CardSettingsComponent } from 'component/card-settings/card-settings.component';
 import { ChatMessageService } from 'service/chat-message.service';
 
 import { PanelOption, PanelService } from 'service/panel.service';
@@ -26,6 +26,10 @@ export class CardStackListComponent implements OnChanges, OnDestroy {
   readonly CardStateFront = CardState.FRONT;
   readonly CardStateBack = CardState.BACK;
 
+  get cards(): Card[] {
+    return this.cardStack ? this.cardStack.cards : [];
+  }
+
   constructor(
     private panelService: PanelService,
     private changeDetector: ChangeDetectorRef,
@@ -39,16 +43,19 @@ export class CardStackListComponent implements OnChanges, OnDestroy {
 
 
   ngOnChanges() {
-    Promise.resolve().then(() => this.panelService.title = this.cardStack.name + this.i18n.t('stack.listSuffix'));
+    if (!this.cardStack) return;
+    Promise.resolve().then(() => {
+      if (this.cardStack) this.panelService.title = this.cardStack.name + this.i18n.t('stack.listSuffix');
+    });
     EventSystem.unregister(this);
     EventSystem.register(this)
-      .on(`UPDATE_GAME_OBJECT/identifier/${this.cardStack?.identifier}`, event => {
+      .on(`UPDATE_GAME_OBJECT/identifier/${this.cardStack.identifier}`, event => {
         this.changeDetector.markForCheck();
-        if (this.cardStack.owner !== this.owner) {
+        if (this.cardStack && this.cardStack.owner !== this.owner) {
           this.panelService.close();
         }
       })
-      .on(`UPDATE_OBJECT_CHILDREN/identifier/${this.cardStack?.identifier}`, event => {
+      .on(`UPDATE_OBJECT_CHILDREN/identifier/${this.cardStack.identifier}`, event => {
         this.changeDetector.markForCheck();
       })
       .on('DELETE_GAME_OBJECT', event => {
@@ -60,20 +67,21 @@ export class CardStackListComponent implements OnChanges, OnDestroy {
 
   ngOnDestroy() {
     EventSystem.unregister(this);
-    if (this.cardStack.owner === this.owner) {
+    if (this.cardStack && this.cardStack.owner === this.owner) {
       this.cardStack.owner = '';
     }
   }
 
   drawCard(card: Card) {
-    if (this.GuestMode()) return;
+    if (this.GuestMode() || !this.cardStack) return;
     card.parent.removeChild(card);
     card.location.x = this.cardStack.location.x + 100 + (Math.random() * 50);
     card.location.y = this.cardStack.location.y + 25 + (Math.random() * 50);
     card.location.name = this.cardStack.location.name;
+    card.tableIdentifier = this.cardStack.location.name === 'table' ? this.cardStack.tableIdentifier : '';
     card.rotate += this.cardStack.rotate;
     if (360 < card.rotate) card.rotate -= 360;
-    card.toTopmost();
+    card.raiseInTier();
     SoundEffect.play(PresetSound.cardDraw);
     const stackName = this.cardStack.name == '' ? this.i18n.t('stack.unnamed') : this.cardStack.name;
     if (card.isFront) {
@@ -106,7 +114,7 @@ export class CardStackListComponent implements OnChanges, OnDestroy {
 
   close(needShuffle: boolean = false) {
     if (this.GuestMode()) return;
-    if (needShuffle) {
+    if (needShuffle && this.cardStack) {
       this.cardStack.shuffle();
       EventSystem.call('SHUFFLE_CARD_STACK', { identifier: this.cardStack.identifier });
       SoundEffect.play(PresetSound.cardShuffle);
@@ -116,15 +124,21 @@ export class CardStackListComponent implements OnChanges, OnDestroy {
 
   showDetail(gameObject: Card) {
     if (this.GuestMode()) return;
+    let title = this.i18n.t('cardList.panelTitle');
+    if (gameObject.name.length) title += ' - ' + gameObject.name;
+    const tourId = PanelService.tourIdObjectDetail(gameObject.identifier);
+    if (PanelService.bringTourPanelToFront(tourId, { title })) return;
     let coordinate = {
       x: this.panelService.left,
       y: this.panelService.top
     };
-    let title = this.i18n.t('cardList.panelTitle');
-    if (gameObject.name.length) title += ' - ' + gameObject.name;
-    let option: PanelOption = { title: title, left: coordinate.x + 10, top: coordinate.y + 20, width: 600, height: 600 };
-    let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
-    component.tabletopObject = gameObject;
+    let option: PanelOption = {
+      title: title, left: coordinate.x + 10, top: coordinate.y + 20, width: 420, height: 360,
+      tourPanelId: tourId,
+      geometryKey: PanelService.sheetGeometryKey(gameObject.aliasName),
+    };
+    let component = this.panelService.open<CardSettingsComponent>(CardSettingsComponent, option);
+    component.card = gameObject;
   }
 
   trackByCard(index: number, card: Card) {

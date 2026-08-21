@@ -1,4 +1,7 @@
-<div class="guided-tour-root" *ngIf="state.phase === 'welcome' || state.phase === 'running'">
+<div class="guided-tour-root"
+  [class.mobile]="state.isMobile"
+  [class.mobile-running]="state.isMobile && state.phase === 'running'"
+  *ngIf="state.phase === 'welcome' || state.phase === 'running'">
   <div class="guided-tour-scrim" *ngIf="state.phase === 'welcome'"></div>
 
   <ng-container *ngIf="state.phase === 'running'">
@@ -21,8 +24,10 @@
   <div
     class="guided-tour-bubble"
     [class.welcome]="state.phase === 'welcome'"
+    [class.mobile]="state.isMobile"
     [style.left.px]="state.phase === 'welcome' ? null : state.bubbleLeft"
     [style.top.px]="state.phase === 'welcome' ? null : state.bubbleTop"
+    [style.width.px]="state.phase === 'welcome' ? null : state.bubbleWidth"
   >
     <ng-container *ngIf="state.phase === 'welcome'">
       <div class="gt-lang">
@@ -32,7 +37,7 @@
         </select>
       </div>
       <div class="gt-title">{{ 'tour.welcome.title' | i18n }}</div>
-      <div class="gt-body">{{ 'tour.welcome.body' | i18n }}</div>
+      <div class="gt-body">{{ (state.isMobile ? 'tour.welcome.bodyMobile' : 'tour.welcome.body') | i18n }}</div>
       <div class="gt-actions">
         <button type="button" class="gt-btn primary" (click)="start()">{{ 'tour.welcome.start' | i18n }}</button>
         <button type="button" class="gt-btn" (click)="skipAll()">{{ 'tour.welcome.skip' | i18n }}</button>
@@ -42,7 +47,7 @@
     <ng-container *ngIf="state.phase === 'running' && state.current">
       <div class="gt-progress">{{ progressLabel }}</div>
       <div class="gt-title">{{ state.current.titleKey | i18n }}</div>
-      <div class="gt-body">{{ state.current.bodyKey | i18n }}</div>
+      <div class="gt-body">{{ stepBodyKey | i18n }}</div>
       <div class="gt-hint" *ngIf="!canNext">{{ 'tour.hint.doAction' | i18n }}</div>
       <div class="gt-actions">
         <button type="button" class="gt-btn" (click)="prev()" [disabled]="state.stepIndex <= 0">{{ 'tour.prev' | i18n }}</button>

@@ -4,7 +4,7 @@ import { Network } from './core/system';
 import { DataElement } from './data-element';
 import { PeerCursor } from './peer-cursor';
 import { TabletopObject } from './tabletop-object';
-import { moveToBackmost, moveToTopmost } from './tabletop-object-util';
+import { moveToBackmost, moveToTopmost, moveToTopmostInTier } from './tabletop-object-util';
 
 export enum CardState {
   FRONT,
@@ -19,7 +19,9 @@ export class Card extends TabletopObject {
   @SyncVar() zindex: number = 0;
   @SyncVar() isLocked: boolean = false;
 
-  get isVisibleOnTable(): boolean { return this.location.name === 'table' && (!this.parentIsAssigned || this.parentIsDestroyed); }
+  get isVisibleOnTable(): boolean {
+    return super.isVisibleOnTable && (!this.parentIsAssigned || this.parentIsDestroyed);
+  }
 
   get name(): string { return this.getCommonValue('name', ''); }
   get size(): number { return this.getCommonValue('size', 2); }
@@ -53,16 +55,14 @@ export class Card extends TabletopObject {
   set color(color: string) { this.setCommonValue('color', color); }
 
   get ownerName(): string {
-    let object = PeerCursor.findByUserId(this.owner);
-    return object ? object.name : '';
+    return PeerCursor.findByUserId(this.owner)?.name || '';
   }
 
   get ownerColor(): string {
-    let object = PeerCursor.findByUserId(this.owner);
-    return object ? object.color : '#444444';
+    return PeerCursor.findByUserId(this.owner)?.color || '#444444';
   }
   
-  get hasOwner(): boolean { return 0 < this.owner.length; }
+  get hasOwner(): boolean { return !!(this.owner && this.owner.length); }
   get ownerIsOnline(): boolean { return this.hasOwner && (this.isHand || Network.peers.some(peer => peer.userId === this.owner && peer.isOpen)); }
   get isHand(): boolean { return Network.peer.userId === this.owner; }
   get isFront(): boolean { return this.state === CardState.FRONT; }
@@ -84,21 +84,25 @@ export class Card extends TabletopObject {
   }
 
   faceUp() {
-    this.state = CardState.FRONT;
+    this.mutateAppearance(() => { this.state = CardState.FRONT; });
     this.owner = '';
   }
 
   faceDown() {
-    this.state = CardState.BACK;
+    this.mutateAppearance(() => { this.state = CardState.BACK; });
     this.owner = '';
   }
 
   toTopmost() {
-    moveToTopmost(this, ['card-stack']);
+    moveToTopmost(this);
+  }
+
+  raiseInTier() {
+    moveToTopmostInTier(this);
   }
 
   toBackmost() {
-    moveToBackmost(this, ['card-stack']);
+    moveToBackmost(this);
   }
 
   static create(name: string, fornt: string, back: string, size: number = 2, identifier?: string): Card {

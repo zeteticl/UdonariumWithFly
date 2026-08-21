@@ -14,7 +14,7 @@ export enum HandleType {
 export class ResizeHandler {
   input: InputHandler = null;
   private handle: HTMLElement = null;
-  private width = 12;
+  private width = 16;
 
   constructor(
     readonly target: HTMLElement,

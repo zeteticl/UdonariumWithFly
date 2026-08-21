@@ -1,4 +1,6 @@
-<div class="settings-ui note-inventory" *ngIf="!GuestMode(); else guestBlock">
+<div class="settings-ui dense note-inventory" *ngIf="!GuestMode(); else guestBlock"
+  [class.is-dragover]="isDragOver"
+  (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
   <section class="card sticky-toolbar">
     <div class="toolbar">
       <div class="inv-tabs">
@@ -7,10 +9,14 @@
           <span>{{filter.label}} ({{countByFilter(filter.id)}})</span>
         </label>
       </div>
+      <button type="button" class="btn btn-sm" [title]="'note.importFile' | i18n" (click)="pickImport()">
+        <i class="material-icons">upload_file</i>
+      </button>
       <button type="button" class="btn btn-sm" [title]="'note.refresh' | i18n" (click)="refresh()">
         <i class="material-icons">refresh</i>
       </button>
     </div>
+    <p class="drop-hint">{{ 'note.dropHint' | i18n }}</p>
   </section>
 
   <section
@@ -22,7 +28,6 @@
   >
     <div class="note-head">
       <strong class="note-title">{{showgameObject(gameObject)}}</strong>
-      <span class="location-badge">{{locationLabel(gameObject)}}</span>
       <span class="actions-spacer">
         <button *ngIf="selectedIdentifier === gameObject.identifier" type="button" class="btn btn-sm" [title]="'note.menu' | i18n"
           (click)="onContextMenu($event, gameObject); $event.stopPropagation()">
@@ -30,18 +35,34 @@
         </button>
         <button *ngIf="!isittable(gameObject)" type="button" class="btn btn-sm btn-primary"
           (click)="settotable(gameObject); $event.stopPropagation()">
-          {{ 'note.moveToTable' | i18n }}
+          {{ (isOnOtherTable(gameObject) ? 'inv.placeOnCurrentMap' : 'note.moveToTable') | i18n }}
           <i class="material-icons">open_with</i>
         </button>
       </span>
     </div>
-    <div class="note-text" [class.expanded]="expandedId === gameObject.identifier">
-      {{gameObject.text}}
+    <div class="note-meta">
+      <span>{{ gameObject.scope === 'room' ? ('note.scopeRoom' | i18n) : ('note.scopeScene' | i18n) }}</span>
+      <span>{{ ('note.kind.' + gameObject.contentKind) | i18n }}</span>
+      <span *ngIf="gameObject.isSelfOnly">{{ 'note.selfOnly' | i18n }}</span>
     </div>
-    <button *ngIf="gameObject.text && gameObject.text.length > 80" type="button" class="btn btn-sm expand-btn"
+    <div class="note-text" [class.expanded]="expandedId === gameObject.identifier">
+      <ng-container [ngSwitch]="gameObject.contentKind">
+        <span *ngSwitchCase="'pdf'">{{ 'note.pdfAttached' | i18n }}</span>
+        <span *ngSwitchCase="'video'">{{ 'note.videoAttached' | i18n }}</span>
+        <span *ngSwitchCase="'image'">{{ 'note.imageAttached' | i18n }}</span>
+        <span *ngSwitchDefault>{{ gameObject.text }}</span>
+      </ng-container>
+    </div>
+    <button *ngIf="gameObject.contentKind === 'text' && gameObject.text && gameObject.text.length > 80" type="button" class="btn btn-sm expand-btn"
       (click)="toggleExpand(gameObject); $event.stopPropagation()">
       {{expandedId === gameObject.identifier ? ('note.collapse' | i18n) : ('note.expand' | i18n)}}
     </button>
+    <note-settings
+      *ngIf="selectedIdentifier === gameObject.identifier"
+      [note]="gameObject"
+      [embedded]="true"
+      (click)="$event.stopPropagation()"
+    ></note-settings>
   </section>
 
   <p class="empty-hint" *ngIf="filteredNotes().length < 1">{{ 'note.empty' | i18n }}</p>

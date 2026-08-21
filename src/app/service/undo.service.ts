@@ -21,10 +21,12 @@ export interface TransformPose {
   y: number;
   posZ: number;
   rotate?: number;
+  /** Character pedestal tilt (top rotate-grab uses targetPropertyName `roll`). */
+  roll?: number;
 }
 
 export type DeleteEntry =
-  | { kind: 'graveyard'; id: string; fromLocation: string }
+  | { kind: 'graveyard'; id: string; fromLocation: string; fromTableIdentifier?: string }
   | { kind: 'destroy'; xml: string; parentId: string; liveId: string };
 
 const MAX_STACK = 50;
@@ -244,7 +246,7 @@ export class UndoService {
         for (const e of state) {
           if (e.kind === 'graveyard') {
             const obj = ObjectStore.instance.get<GameCharacter>(e.id);
-            if (obj) obj.setLocation(e.fromLocation);
+            if (obj) obj.setLocation(e.fromLocation, e.fromTableIdentifier);
           } else {
             const restored = restoreFromXml(e.xml, e.parentId);
             if (restored) e.liveId = restored.identifier;
@@ -257,7 +259,8 @@ export class UndoService {
             const obj = ObjectStore.instance.get<GameCharacter>(e.id);
             if (obj) {
               EventSystem.call('FAREWELL_STAND_IMAGE', { characterIdentifier: obj.identifier });
-              obj.setLocation('graveyard');
+              if (obj.location.name === 'table') obj.leaveCurrentTable('graveyard');
+              else obj.setLocation('graveyard');
             }
           } else {
             const obj = ObjectStore.instance.get(e.liveId);
@@ -362,6 +365,9 @@ export function captureObjectPose(object: TabletopObject, rotate?: number): Tran
   } else if ('rotate' in object) {
     pose.rotate = +(object as any).rotate || 0;
   }
+  if ('roll' in object) {
+    pose.roll = +(object as any).roll || 0;
+  }
   return pose;
 }
 
@@ -385,6 +391,9 @@ function applyPoseMap(poses: Map<string, TransformPose>) {
     if (pose.rotate != null && 'rotate' in obj) {
       (obj as any).rotate = pose.rotate;
     }
+    if (pose.roll != null && 'roll' in obj) {
+      (obj as any).roll = pose.roll;
+    }
     // Movable/Rotable ignore self-UPDATE while selected — sync visuals directly.
     undo?.syncPoseVisual(obj, pose);
     obj.update();
@@ -393,7 +402,8 @@ function applyPoseMap(poses: Map<string, TransformPose>) {
 
 function posesEqual(a: TransformPose, b: TransformPose): boolean {
   return a.x === b.x && a.y === b.y && a.posZ === b.posZ
-    && (a.rotate == null || b.rotate == null || a.rotate === b.rotate);
+    && (a.rotate == null || b.rotate == null || a.rotate === b.rotate)
+    && (a.roll == null || b.roll == null || a.roll === b.roll);
 }
 
 function clonePoseMap(src: Map<string, TransformPose>): Map<string, TransformPose> {

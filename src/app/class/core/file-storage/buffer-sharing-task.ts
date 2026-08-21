@@ -1,4 +1,5 @@
 import { EventSystem } from '../system';
+import { netDebug } from '../system/network/net-debug';
 import { MessagePack } from '../system/util/message-pack';
 import { ResettableTimeout } from '../system/util/resettable-timeout';
 import { clearZeroTimeout, setZeroTimeout } from '../system/util/zero-timeout';
@@ -110,7 +111,7 @@ export class BufferSharingTask<T> {
     let total = Math.ceil(this.uint8Array.byteLength / this.chankSize);
     this.chanks = new Array(total);
 
-    console.log('chunk split ' + this.identifier, this.chanks.length);
+    netDebug('chunk split ' + this.identifier, this.chanks.length);
 
     EventSystem.register(this)
       .on<number>('FILE_MORE_CHANK_' + this.identifier, event => {
@@ -142,7 +143,7 @@ export class BufferSharingTask<T> {
     this.sentChankIndex = index;
     this.sendChankTimer = null;
     if (this.chanks.length <= index + 1) {
-      console.log('buffer send complete', this.identifier);
+      netDebug('buffer send complete', this.identifier);
       this.outputTransferRate(this.uint8Array.byteLength);
       setZeroTimeout(() => this.finish());
     } else if (this.completedChankIndex + this.bufferingChankRange <= index) {
@@ -161,7 +162,7 @@ export class BufferSharingTask<T> {
         if (this.chanks.length < 1) this.chanks = new Array(event.data.length);
 
         if (this.chanks[event.data.index] != null) {
-          console.log(`already received. [${event.data.index}] <${this.identifier}>`);
+          netDebug(`already received. [${event.data.index}] <${this.identifier}>`);
           return;
         }
         this.chankReceiveCount++;
@@ -186,7 +187,7 @@ export class BufferSharingTask<T> {
   }
 
   private finishReceive() {
-    console.log('buffer receive complete', this.identifier);
+    netDebug('buffer receive complete', this.identifier);
 
     let sumLength = 0;
     for (let chank of this.chanks) { sumLength += chank.byteLength; }
@@ -212,6 +213,6 @@ export class BufferSharingTask<T> {
   private outputTransferRate(byteLength: number) {
     let time = performance.now() - this.startTime;
     let rate = (byteLength / 1024 / 1024) / (time / 1000);
-    console.log(`${(byteLength / 1024).toFixed(2)}KB ${(time / 1000).toFixed(2)}秒 転送速度: ${rate.toFixed(2)}MB/s`);
+    netDebug(`${(byteLength / 1024).toFixed(2)}KB ${(time / 1000).toFixed(2)}? ????: ${rate.toFixed(2)}MB/s`);
   }
 }

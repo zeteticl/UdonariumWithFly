@@ -13,9 +13,12 @@ import {
 import { CryptoUtil } from '../../util/crypto-util';
 import { IPeerContext, PeerContext } from '../peer-context';
 import { SkyWayBackend } from './skyway-backend';
+import { installSkyWayQuietLogger } from './skyway-log';
 import { translate } from 'i18n';
 
 export class SkyWayFacade {
+  /** Lobby/room membership TTL. Prefer fewer false fatals over slightly stickier ghosts; leave/close drops membership promptly. */
+  private static readonly MEMBER_KEEPALIVE_SEC = 30;
   url = '';
   context: SkyWayContext;
   private lobby: Channel;
@@ -38,10 +41,10 @@ export class SkyWayFacade {
   async open(peer: IPeerContext) {
     if (this.isOpen) await this.close();
     try {
-      console.log('SkyWayFacade open...');
       this.peer = PeerContext.parse(peer.peerId);
       this.peer.userId = peer.userId;
       this.peer.password = peer.password;
+      this.peer.meshPassword = peer.meshPassword || '';
       this.isDestroyed = false;
 
       await this.createContext();
@@ -49,7 +52,6 @@ export class SkyWayFacade {
       await this.joinLobby();
 
       this.peer.isOpen = true;
-      console.log('SkyWayFacade open ok');
 
       if (this.onOpen) this.onOpen(this.peer);
     } catch (err) {
@@ -61,14 +63,20 @@ export class SkyWayFacade {
 
   async close() {
     try {
-      console.log('SkyWayFacade close...');
       this.peer = PeerContext.parse('???');
       this.isDestroyed = true;
 
-      await this.leaveLobby();
-      await this.leaveRoom();
+      // Leave membership first so the lobby listing drops even if the tab dies mid-close.
+      await Promise.all([
+        this.leaveLobbyPerson().catch(() => { /* unload */ }),
+        this.leaveRoomPerson().catch(() => { /* unload */ }),
+      ]);
+      await this.closeRoomDataStream().catch(() => { /* unload */ });
+      await Promise.all([
+        this.leaveLobbyChannel().catch(() => { /* unload */ }),
+        this.leaveRoomChannel().catch(() => { /* unload */ }),
+      ]);
       await this.disposeContext();
-      console.log('SkyWayFacade close ok');
     } catch (err) {
       console.error(err);
     }
@@ -78,16 +86,19 @@ export class SkyWayFacade {
     await this.disposeContext();
     if (this.isDestroyed) return;
 
+    installSkyWayQuietLogger();
+
     let backend = new SkyWayBackend(this.url);
     let channelName = this.peer.isRoom
-      ? CryptoUtil.sha256Base64Url(this.peer.roomId + this.peer.roomName + this.peer.password)
+      ? CryptoUtil.sha256Base64Url(this.peer.roomId + this.peer.roomName + this.peer.channelPassword)
       : this.peer.peerId;
 
     let authToken = await backend.createSkyWayAuthToken(channelName, this.peer.peerId);
     if (authToken.length < 1) {
       let message = translate('skyway.backendUnavailable', { url: backend.url });
-      if (this.onFatalError) this.onFatalError(this.peer, 'server-error', message, new Error(message));
-      return;
+      const err = new Error(message);
+      err.name = 'server-error';
+      throw err;
     }
 
     let context = await SkyWayContext.Create(authToken);
@@ -139,7 +150,6 @@ export class SkyWayFacade {
       let lobby = await SkyWayChannel.FindOrCreate(this.context, {
         name: lobbyName,
       });
-      console.log(`FindOrCreate<${lobbyName}>`);
       lobbys.push(lobby);
       if (lobby.members.length < 300) break;
     }
@@ -157,7 +167,6 @@ export class SkyWayFacade {
     });
 
     joinLobby.onClosed.add(() => {
-      console.log(`lobby<${joinLobby.name}> onClosed`);
       this.joinLobby();
     });
 
@@ -170,15 +179,20 @@ export class SkyWayFacade {
 
     let lobbyPerson = await this.lobby.join({
       name: this.peer.peerId,
+      keepaliveIntervalSec: SkyWayFacade.MEMBER_KEEPALIVE_SEC,
     });
 
-    console.log(`lobbyPerson join <${this.lobby.name}>`);
-    lobbyPerson.onLeft.add(() => {
-      console.log(`lobbyPerson onClosed`);
-    });
-
-    lobbyPerson.onFatalError.add(err => {
+    lobbyPerson.onFatalError.add(async err => {
       console.error('lobbyPerson onFatalError', err);
+      // Lobby membership is what listAllPeers uses — try rejoin without tearing down the room.
+      if (this.isOpen && this.peer.isRoom && !this.isDestroyed) {
+        try {
+          await this.joinLobby();
+          return;
+        } catch (rejoinErr) {
+          console.error('lobbyPerson rejoin failed', rejoinErr);
+        }
+      }
       const fatal = this.formatFatalError(err);
       if (this.onFatalError) this.onFatalError(this.peer, fatal.type, fatal.message, err);
     });
@@ -196,18 +210,14 @@ export class SkyWayFacade {
     await this.leaveRoomChannel();
     if (this.isDestroyed || !this.peer.isRoom || !this.context || this.context?.disposed) return;
 
-    let roomName = CryptoUtil.sha256Base64Url(this.peer.roomId + this.peer.roomName + this.peer.password);
-    console.log(`roomName: ${roomName}`);
+    let roomName = CryptoUtil.sha256Base64Url(this.peer.roomId + this.peer.roomName + this.peer.channelPassword);
 
     let room = await SkyWayChannel.FindOrCreate(this.context, {
       name: roomName,
     });
-    console.log(`FindOrCreate<${roomName}>`);
 
     room.onClosed.add(async () => {
-      console.log(`room<${room.name}> onClosed`);
       await this.joinRoom();
-      console.log(`room<${room.name}> onRoomRestore`);
       if (this.onRoomRestore) this.onRoomRestore(this.peer);
     });
 
@@ -219,10 +229,9 @@ export class SkyWayFacade {
     if (this.isDestroyed || !this.peer.isRoom || !this.context || this.context?.disposed || this.room == null) return;
 
     let roomPerson = await this.room.join({
-      name: this.peer.peerId
+      name: this.peer.peerId,
+      keepaliveIntervalSec: SkyWayFacade.MEMBER_KEEPALIVE_SEC,
     });
-
-    console.log(`roomPerson join <${this.room.name}>`);
 
     roomPerson.onFatalError.add(err => {
       console.error('roomPerson onFatalError', err);
@@ -243,7 +252,6 @@ export class SkyWayFacade {
     let publication = await this.roomPerson.publish(dataStream, { metadata: 'udonarium-data-stream' });
 
     publication.onSubscribed.add(event => {
-      console.log(`publication onSubscribed ${event.subscription.subscriber.name}`);
       let peerId = event.subscription.subscriber.name;
       if (peerId == null) {
         event.subscription.cancel();
@@ -261,7 +269,6 @@ export class SkyWayFacade {
     let context = this.context;
     this.context = null;
     if (!context) return;
-    console.log('disposeContext');
     context.dispose();
   }
 
@@ -275,7 +282,6 @@ export class SkyWayFacade {
     this.lobby = null;
 
     if (!lobby) return;
-    console.log('leaveLobbyChannel');
     lobby.dispose();
   }
 
@@ -284,7 +290,6 @@ export class SkyWayFacade {
     this.lobbyPerson = null;
 
     if (!lobbyPerson || lobbyPerson.state === 'left') return;
-    console.log('leaveLobbyPerson');
     lobbyPerson.onLeft.removeAllListeners();
     lobbyPerson.onFatalError.removeAllListeners();
     await lobbyPerson.leave();
@@ -301,7 +306,6 @@ export class SkyWayFacade {
     this.room = null;
 
     if (!room) return;
-    console.log('leaveRoomChannel');
     room.onMemberJoined.removeAllListeners();
     room.onMemberLeft.removeAllListeners();
     room.onMemberListChanged.removeAllListeners();
@@ -315,7 +319,6 @@ export class SkyWayFacade {
     this.roomPerson = null;
 
     if (!roomPerson || roomPerson.state === 'left') return;
-    console.log('leaveRoomPerson');
     roomPerson.onLeft.removeAllListeners();
     roomPerson.onFatalError.removeAllListeners();
     await roomPerson.leave();
@@ -330,23 +333,44 @@ export class SkyWayFacade {
   }
 
   async listAllPeers(): Promise<string[]> {
-    if (this.isDestroyed || !this.isOpen) return [];
+    if (this.isDestroyed || !this.isOpen || !this.context) return [];
 
     let lobbys: Channel[] = [];
     for (let lobbyName of this.getLobbyNames()) {
+      if (this.isDestroyed || !this.context) break;
       let level = Logger.level;
       Logger.level = 'disable';
       try {
         let lobby = this.lobby?.name === lobbyName ? this.lobby : await SkyWayChannel.Find(this.context, { name: lobbyName });
+        if (this.isDestroyed || !this.context) {
+          if (lobby && lobby.name !== this.lobby?.name) {
+            try { lobby.dispose(); } catch { /* disposed */ }
+          }
+          break;
+        }
         lobbys.push(lobby);
       } catch (error) {
+        // Close/dispose races leave context null; Find then throws on `_api`.
+        if (this.isDestroyed || !this.context || error instanceof TypeError) {
+          break;
+        }
         if (error instanceof SkyWayError) {
           if (error.name != 'channelNotFound') console.error(`${error.name} ${error.message}`);
         } else {
           console.error(error);
         }
+      } finally {
+        Logger.level = level;
       }
-      Logger.level = level;
+    }
+
+    if (this.isDestroyed || !this.context) {
+      lobbys.forEach(lobby => {
+        if (lobby.name !== this.lobby?.name) {
+          try { lobby.dispose(); } catch { /* disposed */ }
+        }
+      });
+      return [];
     }
 
     let allPeerIds = lobbys.flatMap(lobby => lobby.members.map(member => member.name ?? '???'));
@@ -374,7 +398,6 @@ export class SkyWayFacade {
         }
         try {
           let regArray = /-(\d+)$/.exec(name);
-          console.log(regArray);
           let lobbySize = regArray && 1 < regArray.length ? Number(regArray[1]) : 0;
           if (isNaN(lobbySize)) lobbySize = 0;
           if (maxLobbySize < lobbySize) maxLobbySize = lobbySize;

@@ -1,0 +1,12 @@
+.stack-preview {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  min-height: 48px;
+}
+
+.card-stack-settings .footer-actions .material-icons {
+  font-size: 14px;
+  margin-right: 2px;
+  vertical-align: middle;
+}

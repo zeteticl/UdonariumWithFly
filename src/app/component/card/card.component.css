@@ -1,5 +1,7 @@
 :host {
   display: block;
+  /* Needed so ngStyle z-index on the host actually stacks in 2D. */
+  position: relative;
 }
 
 .is-grab {

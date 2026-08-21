@@ -111,7 +111,16 @@ export class RoomJoinComponent implements OnInit, OnDestroy {
       && RoomAuth.roleRank(this.currentRole) >= RoomAuth.roleRank(role)) {
       return false;
     }
-    if (RoomAuth.canBypassPassword(role, this.room.id)) return false;
+    if (RoomAuth.canBypassPassword(role, this.room.id)) {
+      // Mesh-locked rooms still need the role password in-session to unseal the channel key.
+      if (!this.switchMode
+        && RoomAuth.isMeshLocked(this.room.name)
+        && RoomAuth.roleNeedsPassword(this.room.name, role)
+        && !RoomAuth.getSessionRolePassword(role)) {
+        return true;
+      }
+      return false;
+    }
     return RoomAuth.roleNeedsPassword(this.room.name, role);
   }
 

@@ -5,6 +5,7 @@ import { EventSystem, Network } from '@udonarium/core/system';
 import { DataElement } from '@udonarium/data-element';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
 import { TabletopObject } from '@udonarium/tabletop-object';
+import { stringifyCcfoliaClipboard } from '@udonarium/ccfolia-clipboard';
 
 import { FileSelecterComponent } from 'component/file-selecter/file-selecter.component';
 import { ModalService } from 'service/modal.service';
@@ -30,7 +31,7 @@ import { imageEffectFilter, imageEffectOpacity, imageEffectTransform } from '@ud
 @Component({
     selector: 'game-character-sheet',
     templateUrl: './game-character-sheet.component.html',
-    styleUrls: ['./game-character-sheet.component.css'],
+    styleUrls: ['../shared/settings-ui.css', './game-character-sheet.component.css'],
     animations: [
         trigger('switchImage', [
             transition(':increment, :decrement', [
@@ -83,7 +84,13 @@ import { imageEffectFilter, imageEffectOpacity, imageEffectTransform } from '@ud
 export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('mainImage', { static: false }) mainImageElement: ElementRef;
 
-  @Input() tabletopObject: TabletopObject = null;
+  private _tabletopObject: TabletopObject = null;
+  @Input()
+  get tabletopObject(): TabletopObject { return this._tabletopObject; }
+  set tabletopObject(value: TabletopObject) {
+    this._tabletopObject = value;
+    this.bindSheetGeometry();
+  }
   isEdit: boolean = false;
 
   networkService = Network;
@@ -136,6 +143,18 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
     EventSystem.unregister(this);
   }
 
+  /** Remember / restore detail-sheet size by object type (character, card, note, …). */
+  private bindSheetGeometry() {
+    if (!this._tabletopObject) return;
+    const key = PanelService.sheetGeometryKey(this._tabletopObject.aliasName);
+    this.panelService.geometryKey = key;
+    const g = PanelService.getGeometry(key);
+    if (g && g.width >= 100 && g.height >= 100) {
+      this.panelService.width = g.width;
+      this.panelService.height = g.height;
+    }
+  }
+
   toggleEditMode() {
     this.isEdit = this.isEdit ? false : true;
   }
@@ -149,39 +168,8 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
     }
   }
 
-  clone() {
-    let cloneObject = this.tabletopObject.clone();
-    cloneObject.location.x += 50;
-    cloneObject.location.y += 50;
-    if (this.tabletopObject.parent) this.tabletopObject.parent.appendChild(cloneObject);
-    cloneObject.update();
-    switch (this.tabletopObject.aliasName) {
-      case 'terrain':
-        SoundEffect.play(PresetSound.blockPut);
-        (cloneObject as any).isLocked = false;
-        break;
-      case 'card':
-      case 'card-stack':
-        (cloneObject as any).owner = '';
-        (cloneObject as any).toTopmost();
-      case 'table-mask':
-        (cloneObject as any).isLock = false;
-        (cloneObject as any).isPreview = false;
-        SoundEffect.play(PresetSound.cardPut);
-        break;
-      case 'text-note':
-        (cloneObject as any).toTopmost();
-        SoundEffect.play(PresetSound.cardPut);
-        break;
-      case 'dice-symbol':
-        SoundEffect.play(PresetSound.dicePut);
-      default:
-        SoundEffect.play(PresetSound.piecePut);
-        break;
-    }
-  }
-
   get tabletopObjectName(): string {
+    if (!this.tabletopObject?.commonDataElement) return '';
     let element = this.tabletopObject.commonDataElement.getFirstElementByName('name') || this.tabletopObject.commonDataElement.getFirstElementByName('title');
     return element ? <string>element.value : '';
   }
@@ -194,6 +182,7 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
   }
 
   get descriptionType(): string {
+    if (!this.tabletopObject) return '';
     if (this.tabletopObject instanceof RangeArea && !this.tabletopObject.isApplyWidth) return 'range-not-width';
     return this.tabletopObject.aliasName;
   }
@@ -233,6 +222,37 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
       this.isSaveing = false;
       this.progresPercent = 0;
     }, 500);
+  }
+
+  importXml() {
+    this.saveDataService.pickAndLoadXmlOrZip();
+  }
+
+  /** Export CCFOLIA Clipboard API JSON (download + system clipboard). */
+  async exportCcfoliaJson() {
+    if (!(this.tabletopObject instanceof GameCharacter)) return;
+    const json = stringifyCcfoliaClipboard(this.tabletopObject);
+    const safeName = (this.tabletopObjectName || 'character').replace(/[\\/:*?"<>|]/g, '_');
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `hktrpg_${safeName}_${this.formatExportTimestamp()}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+    try {
+      await navigator.clipboard.writeText(json);
+    } catch {
+      // Download already succeeded; clipboard may be denied without focus/permission.
+    }
+  }
+
+  /** `YYYY-MM-DD_HHmm` for export filenames. */
+  private formatExportTimestamp(date: Date = new Date()): string {
+    const pad = (n: number) => ('00' + n).slice(-2);
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}`;
   }
 
   setLocation(locationName: string) {
@@ -352,14 +372,14 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
   // TODO: 索引也應抽象化以通用化
   selectImage(index: number, name='imageIdentifier') {
     if (this.tabletopObject.currntImageIndex == index) return;
-    this.tabletopObject.currntImageIndex = index;
+    this.tabletopObject.mutateAppearance(() => { this.tabletopObject.currntImageIndex = index; });
     SoundEffect.play(PresetSound.surprise);
     EventSystem.trigger('UPDATE_INVENTORY', null);
   }
 
   selectIcon(index: number) {
     if (this.tabletopObject.currntIconIndex == index) return;
-    this.tabletopObject.currntIconIndex = index;
+    this.tabletopObject.mutateAppearance(() => { this.tabletopObject.currntIconIndex = index; });
   }
 
   deleteImage(index: number=0, name='imageIdentifier') {
@@ -396,7 +416,7 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
     } else if (this.tabletopObject instanceof DiceSymbol) {
       this.openModal(this.tabletopObject['face']);
     } else if (this.tabletopObject instanceof GameCharacter) {
-      this.openModalReplaceImage(this.tabletopObject.imageFiles.length > 1 || 0 < this.tabletopObject.imageFile?.url.length);
+      this.openModalReplaceImage(this.tabletopObject.imageFiles.length > 1 || 0 < this.tabletopObject.imageFile?.url?.length);
     } else {
       this.openModal('imageIdentifier', this.tabletopObject.imageFile && this.tabletopObject.imageFile.url.length > 0)
     }
@@ -404,18 +424,24 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
 
   showChatPalette() {
     if (!(this.tabletopObject instanceof GameCharacter)) return;
+    const character = this.tabletopObject as GameCharacter;
+    const tourId = PanelService.tourIdChatPalette(character.identifier);
+    if (PanelService.bringTourPanelToFront(tourId)) return;
     let coordinate = this.pointerDeviceService.pointers[0];
-    let option: PanelOption = { left: coordinate.x - 250, top: coordinate.y - 175, width: 620, height: 350 };
+    let option: PanelOption = { left: coordinate.x - 250, top: coordinate.y - 175, width: 620, height: 350, tourPanelId: tourId };
     let component = this.panelService.open<ChatPaletteComponent>(ChatPaletteComponent, option);
-    component.character = <GameCharacter>this.tabletopObject;
+    component.character = character;
   }
 
   showStandSetting() {
     if (!(this.tabletopObject instanceof GameCharacter)) return;
+    const character = this.tabletopObject as GameCharacter;
+    const tourId = PanelService.tourIdStandSetting(character.identifier);
+    if (PanelService.bringTourPanelToFront(tourId)) return;
     let coordinate = this.pointerDeviceService.pointers[0];
-    let option: PanelOption = { left: coordinate.x - 400, top: coordinate.y - 175, width: 720, height: 572 };
+    let option: PanelOption = { left: coordinate.x - 400, top: coordinate.y - 175, width: 690, height: 540, tourPanelId: tourId };
     let component = this.panelService.open<StandSettingComponent>(StandSettingComponent, option);
-    component.character = <GameCharacter>this.tabletopObject;
+    component.character = character;
   }
 
   onMainImageLoad() {
@@ -543,12 +569,14 @@ export class GameCharacterSheetComponent implements OnInit, OnDestroy, AfterView
   }
 
   showCaseOffset(index: number): number {
+    if (!this.tabletopObject) return 0;
     let len = this.tabletopObject.imageFiles.length;
     if (len <= 5) return 0; 
     return (50 - (160 / (len - 2))) * (this.tabletopObject.currntImageIndex <= index ? index-1 : index);
   }
 
   showIconOffset(index): number {
+    if (!this.tabletopObject) return 0;
     let len = this.tabletopObject.faceIcons.length;
     if (len <= 5) return 0;
     return (50 - (200 / (len - 1))) * index + 2;

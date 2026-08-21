@@ -18,8 +18,11 @@ import { StringUtil } from '@udonarium/core/system/util/string-util';
 import { MathUtil } from '@udonarium/core/system/util/math-util';
 import { DiceSymbol } from '@udonarium/dice-symbol';
 import { PeerCursor } from '@udonarium/peer-cursor';
+import { TableSelecter } from '@udonarium/table-selecter';
+import { TabletopLoadSettle } from '@udonarium/tabletop-load-settle';
+import { shouldIgnoreTabletopDoubleClick } from '@udonarium/tabletop-interact';
 import { PresetSound, SoundEffect } from '@udonarium/sound-effect';
-import { GameCharacterSheetComponent } from 'component/game-character-sheet/game-character-sheet.component';
+import { DiceSettingsComponent } from 'component/dice-settings/dice-settings.component';
 import { OpenUrlComponent } from 'component/open-url/open-url.component';
 import { ObjectInteractGesture } from 'component/game-table/object-interact-gesture';
 import { MovableOption } from 'directive/movable.directive';
@@ -32,6 +35,7 @@ import { PanelOption, PanelService } from 'service/panel.service';
 import { PointerDeviceService } from 'service/pointer-device.service';
 import { ChatMessageService } from 'service/chat-message.service';
 import { SelectionState, TabletopSelectionService } from 'service/tabletop-selection.service';
+import { TabletopActionService } from 'service/tabletop-action.service';
 
 @Component({
     selector: 'dice-symbol',
@@ -114,19 +118,21 @@ import { SelectionState, TabletopSelectionService } from 'service/tabletop-selec
     standalone: false
 })
 export class DiceSymbolComponent implements OnChanges, AfterViewInit, OnDestroy {
+  get skipEnterBounce(): boolean { return TabletopLoadSettle.skipEnterAnimation; }
   @Input() diceSymbol: DiceSymbol = null;
   @Input() is3D: boolean = false;
 
   get face(): string { return this.diceSymbol.face; }
-  set face(face: string) { this.diceSymbol.face = face; }
+  set face(face: string) { this.diceSymbol.mutateAppearance(() => { this.diceSymbol.face = face; }); }
   get owner(): string { return this.diceSymbol.owner; }
   set owner(owner: string) { this.diceSymbol.owner = owner; }
   get rotate(): number { return this.diceSymbol.rotate; }
-  set rotate(rotate: number) { this.diceSymbol.rotate = rotate; }
+  set rotate(rotate: number) { this.diceSymbol.mutateAppearance(() => { this.diceSymbol.rotate = rotate; }); }
 
   get name(): string { return this.diceSymbol.name; }
   set name(name: string) { this.diceSymbol.name = name; }
   get size(): number { return MathUtil.clampMin(this.diceSymbol.size); }
+  get is2DMode(): boolean { return !!TableSelecter.instance?.viewTable?.is2DMode; }
 
   get faces(): string[] { return this.diceSymbol.faces; }
   get nothingFaces(): string[] { return this.diceSymbol.nothingFaces; }
@@ -146,10 +152,12 @@ export class DiceSymbolComponent implements OnChanges, AfterViewInit, OnDestroy 
   get isVisible(): boolean { return this.diceSymbol.isVisible; }
 
   get isDropShadow(): boolean { return this.diceSymbol.isDropShadow; }
-  set isDropShadow(isDropShadow: boolean) { this.diceSymbol.isDropShadow = isDropShadow; }
+  set isDropShadow(isDropShadow: boolean) {
+    this.diceSymbol.mutateAppearance(() => { this.diceSymbol.isDropShadow = isDropShadow; });
+  }
 
   get isLock(): boolean { return this.diceSymbol.isLock; }
-  set isLock(isLock: boolean) { this.diceSymbol.isLock = isLock; }
+  set isLock(isLock: boolean) { this.diceSymbol.mutateAppearance(() => { this.diceSymbol.isLock = isLock; }); }
 
   get isCoin(): boolean { return this.diceSymbol.isCoin; }
   get selectionState(): SelectionState { return this.selectionService.state(this.diceSymbol); }
@@ -195,6 +203,7 @@ export class DiceSymbolComponent implements OnChanges, AfterViewInit, OnDestroy 
     private imageService: ImageService,
     private modalService: ModalService,
     private chatMessageService: ChatMessageService,
+    private tabletopActionService: TabletopActionService,
     private i18n: I18nService
   ) { }
 
@@ -243,6 +252,12 @@ export class DiceSymbolComponent implements OnChanges, AfterViewInit, OnDestroy 
       })
       .on(`UPDATE_OBJECT_CHILDREN/identifier/${this.diceSymbol?.identifier}`, event => {
         this.changeDetector.markForCheck();
+      })
+      .on('UPDATE_GAME_OBJECT', event => {
+        const tableId = TableSelecter.instance?.viewTable?.identifier;
+        if (tableId && event.data?.identifier === tableId) {
+          this.changeDetector.markForCheck();
+        }
       })
       .on('SYNCHRONIZE_FILE_LIST', event => {
         this.changeDetector.markForCheck();
@@ -300,6 +315,7 @@ export class DiceSymbolComponent implements OnChanges, AfterViewInit, OnDestroy 
   }
 
   onDoubleClick(e?: Event) {
+    if (shouldIgnoreTabletopDoubleClick(e)) return;
     e?.stopPropagation();
     this.showDetail(this.diceSymbol);
   }
@@ -312,19 +328,36 @@ export class DiceSymbolComponent implements OnChanges, AfterViewInit, OnDestroy 
 
     if (this.GuestMode()) return;
     if (!this.pointerDeviceService.isAllowedToOpenContextMenu) return;
+    this.tabletopActionService.ensureObjectSelected(this.diceSymbol);
     let position = this.pointerDeviceService.pointers[0];
 
     let actions: ContextMenuAction[] = [];
+    let title = this.name;
 
-    //if (this.isVisible) {
-    actions = actions.concat(this.makeSelectionContextMenu());
-    actions = actions.concat(this.makeContextMenu());
+    if (this.isMultiSelectedDice()) {
+      actions = this.makeSelectionContextMenu();
+      title = this.i18n.t('dice.selectedCount', { count: this.selectedDiceSymbols().length });
+    } else {
+      actions = actions.concat(this.makeSelectionContextMenu());
+      actions = actions.concat(this.makeContextMenu());
+    }
+    actions = this.tabletopActionService.withClipboardMenuPrefix(actions);
 
-    this.contextMenuService.open(position, actions, this.name);
+    this.contextMenuService.open(position, actions, title);
+  }
+
+  private selectedDiceSymbols(): DiceSymbol[] {
+    return this.selectionService.objects.filter(
+      object => object.aliasName === this.diceSymbol.aliasName
+    ) as DiceSymbol[];
+  }
+
+  private isMultiSelectedDice(): boolean {
+    return this.isSelected && this.selectedDiceSymbols().length > 1;
   }
 
   private makeSelectionContextMenu(): ContextMenuAction[] {
-    if (this.selectionService.objects.length < 1) return [];
+    if (this.selectionService.size <= 1) return [];
 
     let actions: ContextMenuAction[] = [];
 
@@ -333,10 +366,10 @@ export class DiceSymbolComponent implements OnChanges, AfterViewInit, OnDestroy 
       y: this.diceSymbol.location.y + (this.diceSymbol.size * this.gridSize) / 2,
       z: this.diceSymbol.posZ
     };
-    actions.push({ name: this.i18n.t('dice.menu.1'), action: () => this.selectionService.congregate(objectPosition) });
+    actions.push({ name: this.i18n.t('dice.menu.1'), hotkey: 'T', action: () => this.selectionService.congregate(objectPosition) });
 
-    if (this.isSelected) {
-      let selectedDiceSymbols = () => this.selectionService.objects.filter(object => object.aliasName === this.diceSymbol.aliasName) as DiceSymbol[];
+    if (this.isMultiSelectedDice()) {
+      let selectedDiceSymbols = () => this.selectedDiceSymbols();
       const isContainCoin = selectedDiceSymbols().some(diceSymbol => diceSymbol.isCoin);
       const isContainDice = selectedDiceSymbols().some(diceSymbol => !diceSymbol.isCoin);
       const kinds = [isContainCoin ? this.i18n.t('dice.dynamic.1') : '', isContainDice ? this.i18n.t('dice.dynamic.2') : ''].filter(Boolean).join('／');
@@ -406,7 +439,12 @@ export class DiceSymbolComponent implements OnChanges, AfterViewInit, OnDestroy 
 
             },
           ]
-        }
+        },
+        ContextMenuSeparator,
+        {
+          name: this.i18n.t('char.clearSelection'),
+          action: () => this.selectionService.clear()
+        },
       );
     }
     actions.push(ContextMenuSeparator);
@@ -422,7 +460,8 @@ export class DiceSymbolComponent implements OnChanges, AfterViewInit, OnDestroy 
           this.diceRoll();
         },
         disabled: !this.isVisible,
-        default: this.isVisible
+        default: this.isVisible,
+        hotkey: 'F',
       });
     //}
     actions.push(ContextMenuSeparator);
@@ -458,6 +497,7 @@ export class DiceSymbolComponent implements OnChanges, AfterViewInit, OnDestroy 
       on: this.i18n.t('dice.menu.5'),
       off: this.i18n.t('dice.menu.6'),
       disabled: this.hasOwner && !this.isVisible,
+      hotkey: 'L',
     }));
     if (this.isVisible) {
       let subActions: ContextMenuAction[] = [];
@@ -527,19 +567,11 @@ export class DiceSymbolComponent implements OnChanges, AfterViewInit, OnDestroy 
       actions.push(ContextMenuSeparator);
     }
     actions.push({
-      name: this.i18n.t('dice.menu.11'), action: () => {
-        let cloneObject = this.diceSymbol.clone();
-        cloneObject.location.x += this.gridSize;
-        cloneObject.location.y += this.gridSize;
-        cloneObject.update();
-        SoundEffect.play(PresetSound.dicePut);
-      }
-    });
-    actions.push({
       name: this.i18n.t('dice.menu.12'), action: () => {
         this.diceSymbol.destroy();
         SoundEffect.play(PresetSound.sweep);
-      }
+      },
+      hotkey: 'Del',
     });
     return actions;
   }
@@ -585,12 +617,18 @@ export class DiceSymbolComponent implements OnChanges, AfterViewInit, OnDestroy 
   showDetail(gameObject: DiceSymbol) {
     if (this.GuestMode()) return;
     EventSystem.trigger('SELECT_TABLETOP_OBJECT', { identifier: gameObject.identifier, className: gameObject.aliasName });
-    let coordinate = this.pointerDeviceService.pointers[0];
     let title = this.i18n.t('dice.panelTitle');
     if (gameObject.name.length) title += ' - ' + gameObject.name;
-    let option: PanelOption = { title: title, left: coordinate.x - 300, top: coordinate.y - 300, width: 600, height: 490 };
-    let component = this.panelService.open<GameCharacterSheetComponent>(GameCharacterSheetComponent, option);
-    component.tabletopObject = gameObject;
+    const tourId = PanelService.tourIdObjectDetail(gameObject.identifier);
+    if (PanelService.bringTourPanelToFront(tourId, { title })) return;
+    let coordinate = this.pointerDeviceService.pointers[0];
+    let option: PanelOption = {
+      title: title, left: coordinate.x - 210, top: coordinate.y - 180, width: 420, height: 400,
+      tourPanelId: tourId,
+      geometryKey: PanelService.sheetGeometryKey(gameObject.aliasName),
+    };
+    let component = this.panelService.open<DiceSettingsComponent>(DiceSettingsComponent, option);
+    component.dice = gameObject;
   }
 
   private startIconHiddenTimer() {

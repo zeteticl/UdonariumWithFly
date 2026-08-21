@@ -23,7 +23,6 @@ export class AudioStorage {
   }
 
   private constructor() {
-    console.log('AudioStorage ready...');
   }
 
   private destroy() {
@@ -32,10 +31,10 @@ export class AudioStorage {
     }
   }
 
-  async addAsync(file: File): Promise<AudioFile>
-  async addAsync(blob: Blob): Promise<AudioFile>
-  async addAsync(arg: any): Promise<AudioFile> {
-    let audio: AudioFile = await AudioFile.createAsync(arg);
+  async addAsync(file: File, displayName?: string): Promise<AudioFile>
+  async addAsync(blob: Blob, displayName?: string): Promise<AudioFile>
+  async addAsync(arg: any, displayName?: string): Promise<AudioFile> {
+    let audio: AudioFile = await AudioFile.createAsync(arg, displayName);
 
     return this._add(audio);
   }
@@ -60,7 +59,6 @@ export class AudioStorage {
     if (AudioState.COMPLETE <= audio.state) this.lazySynchronize(100);
     if (this.update(audio)) return this.hash[audio.identifier];
     this.hash[audio.identifier] = audio;
-    console.log('add Audio: ' + audio.identifier);
     return audio;
   }
 

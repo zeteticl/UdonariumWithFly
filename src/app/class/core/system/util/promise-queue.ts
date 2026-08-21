@@ -11,7 +11,6 @@ export class PromiseQueue {
   add<T>(executor: (resolve: (value?: T | PromiseLike<T>) => void, reject: (reason?: any) => void) => void): Promise<T>
   add<T>(arg: any): Promise<T> {
     this._length++
-    console.log(`${this.name} add: ${this._length}`);
     if (typeof arg.then == 'function') {
       this.queue = this.queue.then(() => arg); // promise
     } else if (0 < arg.length) {
@@ -26,7 +25,6 @@ export class PromiseQueue {
     });
     this.queue = this.queue.then(() => {
       this._length--;
-      console.log(`${this.name} done: ${this._length}`);
     });
     return ret;
   }

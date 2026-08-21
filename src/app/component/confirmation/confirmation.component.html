@@ -1,7 +1,63 @@
-<div class="text"><i *ngIf="materialIcon" class="material-icons icon">{{ materialIcon }}</i>{{text}}</div>
-<hr />
-<div class="help" *ngIf="help && !helpHtml">{{help}}</div>
-<div class="help" *ngIf="helpHtml" [innerHTML]="helpHtml | safe: 'html'"></div>
-<button *ngIf="extraLabel" type="button" (click)="extra()">{{ extraLabel }}</button>
-<button type="submit" (click)="ok()">{{ okLabel || ('confirm.ok' | i18n) }}</button>
-<button *ngIf="type > 1" type="button" (click)="cancel()">{{ cancelLabel || ('confirm.cancel' | i18n) }}</button>
+<div class="settings-ui dense confirm-ui">
+  <section class="card">
+    <div class="confirm-lead">
+      <span *ngIf="materialIcon" class="icon-badge" aria-hidden="true">
+        <i class="material-icons icon">{{ materialIcon }}</i>
+      </span>
+      <div class="text" *ngIf="text">{{ text }}</div>
+    </div>
+
+    <div class="help-sections" *ngIf="helpSections.length">
+      <div class="help-section" *ngFor="let s of helpSections">
+        <div class="help-section-title" *ngIf="s.title">{{ s.title }}</div>
+        <div class="help-chips" *ngIf="s.chips?.length" role="list">
+          <span
+            class="help-chip"
+            *ngFor="let c of s.chips"
+            role="listitem"
+            [attr.data-tone]="c.tone || 'neutral'">{{ c.label }}</span>
+        </div>
+        <div class="help-section-body" *ngIf="s.body">{{ s.body }}</div>
+      </div>
+    </div>
+
+    <p class="hint" *ngIf="help && !helpHtml && !helpSections.length">{{ help }}</p>
+    <div class="hint" *ngIf="helpHtml" [innerHTML]="helpHtml | safe: 'html'"></div>
+
+    <div class="choice-list" *ngIf="choices.length" role="radiogroup">
+      <label
+        class="choice-item"
+        *ngFor="let c of choices"
+        [class.is-selected]="choiceValue === c.id"
+        [attr.data-choice]="c.id">
+        <input type="radio" name="confirmChoice" [value]="c.id" [(ngModel)]="choiceValue" />
+        <span>{{ c.label }}</span>
+      </label>
+    </div>
+
+    <label class="field prompt-field" *ngIf="hasInput">
+      <span *ngIf="inputLabel">{{ inputLabel }}</span>
+      <input
+        type="text"
+        [(ngModel)]="inputValue"
+        [placeholder]="inputPlaceholder"
+        (keydown.enter)="ok()"
+        autofocus
+      />
+    </label>
+
+    <label class="remember-field" *ngIf="rememberLabel">
+      <input type="checkbox" [(ngModel)]="rememberValue" />
+      <span>{{ rememberLabel }}</span>
+    </label>
+  </section>
+
+  <section class="card footer-actions actions tight">
+    <button *ngIf="extraLabel" type="button" class="btn" (click)="extra()">{{ extraLabel }}</button>
+    <button *ngIf="type > 1" type="button" class="btn" (click)="cancel()">{{ cancelLabel || ('confirm.cancel' | i18n) }}</button>
+    <span class="actions-spacer"></span>
+    <button type="button" class="btn btn-primary"
+      [disabled]="choices.length && requireChoice && !choiceValue"
+      (click)="ok()">{{ okLabel || ('confirm.ok' | i18n) }}</button>
+  </section>
+</div>

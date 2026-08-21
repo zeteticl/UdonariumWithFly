@@ -1,0 +1,57 @@
+<div class="settings-ui dense object-settings dice-settings" *ngIf="dice; else emptyBlock" appFitPanel [fitMinHeight]="240">
+  <section class="card card-dense">
+    <div class="field-row wrap">
+      <label class="field grow">
+        <span>{{ 'dice.settings.name' | i18n }}</span>
+        <input type="text" [(ngModel)]="dice.name" [disabled]="GuestMode()" />
+      </label>
+      <label class="field">
+        <span>{{ 'dice.settings.size' | i18n }}</span>
+        <input type="number" min="0.5" step="0.5" [(ngModel)]="dice.size" [disabled]="GuestMode()" />
+      </label>
+    </div>
+  </section>
+
+  <section class="card card-dense">
+    <div class="section-title">{{ 'dice.settings.faces' | i18n }}</div>
+    <p class="hint" *ngIf="!isVisible">{{ 'dice.settings.hiddenHint' | i18n }}</p>
+    <p class="hint" *ngIf="isVisible">{{ 'dice.settings.faceHint' | i18n }}</p>
+    <div class="face-grid" *ngIf="isVisible">
+      <button type="button" class="face-chip" *ngFor="let face of faces"
+        [class.is-active]="dice.face === face"
+        [class.has-image]="!!faceImage(face)?.url"
+        (click)="openFaceImage(face)"
+        (mouseenter)="showFacePreview($event, face)"
+        (mousemove)="moveFacePreview($event)"
+        (mouseleave)="hideFacePreview()"
+        [disabled]="GuestMode()">
+        <img *ngIf="faceImage(face)?.url" [src]="faceImage(face).url | safe: 'resourceUrl'" alt="" />
+        <i *ngIf="!faceImage(face)?.url" class="material-icons">casino</i>
+        <span class="face-name">{{ face }}</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="card card-dense">
+    <div class="check-row tight">
+      <label><input type="checkbox" [(ngModel)]="dice.isLock" [disabled]="GuestMode()" /> {{ 'dice.settings.locked' | i18n }}</label>
+      <label><input type="checkbox" [(ngModel)]="dice.isDropShadow" [disabled]="GuestMode()" /> {{ 'dice.settings.dropShadow' | i18n }}</label>
+    </div>
+  </section>
+
+  <section class="card card-dense footer-actions actions tight">
+    <button type="button" class="btn btn-sm" (click)="importXml()" [disabled]="GuestMode()">{{ 'sheet.import' | i18n }}</button>
+    <button type="button" class="btn btn-sm" [disabled]="isSaveing || GuestMode()" (click)="saveToXML()">
+      {{ isSaveing ? (progresPercent + '%') : ('sheet.download' | i18n) }}
+    </button>
+  </section>
+
+  <div class="face-preview" *ngIf="facePreviewSrc"
+    [style.left.px]="facePreviewX" [style.top.px]="facePreviewY">
+    <img [src]="facePreviewSrc | safe: 'resourceUrl'" alt="" />
+    <span class="face-preview-label" *ngIf="facePreviewLabel">{{ facePreviewLabel }}</span>
+  </div>
+</div>
+<ng-template #emptyBlock>
+  <div class="settings-ui empty-hint">{{ 'dice.settingsEmpty' | i18n }}</div>
+</ng-template>

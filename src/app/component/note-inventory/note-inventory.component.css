@@ -3,7 +3,19 @@
 .note-inventory {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+}
+
+.note-inventory.is-dragover {
+  outline: 2px dashed #8a6a45;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.drop-hint {
+  margin: 4px 0 0;
+  font-size: 10px;
+  color: #7a6550;
 }
 
 .sticky-toolbar {
@@ -37,8 +49,8 @@
 .inv-tab span {
   display: inline-block;
   padding: 4px 10px;
-  border: 1px solid #c4b29a;
-  border-radius: 4px;
+  border: 1px solid var(--udon-control-border, #c4b29a);
+  border-radius: var(--udon-control-radius, 4px);
   font-size: 12px;
   font-weight: 700;
   background: #fffdf8;
@@ -104,4 +116,74 @@
 
 .expand-btn {
   margin-top: 6px;
+}
+
+.note-card note-settings {
+  display: block;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--udon-control-border, #c4b29a);
+}
+
+.note-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #7a6550;
+}
+
+.size-row,
+.image-row,
+.radio-row,
+.checks-row,
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.size-row .field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 80px;
+}
+
+.size-row input[type="number"],
+.action-row input[type="text"],
+.action-row select {
+  min-width: 120px;
+}
+
+.checks-row label,
+.radio-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.handout-row {
+  margin-top: 12px;
+}
+
+.media-hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #7a6550;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.field input[type="url"] {
+  width: 100%;
 }

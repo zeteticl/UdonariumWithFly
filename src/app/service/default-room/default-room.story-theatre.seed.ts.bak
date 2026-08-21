@@ -1,0 +1,398 @@
+/**
+ * BACKUP — 3D story theatre (mountain village) default room.
+ *
+ * Not compiled. To activate:
+ *   1. Copy this file over default-room.seed.ts (or swap exports)
+ *   2. Ensure sample.battle.* story-theatre i18n keys remain
+ *
+ * Active seed is default-room.seed.ts (classic battle tokens).
+ */
+import { ClueLink } from '@udonarium/clue-link';
+import { ImageContext, ImageFile } from '@udonarium/core/file-storage/image-file';
+import { ImageStorage } from '@udonarium/core/file-storage/image-storage';
+import { ObjectStore } from '@udonarium/core/synchronize-object/object-store';
+import { EventSystem } from '@udonarium/core/system';
+import { GameCharacter } from '@udonarium/game-character';
+import { GameTable, GridType } from '@udonarium/game-table';
+import { GameTableMask } from '@udonarium/game-table-mask';
+import { ImageTag } from '@udonarium/image-tag';
+import { setStatusFlag, stringifyStatuses } from '@udonarium/table-fx/character-status';
+import { TableLight } from '@udonarium/table-fx/table-light';
+import { TokenFrameStyle } from '@udonarium/table-fx/push-pin.util';
+import { TableSelecter } from '@udonarium/table-selecter';
+import { TabletopObject } from '@udonarium/tabletop-object';
+import { Terrain } from '@udonarium/terrain';
+import { TextNote } from '@udonarium/text-note';
+
+import {
+  CLUE_BOARD_BG_URL,
+  CLUE_STICKY_YELLOW,
+  DEFAULT_BG_2D_IMAGE_ID,
+  DEFAULT_BG_3D_IMAGE_ID,
+  DEFAULT_TABLE_2D_ID,
+  DEFAULT_TABLE_3D_ID,
+  DefaultRoomTranslate,
+} from './default-room.ids';
+
+export function ensureClueBoardBackground(t: DefaultRoomTranslate): void {
+  const redboardUrl = CLUE_BOARD_BG_URL;
+  const prev = ImageStorage.instance.get(DEFAULT_BG_2D_IMAGE_ID);
+  if (prev?.url === redboardUrl) return;
+  if (prev) ImageStorage.instance.delete(DEFAULT_BG_2D_IMAGE_ID);
+  const bg2dCtx = ImageFile.createEmpty(DEFAULT_BG_2D_IMAGE_ID).toContext();
+  bg2dCtx.url = redboardUrl;
+  const bg2d = ImageStorage.instance.add(bg2dCtx);
+  if (!ImageTag.get(bg2d.identifier)) {
+    ImageTag.create(bg2d.identifier).tag = '*default ' + t('sample.clue.tableName');
+  }
+}
+
+/** Create maps with fog / darkness for the story theatre. */
+export function makeDefaultTables(t: DefaultRoomTranslate): void {
+  const bg3dCtx = ImageFile.createEmpty(DEFAULT_BG_3D_IMAGE_ID).toContext();
+  bg3dCtx.url = './assets/images/BG10a_80.jpg';
+  const bg3d = ImageStorage.instance.add(bg3dCtx);
+  ImageTag.create(bg3d.identifier).tag = '*default ' + t('char.table');
+
+  const table3d = new GameTable(DEFAULT_TABLE_3D_ID);
+  table3d.name = t('sample.battle.tableName');
+  table3d.imageIdentifier = bg3d.identifier;
+  table3d.width = 20;
+  table3d.height = 15;
+  table3d.is2DMode = false;
+  table3d.weatherType = 'fog';
+  table3d.weatherIntensity = 0.55;
+  table3d.darkness = 0.45;
+  table3d.globalIllumination = 0.35;
+  table3d.initialize();
+
+  ensureClueBoardBackground(t);
+  const bg2d = ImageStorage.instance.get(DEFAULT_BG_2D_IMAGE_ID);
+
+  const table2d = new GameTable(DEFAULT_TABLE_2D_ID);
+  table2d.name = t('sample.clue.tableName');
+  table2d.imageIdentifier = bg2d.identifier;
+  table2d.width = 31;
+  table2d.height = 17;
+  table2d.is2DMode = true;
+  table2d.gridType = GridType.NONE;
+  table2d.gridColor = '#3a201880';
+  table2d.isShowNumber = false;
+  table2d.weatherType = 'none';
+  table2d.weatherIntensity = 0.5;
+  table2d.initialize();
+
+  table3d.selected = true;
+  table2d.selected = false;
+  TableSelecter.instance.viewTableIdentifier = table3d.identifier;
+  TableSelecter.instance.viewedTableIdentifier = table3d.identifier;
+  EventSystem.trigger('SELECT_GAME_TABLE', { identifier: table3d.identifier });
+}
+
+export function seedDefaultRoomObjects(t: DefaultRoomTranslate): void {
+  seedStoryTheatreObjects(DEFAULT_TABLE_3D_ID, t);
+  seedClueBoardObjects(DEFAULT_TABLE_2D_ID, t);
+  TabletopObject.migrateUnboundTablePieces(DEFAULT_TABLE_3D_ID);
+}
+
+function seedStoryTheatreObjects(tableId: string, t: DefaultRoomTranslate): void {
+  const table = ObjectStore.instance.get<GameTable>(tableId);
+  const texId = ensureDefaultTerrainTexture(t);
+
+  const gateLeft = Terrain.create(
+    t('sample.battle.terrain.gateLeft'), 1, 1, 3, texId, texId, 'battleTerrain_gateLeft');
+  gateLeft.location.x = 7 * 50;
+  gateLeft.location.y = 3 * 50;
+  gateLeft.affectsLight = true;
+  gateLeft.moveToTableOnly(tableId);
+  if (table) table.appendChild(gateLeft);
+
+  const gateRight = Terrain.create(
+    t('sample.battle.terrain.gateRight'), 1, 1, 3, texId, texId, 'battleTerrain_gateRight');
+  gateRight.location.x = 11 * 50;
+  gateRight.location.y = 3 * 50;
+  gateRight.affectsLight = true;
+  gateRight.moveToTableOnly(tableId);
+  if (table) table.appendChild(gateRight);
+
+  const wall = Terrain.create(
+    t('sample.battle.terrain.wall'), 4, 1, 2, texId, texId, 'battleTerrain_wall');
+  wall.location.x = 14 * 50;
+  wall.location.y = 5 * 50;
+  wall.rotate = 15;
+  wall.affectsLight = true;
+  wall.moveToTableOnly(tableId);
+  if (table) table.appendChild(wall);
+
+  const platform = Terrain.create(
+    t('sample.battle.terrain.platform'), 3, 3, 0.5, texId, texId, 'battleTerrain_platform');
+  platform.location.x = 8 * 50;
+  platform.location.y = 7 * 50;
+  platform.affectsLight = false;
+  platform.moveToTableOnly(tableId);
+  if (table) table.appendChild(platform);
+
+  const gateLight = TableLight.create(9 * 50 + 25, 4 * 50 + 25, 180);
+  gateLight.name = t('sample.battle.light.gate');
+  gateLight.color = '#ffc878';
+  gateLight.intensity = 0.85;
+  gateLight.brightRadius = 90;
+  if (table) table.appendChild(gateLight);
+
+  seedTheatreNote(
+    'battleNote_gate',
+    t('sample.battle.note.gateTitle'),
+    t('sample.battle.note.gateBody'),
+    4, 3, 2.5, 9 * 50 + 25, 2 * 50, -6, tableId);
+  seedTheatreNote(
+    'battleNote_fog',
+    t('sample.battle.note.fogTitle'),
+    t('sample.battle.note.fogBody'),
+    4, 3, 2.5, 3 * 50 + 25, 10 * 50, 8, tableId);
+  seedTheatreNote(
+    'battleNote_stage',
+    t('sample.battle.note.stageTitle'),
+    t('sample.battle.note.stageBody'),
+    5, 3.5, 2, 16 * 50, 12 * 50, -3, tableId);
+
+  const traveler = seedTheatreCharacter(
+    'testCharacter_4', './assets/images/mon_150.gif',
+    t('sample.battle.char.traveler'), 6 * 50, 11 * 50, 1, tableId, t);
+  traveler.aura = 1;
+  traveler.floorRing = 'none';
+  traveler.visionRange = 6;
+  traveler.brightLight = 1;
+  traveler.dimLight = 3;
+  traveler.statusesJson = stringifyStatuses(setStatusFlag([], 'frightened', true));
+
+  const girl = seedTheatreCharacter(
+    'testCharacter_5', './assets/images/mon_211.gif',
+    t('sample.battle.char.villageGirl'), 9 * 50, 5 * 50, 1, tableId, t);
+  girl.aura = 6;
+  girl.floorRing = 'holy';
+  girl.floorRingSpeed = 0.8;
+  girl.visionRange = 8;
+  girl.brightLight = 2;
+  girl.dimLight = 4;
+
+  const fogBeast = seedTheatreCharacter(
+    'testCharacter_3', './assets/images/mon_128.gif',
+    t('sample.battle.char.fogBeast'), 4 * 50, 2 * 50, 3, tableId, t);
+  fogBeast.aura = 5;
+  fogBeast.floorRing = 'eldritch';
+  fogBeast.visionRange = 4;
+  fogBeast.brightLight = 0;
+  fogBeast.dimLight = 0;
+  fogBeast.statusesJson = stringifyStatuses(setStatusFlag([], 'invisible', true));
+
+  const watchfire = seedTheatreCharacter(
+    'testCharacter_1', './assets/images/mon_052.gif',
+    t('sample.battle.char.watchfire'), 12 * 50, 8 * 50, 1, tableId, t);
+  watchfire.aura = 4;
+  watchfire.floorRing = 'fire';
+  watchfire.floorRingSpeed = 1.2;
+  watchfire.visionRange = 5;
+  watchfire.brightLight = 3;
+  watchfire.dimLight = 5;
+
+  const guide = seedTheatreCharacter(
+    'testCharacter_6', './assets/images/mon_135.gif',
+    t('sample.battle.char.guide'), 5 * 50, 13 * 50, 1, tableId, t);
+  guide.aura = 3;
+  guide.floorRing = 'magic';
+  guide.visionRange = 10;
+  guide.brightLight = 0;
+  guide.dimLight = 2;
+
+  const lurker = seedTheatreCharacter(
+    'testCharacter_2', './assets/images/mon_052.gif',
+    t('sample.battle.char.lurker'), 8 * 50, 8 * 50, 1, tableId, t);
+  lurker.aura = 2;
+  lurker.floorRing = 'tech';
+  lurker.visionRange = 3;
+  lurker.brightLight = 0;
+  lurker.dimLight = 0;
+}
+
+function ensureDefaultTerrainTexture(t: DefaultRoomTranslate): string {
+  const url = './assets/images/tex.jpg';
+  let image = ImageStorage.instance.get(url);
+  if (!image) {
+    image = ImageStorage.instance.add(url);
+    if (!ImageTag.get(image.identifier)) {
+      ImageTag.create(image.identifier).tag = '*default ' + t('action.terrainName');
+    }
+  }
+  return image.identifier;
+}
+
+function seedTheatreNote(
+  id: string,
+  title: string,
+  body: string,
+  fontSize: number,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  rotate: number,
+  tableId: string,
+): TextNote {
+  const note = TextNote.create(title, body, fontSize, width, height, id);
+  note.location.x = x;
+  note.location.y = y;
+  note.rotate = rotate;
+  note.isUpright = true;
+  note.moveToTableOnly(tableId);
+  return note;
+}
+
+function seedTheatreCharacter(
+  id: string,
+  imageUrl: string,
+  name: string,
+  x: number,
+  y: number,
+  size: number,
+  tableId: string,
+  t: DefaultRoomTranslate,
+): GameCharacter {
+  const fileContext = ImageFile.createEmpty(id + '_image').toContext();
+  fileContext.url = imageUrl;
+  const testFile = ImageStorage.instance.add(fileContext);
+  if (!ImageTag.get(testFile.identifier)) {
+    ImageTag.create(testFile.identifier).tag = '*default ' + t('action.newCharacter');
+  }
+  const ch = new GameCharacter(id);
+  ch.location.x = x;
+  ch.location.y = y;
+  ch.initialize();
+  ch.createTestGameDataElement(name, size, testFile.identifier);
+  ch.isShowName = true;
+  ch.moveToTableOnly(tableId);
+  return ch;
+}
+
+function seedClueBoardObjects(tableId: string, t: DefaultRoomTranslate): void {
+  const monsterC = ObjectStore.instance.get<GameCharacter>('testCharacter_3');
+  if (monsterC) {
+    monsterC.pushPin = true;
+    monsterC.pushPinAngle = 13;
+    monsterC.pushPinStyle = 2;
+    monsterC.addToTable(tableId, { x: 175, y: 400, posZ: 0 }, false);
+  }
+
+  const clueA = seedClueCharacter('clueCharacter_1', './assets/images/mon_150.gif',
+    t('sample.clue.suspectA'), 829, 304, tableId, 'polaroid', -8, 6, -8, t);
+  const clueB = seedClueCharacter('clueCharacter_2', './assets/images/mon_211.gif',
+    t('sample.clue.suspectB'), 573, 373, tableId, 'photo', 12, 6, -7, t);
+  const clueC = seedClueCharacter('clueCharacter_3', './assets/images/mon_135.gif',
+    t('sample.clue.evidence'), 500, 480, tableId, 'card', -15, 2, -6, t);
+  const clueD = seedClueCharacter('clueCharacter_4', './assets/images/mon_052.gif',
+    t('sample.clue.witness'), 655, 632, tableId, 'polaroid', 6, 2, -5, t);
+
+  const noteA4 = TextNote.create(
+    t('sample.clue.caseTitle'), t('sample.clue.caseBody'), 12, 6, 6, 'clueNote_a4');
+  noteA4.location.x = 1225;
+  noteA4.location.y = 625;
+  noteA4.rotate = -4;
+  noteA4.isUpright = false;
+  noteA4.applyPaperStyle('a4');
+  noteA4.pushPin = true;
+  noteA4.pushPinAngle = -22;
+  noteA4.pushPinStyle = 7;
+  noteA4.moveToTableOnly(tableId);
+
+  const sticky = TextNote.create(
+    t('sample.clue.stickyTitle'), t('sample.clue.stickyBody'), 14, 2.5, 2.5, 'clueNote_sticky');
+  sticky.location.x = 981;
+  sticky.location.y = 711;
+  sticky.rotate = 7;
+  sticky.isUpright = false;
+  sticky.applyPaperStyle('sticky');
+  sticky.pushPin = true;
+  sticky.pushPinAngle = -25;
+  sticky.pushPinStyle = 6;
+  sticky.moveToTableOnly(tableId);
+
+  const rumours = TextNote.create(
+    t('sample.clue.rumourTitle'), t('sample.clue.rumourBody'), 14, 4, 3, 'clueNote_rumour');
+  rumours.location.x = 1259;
+  rumours.location.y = 698;
+  rumours.rotate = 0;
+  rumours.isUpright = false;
+  rumours.isLocked = true;
+  rumours.textAlign = 'center';
+  rumours.tableIdentifier = tableId;
+  rumours.location.name = 'common';
+  rumours.update();
+
+  const mask = GameTableMask.create(t('sample.clue.maskName'), 5, 7, 100, 'clueMask_org');
+  mask.location.x = 126;
+  mask.location.y = 229;
+  mask.isLock = true;
+  mask.borderType = 0;
+  mask.text = t('sample.clue.maskText');
+  mask.fontsize = 18;
+  mask.textPosition = 'top-center';
+  mask.color = '#555555';
+  mask.bgcolor = CLUE_STICKY_YELLOW;
+  mask.tokenFxPassive = true;
+  mask.tokenFxPassiveConfig = {
+    isInverse: false,
+    isHollow: false,
+    isBlackPaint: true,
+    isGrayscale: false,
+    isSepia: false,
+    isWhitePaint: false,
+    isMatrix: false,
+    isFlipVertical: false,
+    isContrast: false,
+    altitudeMode: 'none',
+    altitude: 0,
+  };
+  mask.setEnabledClickActions(['note', 'tokenFx']);
+  mask.clickNoteId = rumours.identifier;
+  mask.moveToTableOnly(tableId);
+  const clueTable = ObjectStore.instance.get<GameTable>(tableId);
+  if (clueTable) clueTable.appendChild(mask);
+
+  ClueLink.create(clueA.identifier, clueB.identifier, { sag: 0.28, tableIdentifier: tableId, identifier: 'clueLink_1' });
+  ClueLink.create(clueB.identifier, clueC.identifier, { sag: 0.2, tableIdentifier: tableId, identifier: 'clueLink_2' });
+  ClueLink.create(clueA.identifier, noteA4.identifier, { sag: 0.32, tableIdentifier: tableId, identifier: 'clueLink_3' });
+  ClueLink.create(clueD.identifier, sticky.identifier, { sag: 0.18, tableIdentifier: tableId, identifier: 'clueLink_4' });
+  ClueLink.create(clueC.identifier, clueD.identifier, { sag: 0.25, tableIdentifier: tableId, identifier: 'clueLink_5' });
+}
+
+function seedClueCharacter(
+  id: string,
+  imageUrl: string,
+  name: string,
+  x: number,
+  y: number,
+  tableId: string,
+  frame: TokenFrameStyle,
+  rotate: number,
+  pinStyle: number,
+  pinAngle: number,
+  t: DefaultRoomTranslate,
+): GameCharacter {
+  const fileContext = ImageFile.createEmpty(id + '_image').toContext();
+  fileContext.url = imageUrl;
+  const testFile = ImageStorage.instance.add(fileContext);
+  ImageTag.create(testFile.identifier).tag = '*default ' + t('action.newCharacter');
+  const ch = new GameCharacter(id);
+  ch.location.x = x;
+  ch.location.y = y;
+  ch.rotate = rotate;
+  ch.initialize();
+  ch.createTestGameDataElement(name, 1, testFile.identifier);
+  ch.tokenFrame = frame;
+  ch.tokenFrameCaption = name;
+  ch.isShowName = true;
+  ch.pushPin = true;
+  ch.pushPinAngle = pinAngle;
+  ch.pushPinStyle = pinStyle;
+  ch.moveToTableOnly(tableId);
+  return ch;
+}

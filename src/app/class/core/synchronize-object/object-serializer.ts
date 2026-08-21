@@ -2,6 +2,7 @@ import { XmlUtil } from '../system/util/xml-util';
 import { Attributes } from './attributes';
 import { GameObject, ObjectContext } from './game-object';
 import { ObjectFactory } from './object-factory';
+import { ObjectStore } from './object-store';
 
 export interface XmlAttributes extends GameObject {
   toAttributes(): Attributes;
@@ -24,8 +25,10 @@ export class ObjectSerializer {
   }
 
   private constructor() {
-    console.log('ObjectSerializer ready...');
   };
+
+  /** Stable object id for cross-refs (tableIdentifier, scene snaps). Not a SyncVar. */
+  static readonly SYNC_ID_ATTR = 'syncId';
 
   toXml(gameObject: GameObject): string {
     let xml = '';
@@ -34,10 +37,13 @@ export class ObjectSerializer {
 
     let attrStr = '';
     for (let name in attributes) {
+      if (name === ObjectSerializer.SYNC_ID_ATTR) continue;
       if (attributes[name] === undefined) continue;
       let attribute = XmlUtil.encodeEntityReference(attributes[name] + '');
       attrStr += ' ' + name + '="' + attribute + '"';
     }
+    // Persist identity so tableIdentifier / scene-preset snaps survive room reload.
+    attrStr += ` ${ObjectSerializer.SYNC_ID_ATTR}="${XmlUtil.encodeEntityReference(gameObject.identifier)}"`;
     xml += `<${tagName + attrStr}>`;
     xml += 'innerXml' in gameObject ? (<InnerXml>gameObject).innerXml() : '';
     xml += `</${tagName}>`;
@@ -114,28 +120,58 @@ export class ObjectSerializer {
       return null;
     }
 
-    let gameObject: GameObject = ObjectFactory.instance.create(xmlElement.tagName);
-    if (!gameObject) return null;
-
-    if ('parseAttributes' in gameObject) {
-      (<XmlAttributes>gameObject).parseAttributes(xmlElement.attributes);
-    } else {
-      let context: ObjectContext = gameObject.toContext();
-      ObjectSerializer.parseAttributes(context.syncData, xmlElement.attributes);
-      gameObject.apply(context);
+    const tagName = xmlElement.tagName;
+    let syncId = xmlElement.getAttribute(ObjectSerializer.SYNC_ID_ATTR);
+    if (syncId) {
+      syncId = XmlUtil.decodeEntityReference(syncId);
+      xmlElement.removeAttribute(ObjectSerializer.SYNC_ID_ATTR);
     }
 
-    gameObject.initialize();
-    if ('parseInnerXml' in gameObject) {
-      (<InnerXml>gameObject).parseInnerXml(xmlElement);
-    }
+    let gameObject: GameObject = null;
     try {
-      gameObject.complement();
-    } catch(e) {
-      console.log(e);
+      // Reuse id only when free (clone while original exists still gets a new UUID).
+      if (syncId && ObjectStore.instance.get(syncId) == null) {
+        ObjectStore.instance.clearDeleted(syncId);
+        gameObject = ObjectFactory.instance.create(tagName, syncId);
+      } else {
+        gameObject = ObjectFactory.instance.create(tagName);
+      }
+      if (!gameObject) return null;
+
+      if ('parseAttributes' in gameObject) {
+        (<XmlAttributes>gameObject).parseAttributes(xmlElement.attributes);
+      } else {
+        let context: ObjectContext = gameObject.toContext();
+        ObjectSerializer.parseAttributes(context.syncData, xmlElement.attributes);
+        gameObject.apply(context);
+      }
+
+      gameObject.initialize();
+      if ('parseInnerXml' in gameObject) {
+        (<InnerXml>gameObject).parseInnerXml(xmlElement);
+      }
+      try {
+        gameObject.complement();
+      } catch (e) {
+        console.warn('[ObjectSerializer] complement failed; keeping object', tagName, syncId || gameObject.identifier, e);
+      }
+
+      return gameObject;
+    } catch (e) {
+      console.warn(
+        '[ObjectSerializer] skip corrupt object',
+        { tag: tagName, syncId: syncId || '', error: String((e as Error)?.message || e) },
+        e
+      );
+      if (gameObject) {
+        try {
+          gameObject.destroy();
+        } catch (destroyErr) {
+          console.warn('[ObjectSerializer] destroy after parse failure failed', destroyErr);
+        }
+      }
+      return null;
     }
-    
-    return gameObject;
   }
 
   static parseAttributes(syncData: Object, attributes: NamedNodeMap): Object {
@@ -147,6 +183,8 @@ export class ObjectSerializer {
       let split: string[] = attributes[i].name.split('.');
       let key: string | number = split[0];
       let obj: Object | Array<any> = syncData;
+
+      if (key === ObjectSerializer.SYNC_ID_ATTR) continue;
 
       let pollutionKey = split.find(splitKey => objectPropertyKeys.includes(splitKey));
       if (pollutionKey != null) {
@@ -161,7 +199,12 @@ export class ObjectSerializer {
 
       let type = typeof obj[key];
       if (type !== 'string' && obj[key] != null) {
-        value = JSON.parse(value);
+        try {
+          value = JSON.parse(value);
+        } catch (e) {
+          console.warn('[ObjectSerializer] skip corrupt attribute value', attributes[i].name, e);
+          continue;
+        }
       }
       obj[key] = value;
     }

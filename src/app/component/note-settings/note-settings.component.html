@@ -1,0 +1,188 @@
+<div class="settings-ui dense note-settings" *ngIf="note; else emptyBlock" appFitPanel [fitMinHeight]="260" [class.is-embedded]="embedded"
+  [class.is-dragover]="isDragOver"
+  (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+  <section class="card card-dense drop-bar">
+    <button type="button" class="btn btn-sm" (click)="pickImportFile()" [disabled]="GuestMode()">
+      <i class="material-icons">upload_file</i>{{ 'note.importFile' | i18n }}
+    </button>
+    <span class="hint">{{ 'note.dropHint' | i18n }}</span>
+  </section>
+
+  <section class="card card-dense">
+    <div class="title-row">
+      <label class="field grow">
+        <span>{{ 'note.fieldTitle' | i18n }}</span>
+        <input type="text" [(ngModel)]="note.title" [disabled]="GuestMode()" />
+      </label>
+      <label class="field title-bg-field">
+        <span>{{ 'note.fieldTitleBg' | i18n }}</span>
+        <input type="color" [ngModel]="note.titleBgColor" (ngModelChange)="setTitleBgColor($event)" [disabled]="GuestMode() || !note.isShowTitle" />
+      </label>
+      <span class="kind-pill">{{ ('note.kind.' + note.contentKind) | i18n }}</span>
+    </div>
+
+    <div class="field-row wrap size-row">
+      <label class="field">
+        <span>{{ 'note.fieldWidth' | i18n }}</span>
+        <input type="number" min="0.5" step="0.5" [(ngModel)]="note.width" [disabled]="GuestMode() || note.isSizeLocked" />
+      </label>
+      <label class="field">
+        <span>{{ 'note.fieldHeight' | i18n }}</span>
+        <input type="number" min="0.5" step="0.5" [(ngModel)]="note.height" [disabled]="GuestMode() || note.isSizeLocked" />
+      </label>
+      <label class="field" *ngIf="editMode === 'text'">
+        <span>{{ 'note.fieldFontSize' | i18n }}</span>
+        <input type="number" min="1" step="1" [(ngModel)]="note.fontSize" [disabled]="GuestMode()" />
+      </label>
+      <label class="field" *ngIf="editMode === 'text'">
+        <span>{{ 'note.fieldColor' | i18n }}</span>
+        <input type="color" [(ngModel)]="note.color" [disabled]="GuestMode()" />
+      </label>
+      <label class="field" *ngIf="editMode === 'text'">
+        <span>{{ 'note.fieldAlign' | i18n }}</span>
+        <select [ngModel]="note.textAlign || 'left'" (ngModelChange)="setTextAlign($event)" [disabled]="GuestMode()">
+          <option value="left">{{ 'note.align.left' | i18n }}</option>
+          <option value="center">{{ 'note.align.center' | i18n }}</option>
+          <option value="right">{{ 'note.align.right' | i18n }}</option>
+          <option value="justify">{{ 'note.align.justify' | i18n }}</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="mode-tabs" role="tablist" [attr.title]="'note.mediaHint' | i18n">
+      <button type="button" class="mode-tab" *ngFor="let mode of modes"
+        [class.is-active]="note.contentMode === mode.id"
+        [disabled]="GuestMode()"
+        (click)="setContentMode(mode.id)">
+        <i class="material-icons">{{ mode.icon }}</i>
+        <span>{{ mode.labelKey | i18n }}</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- TEXT -->
+  <section class="card card-dense" *ngIf="editMode === 'text'">
+    <label class="field">
+      <span>{{ 'note.fieldText' | i18n }}</span>
+      <textarea class="text-body" rows="3" [(ngModel)]="note.text" [disabled]="GuestMode()"
+        [style.text-align]="note.textAlign || 'left'"></textarea>
+    </label>
+    <div class="inline-tools">
+      <div class="check-row tight">
+        <label><input type="checkbox" [(ngModel)]="note.isShowTitle" [disabled]="GuestMode()" /> {{ 'note.showTitle' | i18n }}</label>
+        <label><input type="checkbox" [(ngModel)]="note.isWhiteOut" [disabled]="GuestMode()" /> {{ 'note.whiteOut' | i18n }}</label>
+        <label *ngIf="!is2DMode"><input type="checkbox" [(ngModel)]="note.isUpright" [disabled]="GuestMode()" /> {{ 'note.upright' | i18n }}</label>
+      </div>
+      <button type="button" class="thumb-btn" [class.has-image]="!!note.frontImage?.url" (click)="openFrontImage()" [disabled]="GuestMode()"
+        [title]="'note.changeFront' | i18n">
+        <img *ngIf="note.frontImage?.url" [src]="note.frontImage.url | safe: 'resourceUrl'" alt="" />
+        <i *ngIf="!note.frontImage?.url" class="material-icons">image</i>
+      </button>
+    </div>
+  </section>
+
+  <!-- IMAGE -->
+  <section class="card card-dense" *ngIf="editMode === 'image'">
+    <div class="image-grid compact">
+      <div class="image-slot">
+        <span class="image-label">{{ 'note.changeFront' | i18n }}</span>
+        <button type="button" class="image-frame" [class.image-frame-empty]="!note.frontImage?.url" (click)="openFrontImage()" [disabled]="GuestMode()">
+          <img *ngIf="note.frontImage?.url" [src]="note.frontImage.url | safe: 'resourceUrl'" alt="" />
+          <ng-container *ngIf="!note.frontImage?.url">
+            <i class="material-icons">add_photo_alternate</i>
+          </ng-container>
+        </button>
+      </div>
+      <div class="image-slot">
+        <span class="image-label">{{ 'note.changeBack' | i18n }}</span>
+        <button type="button" class="image-frame" [class.image-frame-empty]="!note.backImage?.url" (click)="openBackImage()" [disabled]="GuestMode()">
+          <img *ngIf="note.backImage?.url" [src]="note.backImage.url | safe: 'resourceUrl'" alt="" />
+          <ng-container *ngIf="!note.backImage?.url">
+            <i class="material-icons">flip</i>
+          </ng-container>
+        </button>
+      </div>
+    </div>
+    <div class="check-row tight">
+      <label><input type="checkbox" [ngModel]="note.isFlipped" (ngModelChange)="setFlipped($event)" [disabled]="GuestMode()" /> {{ 'note.flipped' | i18n }}</label>
+      <label><input type="checkbox" [(ngModel)]="note.isShowTitle" [disabled]="GuestMode()" /> {{ 'note.showTitle' | i18n }}</label>
+    </div>
+  </section>
+
+  <!-- VIDEO -->
+  <section class="card card-dense" *ngIf="editMode === 'video'">
+    <div class="actions tight">
+      <button type="button" class="btn btn-sm btn-primary" (click)="attachVideo()" [disabled]="GuestMode()">
+        <i class="material-icons">upload</i>{{ 'note.attachVideo' | i18n }}
+      </button>
+      <button type="button" class="btn btn-sm" (click)="clearVideo()" [disabled]="GuestMode() || !note.hasVideo">
+        {{ 'note.clearVideo' | i18n }}
+      </button>
+    </div>
+    <label class="field">
+      <span>{{ 'note.videoUrl' | i18n }}</span>
+      <input type="url" [ngModel]="note.videoUrl" [placeholder]="'note.videoUrlHint' | i18n"
+        (change)="onVideoUrlChange($event)" [disabled]="GuestMode()" />
+    </label>
+    <div class="media-preview" *ngIf="note.resolvedVideoUrl">
+      <video [src]="note.resolvedVideoUrl | safe: 'resourceUrl'" controls playsinline preload="metadata"></video>
+    </div>
+    <p class="hint" *ngIf="!note.hasVideo">{{ 'note.videoEmpty' | i18n }}</p>
+  </section>
+
+  <!-- PDF -->
+  <section class="card card-dense" *ngIf="editMode === 'pdf'">
+    <div class="actions tight">
+      <button type="button" class="btn btn-sm btn-primary" (click)="attachPdf()" [disabled]="GuestMode()">
+        <i class="material-icons">upload</i>{{ 'note.attachPdf' | i18n }}
+      </button>
+      <button type="button" class="btn btn-sm" (click)="clearPdf()" [disabled]="GuestMode() || !note.hasPdf">
+        {{ 'note.clearPdf' | i18n }}
+      </button>
+      <label class="field page-field" *ngIf="note.hasPdf">
+        <span>{{ 'note.pdfPage' | i18n }}</span>
+        <input type="number" min="1" [(ngModel)]="note.pdfPage" [disabled]="GuestMode()" />
+      </label>
+      <span class="hint" *ngIf="note.hasPdf && note.pdfPageCount">/ {{ note.pdfPageCount }}</span>
+    </div>
+    <p class="hint" *ngIf="!note.hasPdf">{{ 'note.pdfEmpty' | i18n }}</p>
+  </section>
+
+  <section class="card card-dense">
+    <div class="board-row">
+      <div class="radio-row tight">
+        <span>{{ 'note.scope' | i18n }}</span>
+        <label>
+          <input type="radio" name="note-scope-{{note.identifier}}" [checked]="note.scope === 'scene'" (change)="setScope('scene')" [disabled]="GuestMode()" />
+          {{ 'note.scopeScene' | i18n }}
+        </label>
+        <label>
+          <input type="radio" name="note-scope-{{note.identifier}}" [checked]="note.scope === 'room'" (change)="setScope('room')" [disabled]="GuestMode()" />
+          {{ 'note.scopeRoom' | i18n }}
+        </label>
+      </div>
+      <div class="check-row tight">
+        <label><input type="checkbox" [(ngModel)]="note.isLocked" [disabled]="GuestMode()" /> {{ 'note.lock' | i18n }}</label>
+        <label><input type="checkbox" [(ngModel)]="note.isSizeLocked" [disabled]="GuestMode()" /> {{ 'note.sizeLock' | i18n }}</label>
+        <label>
+          <input type="checkbox" [ngModel]="selfOnly" (ngModelChange)="setSelfOnly($event)" [disabled]="GuestMode()" />
+          {{ 'note.selfOnly' | i18n }}
+        </label>
+        <label *ngIf="editMode !== 'image'"><input type="checkbox" [ngModel]="note.isFlipped" (ngModelChange)="setFlipped($event)" [disabled]="GuestMode()" /> {{ 'note.flipped' | i18n }}</label>
+      </div>
+    </div>
+
+    <footer class="actions tight">
+      <button type="button" class="btn btn-sm" (click)="previewSelf()" [title]="'note.ctrlHoverHint' | i18n">
+        <i class="material-icons">visibility</i>{{ 'note.previewSelf' | i18n }}
+      </button>
+      <button type="button" class="btn btn-sm btn-primary" (click)="showToPlayers()" [disabled]="!isGM">
+        <i class="material-icons">cast</i>{{ 'note.showPlayers' | i18n }}
+      </button>
+    </footer>
+  </section>
+</div>
+
+<ng-template #emptyBlock>
+  <div class="settings-ui empty-hint">{{ 'note.settingsEmpty' | i18n }}</div>
+</ng-template>

@@ -1,4 +1,4 @@
-<div class="settings-ui settings-layout">
+<div class="settings-ui dense settings-layout" appFitPanel [fitMinHeight]="300" [fitMaxHeight]="560">
   <aside class="settings-aside">
     <button type="button" class="btn btn-primary btn-block" (click)="add()">
       <i class="material-icons">add</i>{{ 'cutin.add' | i18n }}
@@ -301,8 +301,9 @@
         <button type="button" class="btn btn-sm" (click)="upTabIndex()">↑</button>
         <button type="button" class="btn btn-sm" (click)="downTabIndex()">↓</button>
         <span class="actions-spacer">
+          <button type="button" class="btn" (click)="importXml()">{{ 'sheet.import' | i18n }}</button>
           <button type="button" class="btn" [disabled]="isSaveing" (click)="save()">
-            <span class="btn-label" [class.is-hidden]="isSaveing">{{ 'cutin.save' | i18n }}</span>
+            <span class="btn-label" [class.is-hidden]="isSaveing">{{ 'sheet.download' | i18n }}</span>
             <span *ngIf="isSaveing" class="btn-progress">{{progresPercent}}%</span>
           </button>
           <button type="button" class="btn btn-danger" (click)="delete()">{{ 'cutin.delete' | i18n }}</button>

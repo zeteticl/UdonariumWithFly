@@ -4,21 +4,40 @@
   grid-template-columns: 9em 1fr 3.2em auto;
 }
 
-.overview-card {
-  padding: 8px 12px;
-}
-
 .overview-option {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #5c4630;
-  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
 }
 
-.overview-card.is-selected,
+.overview-option.is-selected {
+  border-color: #c0392b;
+  box-shadow: 0 0 0 1px #c0392b;
+  background: rgba(192, 57, 43, 0.06);
+}
+
+.list-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stand-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stand-entry {
+  border: 1px solid #d2c2ab;
+  border-radius: 4px;
+  background: #fffdf8;
+  padding: 8px;
+}
+
 .stand-entry.is-selected {
   border-color: #c0392b;
   box-shadow: 0 0 0 1px #c0392b;
@@ -56,12 +75,20 @@
   flex-shrink: 0;
 }
 
-.settings-ui > .card + .card,
-.settings-ui > .card + .actions,
-.settings-ui > .stand-entry + .stand-entry {
-  margin-top: 10px;
+.stand-empty {
+  margin: 0;
+  padding: 6px 4px;
+  text-align: center;
+  font-size: 12px;
+  color: #8a7460;
 }
 
-.settings-ui > .actions {
-  margin-top: 10px;
+.settings-ui > .card + .card {
+  margin-top: 4px;
+}
+
+.list-card > .actions {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid #e2d3bf;
 }

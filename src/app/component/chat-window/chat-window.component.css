@@ -71,10 +71,46 @@
   user-select: none;
 }
 
+.chat-toolbar-main {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 4px;
+}
+
 .chat-toolbar .chat-tab {
   flex: 1 1 auto;
   min-width: 0;
   padding: 0;
+}
+
+.toolbar-more {
+  display: none;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  margin: 0;
+  border: solid 1px #555;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.55);
+  color: #444;
+  cursor: pointer;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.toolbar-more .material-icons {
+  font-size: 1.25rem;
+  line-height: 34px;
+  vertical-align: middle;
+}
+
+.toolbar-more:hover,
+.chat-toolbar.actions-open .toolbar-more {
+  background-color: #555;
+  color: #eee;
 }
 
 .chat-toolbar-actions {
@@ -93,6 +129,48 @@
 .chat-tab label {
   display: inline-block;
   position: relative;
+}
+
+.private-members-tip {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  z-index: 30;
+  min-width: 7em;
+  max-width: 14em;
+  padding: 5px 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #3a2f24;
+  background: linear-gradient(-30deg, rgba(240, 218, 189, 1), rgba(255, 244, 232, 1));
+  border: solid 1px #999;
+  border-left: solid 4px #555;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+  white-space: nowrap;
+}
+
+.tab.is-private:hover .private-members-tip {
+  visibility: visible;
+  opacity: 1;
+}
+
+.private-members-tip-head {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.private-members-tip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.private-members-tip-empty {
+  color: #7a6a58;
+  font-weight: normal;
 }
 
 .chat-tab input[type="radio"] {
@@ -189,8 +267,139 @@ button.indicate.is-active .material-icons {
   opacity: 1.0;
 }
 
-button.indicate sup {
+button.indicate .local-mark {
   display: inline-block;
   top: 2px;
   position: relative;
+  color: red;
+}
+/* —— Mobile compact chat (Play half-sheet) —— */
+:host-context(html.udon-mobile-layout) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  /* Fill the sheet scrollport so short tabs still pin the composer to the bottom.
+     min-height is also set in px from pinComposerToPanel() on open / resize. */
+  min-height: 100%;
+  height: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* Grow with messages so the panel (not .log) scrolls — matches chat-tab virtual list. */
+:host-context(html.udon-mobile-layout) .component {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  flex: 1 0 auto;
+  min-height: 100%;
+  height: auto;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+:host-context(html.udon-mobile-layout) .log {
+  flex: 1 0 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+  overflow-anchor: none;
+  box-sizing: border-box;
+}
+
+:host-context(html.udon-mobile-layout) .sticky-bottom {
+  position: sticky;
+  bottom: 0;
+  /* Push under short message lists; collapses when log grows taller than the sheet. */
+  margin-top: auto;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, rgba(243, 230, 212, 0.97) 0%, #f3e6d4 18%);
+  border-top: 1px solid rgba(102, 85, 68, 0.35);
+  box-shadow: 0 -6px 16px rgba(60, 40, 20, 0.08);
+  flex-shrink: 0;
+  z-index: 2;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+:host-context(html.udon-mobile-layout) .chat-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 6px 8px 2px;
+  gap: 4px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+:host-context(html.udon-mobile-layout) .chat-toolbar-main {
+  width: 100%;
+}
+
+:host-context(html.udon-mobile-layout) .toolbar-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:host-context(html.udon-mobile-layout) .chat-toolbar:not(.actions-open) .chat-toolbar-actions {
+  display: none;
+}
+
+:host-context(html.udon-mobile-layout) .chat-toolbar.actions-open .chat-toolbar-actions {
+  display: flex;
+  width: 100%;
+  margin-left: 0;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px 0 4px;
+}
+
+:host-context(html.udon-mobile-layout) .chat-toolbar-actions .indicate {
+  padding: 0 !important;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.65);
+  border: solid 1px rgba(85, 85, 85, 0.55);
+}
+
+:host-context(html.udon-mobile-layout) .chat-toolbar-actions .indicate.is-active {
+  background: #fff;
+  border-color: #555;
+}
+
+:host-context(html.udon-mobile-layout) .chat-toolbar-actions .indicate .local-mark {
+  display: none;
+}
+
+:host-context(html.udon-mobile-layout) .chat-tab input[type="radio"] + div {
+  height: 2em;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+:host-context(html.udon-mobile-layout) .chat-tab {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+
+:host-context(html.udon-mobile-layout) .chat-tab::-webkit-scrollbar {
+  display: none;
+}
+
+:host-context(html.udon-mobile-layout) .tab-setting {
+  height: 32px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  vertical-align: middle;
 }

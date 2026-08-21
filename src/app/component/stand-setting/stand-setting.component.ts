@@ -21,8 +21,14 @@ import { I18nService } from 'service/i18n.service';
     standalone: false
 })
 export class StandSettingComponent implements OnInit, OnDestroy, AfterViewInit {
-  @Input() character: GameCharacter = null;
-　@ViewChildren(StandElementComponent) standElementComponents: QueryList<StandElementComponent>;
+  private _character: GameCharacter = null;
+  @Input()
+  get character(): GameCharacter { return this._character; }
+  set character(value: GameCharacter) {
+    this._character = value;
+    if (value) this.updatePanelTitle();
+  }
+  @ViewChildren(StandElementComponent) standElementComponents: QueryList<StandElementComponent>;
 
   panelId: string;
   standSettingXML = '';
@@ -38,11 +44,12 @@ export class StandSettingComponent implements OnInit, OnDestroy, AfterViewInit {
   ) { }
 
   get standElements(): DataElement[] {
+    if (!this.character || !this.character.standList) return [];
     return this.character.standList.standElements;
   }
 
   get imageList(): ImageFile[] {
-    if (!this.character) return [];
+    if (!this.character || !this.character.imageDataElement) return [];
     let ret = [];
     let dupe = {};
     const tmp = this.character.imageDataElement.getElementsByName('imageIdentifier');
@@ -112,6 +119,7 @@ export class StandSettingComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngAfterViewInit() {
     this._intervalId = setInterval(() => {
+      if (!this.standElementComponents) return;
       this.isSpeaking = !this.isSpeaking;
       this.standElementComponents.forEach(standElementComponent => {
         standElementComponent.isSpeaking = this.isSpeaking;
@@ -125,11 +133,13 @@ export class StandSettingComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   updatePanelTitle() {
+    if (!this.character) return;
     this.panelService.title = this.i18n.t('stand.title', { name: this.character.name });
   }
 
   add() {
-    this.character.standList.add(this.character.imageFile.identifier);
+    if (!this.character) return;
+    this.character.ensureStandList().add(this.character.imageFile.identifier);
     this.standSettingXML = '';
   }
 
@@ -197,7 +207,7 @@ export class StandSettingComponent implements OnInit, OnDestroy, AfterViewInit {
 
   helpStandSeteing() {
     let coordinate = this.pointerDeviceService.pointers[0];
-    let option: PanelOption = { left: coordinate.x, top: coordinate.y, width: 600, height: 620 };
+    let option: PanelOption = { left: coordinate.x, top: coordinate.y, width: 600, height: 600, geometryKey: 'stand.help' };
     let textView = this.panelService.open(TextViewComponent, option);
     textView.title = this.i18n.t('stand.helpTitle');
     textView.text = this.i18n.t('stand.help');

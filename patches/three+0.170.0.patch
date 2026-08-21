@@ -1,0 +1,30 @@
+diff --git a/node_modules/three/examples/jsm/loaders/FBXLoader.js b/node_modules/three/examples/jsm/loaders/FBXLoader.js
+index d2e0b9d..4fd1257 100644
+--- a/node_modules/three/examples/jsm/loaders/FBXLoader.js
++++ b/node_modules/three/examples/jsm/loaders/FBXLoader.js
+@@ -2321,11 +2321,24 @@ class GeometryParser {
+ 
+ 		const mappingType = ColorNode.MappingInformationType;
+ 		const referenceType = ColorNode.ReferenceInformationType;
++		// Some marketplace FBX files declare LayerElementColor without Colors data.
++		if ( ! ColorNode || ! ColorNode.Colors || ! ColorNode.Colors.a ) {
++
++			return {
++				dataSize: 4,
++				buffer: [],
++				indices: [],
++				mappingType: mappingType,
++				referenceType: referenceType
++			};
++
++		}
++
+ 		const buffer = ColorNode.Colors.a;
+ 		let indexBuffer = [];
+ 		if ( referenceType === 'IndexToDirect' ) {
+ 
+-			indexBuffer = ColorNode.ColorIndex.a;
++			indexBuffer = ( ColorNode.ColorIndex && ColorNode.ColorIndex.a ) ? ColorNode.ColorIndex.a : [];
+ 
+ 		}
+ 

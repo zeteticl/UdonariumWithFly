@@ -1,0 +1,41 @@
+name: Tests
+
+on:
+  push:
+    branches: [hktrpg-main, fix, main, master, Weather-sfx]
+  pull_request:
+    branches: [hktrpg-main, fix, main, master]
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  karma:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Karma (headless + coverage)
+        run: npm run test:ci
+
+  playwright-smoke:
+    runs-on: ubuntu-latest
+    needs: karma
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Smoke E2E
+        run: npm run e2e:smoke

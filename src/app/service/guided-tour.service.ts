@@ -2,6 +2,7 @@ import { Injectable, NgZone } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { EventSystem } from '@udonarium/core/system';
 import { buildGuidedTourSteps, GuidedTourStep, shouldSkipStep, TourRequire } from '@udonarium/guided-tour-steps';
+import { MobileLayoutService } from 'service/mobile-layout.service';
 import { PanelService } from 'service/panel.service';
 import { TabletopSelectionService } from 'service/tabletop-selection.service';
 import { TeachingTipService } from 'service/teaching-tip.service';
@@ -20,6 +21,8 @@ export interface GuidedTourUiState {
   hole: { left: number; top: number; width: number; height: number } | null;
   bubbleLeft: number;
   bubbleTop: number;
+  bubbleWidth: number;
+  isMobile: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -41,8 +44,10 @@ export class GuidedTourService {
   private readonly onKeyDown = (e: KeyboardEvent) => this.handleKeyMove(e);
   private readonly onPointerUp = () => this.handlePathDraft();
   private readonly onResize = () => this.refreshHole();
+  private readonly onTouchMove = (e: TouchEvent) => this.handleTouchZoom(e);
 
   private panLast: { x: number; y: number } | null = null;
+  private pinchLastDist: number | null = null;
   /** Bumped to cancel pending panel-open auto-advance timers. */
   private autoAdvanceToken = 0;
 
@@ -51,6 +56,7 @@ export class GuidedTourService {
     private ngZone: NgZone,
     private tokenPath: TokenPathMoveService,
     private selection: TabletopSelectionService,
+    private mobileLayout: MobileLayoutService,
   ) { }
 
   get isActive(): boolean {
@@ -75,7 +81,12 @@ export class GuidedTourService {
   }
 
   start() {
-    this.steps = buildGuidedTourSteps().filter(s => !shouldSkipStep(s));
+    const mobile = this.mobileLayout.isMobile;
+    if (mobile) {
+      PanelService.closeAllPanels();
+      this.mobileLayout.setUiMode('play');
+    }
+    this.steps = buildGuidedTourSteps(mobile).filter(s => !shouldSkipStep(s, mobile));
     this.stepIndex = 0;
     this.phase = 'running';
     this.actionDone = this.steps[0]?.require === 'ack';
@@ -118,7 +129,7 @@ export class GuidedTourService {
     if (!this.actionDone && this.currentRequire() !== 'ack') return;
     this.cancelAutoAdvance();
     this.stepIndex++;
-    while (this.stepIndex < this.steps.length && shouldSkipStep(this.steps[this.stepIndex])) {
+    while (this.stepIndex < this.steps.length && shouldSkipStep(this.steps[this.stepIndex], this.mobileLayout.isMobile)) {
       this.stepIndex++;
     }
     if (this.stepIndex >= this.steps.length) {
@@ -132,7 +143,7 @@ export class GuidedTourService {
     if (this.phase !== 'running' || this.stepIndex <= 0) return;
     this.cancelAutoAdvance();
     this.stepIndex--;
-    while (this.stepIndex > 0 && shouldSkipStep(this.steps[this.stepIndex])) {
+    while (this.stepIndex > 0 && shouldSkipStep(this.steps[this.stepIndex], this.mobileLayout.isMobile)) {
       this.stepIndex--;
     }
     // Never auto-skip when walking backward — otherwise「上一步」bounces forward again.
@@ -177,6 +188,7 @@ export class GuidedTourService {
     const step = this.steps[this.stepIndex];
     this.actionDone = !step || step.require === 'ack';
     this.panLast = null;
+    this.pinchLastDist = null;
     if (step?.id === 'tableChapter') {
       PanelService.closeAllPanels();
     }
@@ -271,6 +283,7 @@ export class GuidedTourService {
       window.addEventListener('click', this.onClickCapture, true);
       window.addEventListener('keydown', this.onKeyDown, true);
       window.addEventListener('pointerup', this.onPointerUp, true);
+      window.addEventListener('touchmove', this.onTouchMove, { capture: true, passive: true });
       window.addEventListener('resize', this.onResize);
     });
     if (!this.eventBound) {
@@ -290,6 +303,7 @@ export class GuidedTourService {
     window.removeEventListener('click', this.onClickCapture, true);
     window.removeEventListener('keydown', this.onKeyDown, true);
     window.removeEventListener('pointerup', this.onPointerUp, true);
+    window.removeEventListener('touchmove', this.onTouchMove, true);
     window.removeEventListener('resize', this.onResize);
     if (this.eventBound) {
       this.eventBound = false;
@@ -299,12 +313,19 @@ export class GuidedTourService {
 
   private handlePan(e: PointerEvent) {
     if (this.currentRequire() !== 'gesture-pan') return;
-    if (e.buttons === 0) {
+    if (e.buttons === 0 && e.pointerType !== 'touch') {
       this.panLast = null;
       return;
     }
-    // Ctrl+left drag = pan in this app
-    if (!(e.buttons & 1) || !e.ctrlKey) return;
+    // Desktop: Ctrl+left or right-drag. Touch/pen: any drag while pressed.
+    const isTouchish = e.pointerType === 'touch' || e.pointerType === 'pen';
+    const isCtrlLeft = !!(e.buttons & 1) && e.ctrlKey;
+    const isRightDrag = !!(e.buttons & 2);
+    const isTouchDrag = isTouchish && (e.buttons !== 0 || e.pressure > 0 || e.type === 'pointermove');
+    if (!isCtrlLeft && !isRightDrag && !isTouchDrag) {
+      if (!isTouchish) this.panLast = null;
+      return;
+    }
     if (!this.panLast) {
       this.panLast = { x: e.clientX, y: e.clientY };
       return;
@@ -312,6 +333,47 @@ export class GuidedTourService {
     const dx = e.clientX - this.panLast.x;
     const dy = e.clientY - this.panLast.y;
     if (dx * dx + dy * dy > 36) {
+      this.ngZone.run(() => {
+        this.actionDone = true;
+        this.emit();
+      });
+    }
+  }
+
+  /** Pinch-to-zoom + single-finger pan completion for mobile tour. */
+  private handleTouchZoom(e: TouchEvent) {
+    if (this.currentRequire() === 'gesture-pan' && !this.actionDone && e.touches.length === 1) {
+      const t = e.touches.item(0);
+      if (!t) return;
+      if (!this.panLast) {
+        this.panLast = { x: t.clientX, y: t.clientY };
+        return;
+      }
+      const dx = t.clientX - this.panLast.x;
+      const dy = t.clientY - this.panLast.y;
+      if (dx * dx + dy * dy > 36) {
+        this.ngZone.run(() => {
+          this.actionDone = true;
+          this.emit();
+        });
+      }
+      return;
+    }
+
+    if (this.currentRequire() !== 'gesture-zoom' || this.actionDone) return;
+    if (e.touches.length < 2) {
+      this.pinchLastDist = null;
+      return;
+    }
+    const a = e.touches.item(0);
+    const b = e.touches.item(1);
+    if (!a || !b) return;
+    const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    if (this.pinchLastDist == null) {
+      this.pinchLastDist = dist;
+      return;
+    }
+    if (Math.abs(dist - this.pinchLastDist) > 24) {
       this.ngZone.run(() => {
         this.actionDone = true;
         this.emit();
@@ -416,32 +478,72 @@ export class GuidedTourService {
 
   refreshHole() {
     const step = this.steps[this.stepIndex];
+    const isMobile = this.mobileLayout.isMobile;
+    const bubbleW = isMobile
+      ? Math.min(340, Math.max(260, window.innerWidth - 16))
+      : 320;
     let hole: GuidedTourUiState['hole'] = null;
-    let bubbleLeft = Math.max(16, window.innerWidth / 2 - 160);
+    let bubbleLeft = Math.max(8, (window.innerWidth - bubbleW) / 2);
     let bubbleTop = Math.max(16, window.innerHeight / 2 - 80);
     const el = this.resolveHighlightElement(step);
     if (el) {
       const r = el.getBoundingClientRect();
       if (r.width >= 1 && r.height >= 1) {
-        const pad = 4;
+        const pad = isMobile ? 6 : 4;
+        // Enlarge tiny menu hits for finger targets.
+        const minHit = isMobile ? 44 : 0;
+        const hitW = Math.max(r.width, minHit);
+        const hitH = Math.max(r.height, minHit);
+        const left = Math.round(r.left + r.width / 2 - hitW / 2) - pad;
+        const top = Math.round(r.top + r.height / 2 - hitH / 2) - pad;
         hole = {
-          left: Math.round(r.left) - pad,
-          top: Math.round(r.top) - pad,
-          width: Math.round(r.width) + pad * 2,
-          height: Math.round(r.height) + pad * 2,
+          left,
+          top,
+          width: Math.round(hitW) + pad * 2,
+          height: Math.round(hitH) + pad * 2,
         };
-        bubbleLeft = Math.min(window.innerWidth - 340, Math.max(8, r.right + 12));
-        bubbleTop = Math.min(window.innerHeight - 200, Math.max(8, r.top));
-        if (bubbleLeft + 320 > window.innerWidth) {
-          bubbleLeft = Math.max(8, r.left - 332);
-        }
-        // Large panels: keep bubble near the panel's right edge
-        if (r.width > window.innerWidth * 0.45) {
-          bubbleLeft = Math.min(window.innerWidth - 340, Math.max(8, r.right + 8));
-          if (bubbleLeft + 320 > window.innerWidth) {
-            bubbleLeft = Math.max(8, r.left - 332);
+
+        if (isMobile) {
+          // Keep bubble away from bottom nav and the spotlight hole.
+          const navReserve = this.mobileLayout.bottomChromePx + 12;
+          const estimatedH = 210;
+          const below = hole.top + hole.height + 12;
+          const above = hole.top - estimatedH - 12;
+          if (below + estimatedH < window.innerHeight - navReserve) {
+            bubbleTop = below;
+          } else if (above >= 8) {
+            bubbleTop = above;
+          } else {
+            bubbleTop = Math.max(8, window.innerHeight - navReserve - estimatedH);
           }
-          bubbleTop = Math.min(window.innerHeight - 220, Math.max(8, r.top + 8));
+          bubbleLeft = Math.max(8, Math.min(window.innerWidth - bubbleW - 8, (window.innerWidth - bubbleW) / 2));
+          // If still overlapping the hole (e.g. full-table spotlight), pin to top.
+          if (this.rectsOverlap(
+            bubbleLeft, bubbleTop, bubbleW, estimatedH,
+            hole.left, hole.top, hole.width, hole.height,
+          )) {
+            bubbleTop = 8;
+            if (this.rectsOverlap(
+              bubbleLeft, bubbleTop, bubbleW, estimatedH,
+              hole.left, hole.top, hole.width, hole.height,
+            )) {
+              bubbleTop = Math.min(window.innerHeight - navReserve - estimatedH, hole.top + hole.height + 8);
+            }
+          }
+        } else {
+          bubbleLeft = Math.min(window.innerWidth - bubbleW - 20, Math.max(8, r.right + 12));
+          bubbleTop = Math.min(window.innerHeight - 200, Math.max(8, r.top));
+          if (bubbleLeft + bubbleW > window.innerWidth) {
+            bubbleLeft = Math.max(8, r.left - bubbleW - 12);
+          }
+          // Large panels: keep bubble near the panel's right edge
+          if (r.width > window.innerWidth * 0.45) {
+            bubbleLeft = Math.min(window.innerWidth - bubbleW - 20, Math.max(8, r.right + 8));
+            if (bubbleLeft + bubbleW > window.innerWidth) {
+              bubbleLeft = Math.max(8, r.left - bubbleW - 12);
+            }
+            bubbleTop = Math.min(window.innerHeight - 220, Math.max(8, r.top + 8));
+          }
         }
       }
     }
@@ -451,12 +553,21 @@ export class GuidedTourService {
       hole,
       bubbleLeft,
       bubbleTop,
+      bubbleWidth: bubbleW,
+      isMobile,
       actionDone: this.actionDone,
       stepIndex: this.stepIndex,
       current: step ?? null,
       phase: this.phase,
       steps: this.steps,
     });
+  }
+
+  private rectsOverlap(
+    ax: number, ay: number, aw: number, ah: number,
+    bx: number, by: number, bw: number, bh: number,
+  ): boolean {
+    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
   }
 
   /** Nav button until panel opens; then the opened panel chrome. */
@@ -490,6 +601,8 @@ export class GuidedTourService {
       hole: null,
       bubbleLeft: 24,
       bubbleTop: 24,
+      bubbleWidth: 320,
+      isMobile: false,
     };
   }
 

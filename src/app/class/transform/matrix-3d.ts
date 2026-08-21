@@ -286,8 +286,9 @@ export class Matrix3D {
 
     let det = n11 * data[0] + n21 * data[1] + n31 * data[2] + n41 * data[3];
     if (det == 0) {
-      console.warn('Can not invert matrix, determinant is 0');
-      return this;
+      // Common while tokens are display:none / zero-size during table hydrate.
+      target.identity();
+      return target;
     }
 
     data[4] = n24 * n33 * n41 - n23 * n34 * n41 - n24 * n31 * n43 + n21 * n34 * n43 + n23 * n31 * n44 - n21 * n33 * n44;

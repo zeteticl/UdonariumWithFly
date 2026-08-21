@@ -1,4 +1,13 @@
-<div class="component is-pointer-events-none" [@fadeInOut]="'in'" appDraggable #draggablePanel>
+<div class="component is-pointer-events-none" [@fadeInOut]="fadeState" appDraggable #draggablePanel
+  [class.is-pinned]="isPinned">
+  <button type="button" class="pin-button is-pointer-events-auto"
+    [class.is-pinned]="isPinned"
+    [attr.title]="isPinned ? (i18n.t('overview.unpin')) : (i18n.t('overview.pin'))"
+    (mousedown)="$event.stopPropagation()"
+    (pointerdown)="$event.stopPropagation()"
+    (click)="togglePin($event)">
+    <i class="material-icons">push_pin</i>
+  </button>
   <ng-container [ngSwitch]="tabletopObject.aliasName">
     <ng-container *ngSwitchCase="'numberResource'">
     </ng-container>
@@ -12,7 +21,14 @@
       <ng-container *ngTemplateOutlet="overviewNote; context: { note: tabletopObject }"></ng-container>
     </ng-container>
     <ng-container *ngSwitchCase="'character'">
-      <ng-container *ngTemplateOutlet="overviewCharacter; context: { character: tabletopObject }"></ng-container>
+      <ng-container *ngIf="overviewCharacterBody as body">
+        <ng-container *ngTemplateOutlet="overviewCharacter; context: { character: body }"></ng-container>
+      </ng-container>
+    </ng-container>
+    <ng-container *ngSwitchCase="'character-token'">
+      <ng-container *ngIf="overviewCharacterBody as body">
+        <ng-container *ngTemplateOutlet="overviewCharacter; context: { character: body }"></ng-container>
+      </ng-container>
     </ng-container>
     <ng-container *ngSwitchCase="'dice-symbol'">
       <ng-container *ngTemplateOutlet="overviewDiceSymbol; context: { dice: tabletopObject }"></ng-container>
@@ -44,7 +60,7 @@
       <button class="zoom-button" (click)="chanageImageView(true)" style="z-index: 10">
         <i class="material-icons">zoom_in</i>
       </button>
-      <div *ngIf="card.ownerIsOnline && 0 < card.ownerName.length" class="component-owner position-right-bottom" style="z-index: 10"
+      <div *ngIf="card.ownerIsOnline && 0 < card.ownerName?.length" class="component-owner position-right-bottom" style="z-index: 10"
         [ngClass]="{'with-button-marign': hasImage}">
         <div class="owner-tag" [style.background-color]="card.ownerColor">{{card.ownerName}}</div>
       </div>
@@ -138,7 +154,7 @@
       [ngClass]="{ 'is-pointer-events-auto': !this.isPointerDragging, 'pointer-events-none': this.isPointerDragging }">
       <ng-container *ngIf="0 < dice?.name?.length">{{dice.name}}:</ng-container><ng-container *ngIf="dice.isVisible">{{dice.face}}</ng-container><ng-container *ngIf="!dice.isVisible">{{ 'dice.hidden' | i18n }}</ng-container>
     </div>
-    <div *ngIf="dice.hasOwner && 0 < dice.ownerName.length" class="owner-name-area component-owner"
+    <div *ngIf="dice.hasOwner && 0 < dice.ownerName?.length" class="owner-name-area component-owner"
       [ngClass]="{ 'is-pointer-events-auto': !this.isPointerDragging, 'pointer-events-none': this.isPointerDragging }">
       <div class="owner-tag" [style.background-color]="dice.ownerColor">{{dice.ownerName}}
       </div>
@@ -183,13 +199,13 @@
               <div class="value">
                 <div style="display: inline-block; width: min-content;">
                   <div class="hidden-spacer" style="margin-right: 2em;">{{dataElm.value}}</div>
-                  <input class="input" style="width:4em" type="number" step="0.1" size="1" [(ngModel)]="dataElm.value"  [disabled]="GuestMode()" />
+                  <input class="input" style="width:4em" type="number" step="0.1" size="1" [ngModel]="dataElm.value" (ngModelChange)="writeOverviewDataElm(dataElm, $event)"  [disabled]="GuestMode()" />
                 </div>
               </div>
               <div class="section" style="line-height: 1em;">
                 <input type="range" title="{{dataElm.value}}"
                   [style]="'font-size: 0.8em; width: 100%; --min: 0; --max:' + dataElm.value + '; --val:' + dataElm.currentValue +';' | safe: 'style'"
-                  [min]="dataElm.name == 'length' ? 1 : 0" max="12" step="0.5" [(ngModel)]="dataElm.value" [disabled]="GuestMode()" />
+                  [min]="dataElm.name == 'length' ? 1 : 0" max="12" step="0.5" [ngModel]="dataElm.value" (ngModelChange)="writeOverviewDataElm(dataElm, $event)" [disabled]="GuestMode()" />
               </div>
             </ng-container>
             <ng-container *ngIf="dataElm.name == 'opacity'">
@@ -259,7 +275,7 @@
   <ng-container *ngIf="0 < dataElm.children.length; then thenBlock; else elseBlock"></ng-container>
   <ng-template #thenBlock>
     <div class="section" style="padding-top: 0.5em;">
-      <div *ngIf="0 < dataElm.name.trim().length" class="section-text" [attr.title]="dataElm.name">{{dataElm.name}}</div>
+      <div *ngIf="0 < (dataElm.name || '').trim().length" class="section-text" [attr.title]="dataElm.name">{{dataElm.name}}</div>
       <div class="grid-container indetnt">
         <ng-container *ngFor="let childElm of dataElm.children">
           <ng-container *ngTemplateOutlet="dataElement; context: { dataElm: childElm, name: name }"></ng-container>
@@ -326,7 +342,7 @@
         <div *ngIf="dataElm.name" class="tag" [attr.title]="dataElm.name">{{dataElm.name}}</div>
         <div class="value">
           <div *ngIf="dataElm.name" class="hidden-spacer">{{dataElm.value}}</div>
-          <input class="input" [ngStyle]="{'min-width': dataElm.name ? '8em' : '100%'}" type="{{dataElm.name === 'size' || dataElm.name === 'altitude' ? 'number' : 'text'}}" min="{{dataElm.name === 'size' ? '0' : ''}}" size="1" [(ngModel)]="dataElm.value"  [disabled]="GuestMode()" />
+          <input class="input" [ngStyle]="{'min-width': dataElm.name ? '8em' : '100%'}" type="{{dataElm.name === 'size' || dataElm.name === 'altitude' ? 'number' : 'text'}}" min="{{dataElm.name === 'size' ? '0' : ''}}" size="1" [ngModel]="dataElm.value" (ngModelChange)="writeOverviewDataElm(dataElm, $event)"  [disabled]="GuestMode()" />
         </div>
       </ng-container>
     </ng-container>

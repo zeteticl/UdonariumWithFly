@@ -1,0 +1,67 @@
+<div class="settings-ui dense scene-preset" appFitPanel [fitMinHeight]="280" [fitMaxHeight]="560">
+  <section class="card card-top">
+    <div class="toolbar">
+      <button type="button" class="btn btn-sm btn-primary" (click)="create()" [disabled]="GuestMode()"
+        [title]="'scenePreset.hint' | i18n">
+        <i class="material-icons">add</i>{{ 'scenePreset.create' | i18n }}
+      </button>
+      <label class="opt"><input type="checkbox" [(ngModel)]="skipBgm" /> {{ 'scenePreset.skipBgm' | i18n }}</label>
+      <label class="opt"><input type="checkbox" [(ngModel)]="skipText" /> {{ 'scenePreset.skipText' | i18n }}</label>
+    </div>
+  </section>
+
+  <section class="card card-list" *ngIf="presets.length">
+    <div class="list-item" *ngFor="let preset of presets" [class.is-selected]="preset === selected" (click)="select(preset)">
+      <div class="list-thumb" aria-hidden="true"
+        (mouseenter)="showThumbPreview($event, preset)"
+        (mousemove)="moveThumbPreview($event)"
+        (mouseleave)="hideThumbPreview()">
+        <img *ngIf="preset.previewJpeg" [src]="preset.previewJpeg" alt="" />
+        <i *ngIf="!preset.previewJpeg" class="material-icons">image</i>
+      </div>
+      <div class="list-main">
+        <span class="list-item-name" [class.invalid]="!preset.isValid">{{ preset.title || ('scenePreset.untitled' | i18n) }}</span>
+        <span class="list-meta" *ngIf="metaLine(preset) as meta">{{ meta }}</span>
+      </div>
+      <span class="btn-group" (click)="$event.stopPropagation()">
+        <button type="button" class="btn btn-sm btn-primary" (click)="apply(preset)" [disabled]="GuestMode() || !preset.isValid"
+          [title]="'scenePreset.applyTip' | i18n">
+          <i class="material-icons">play_arrow</i>{{ 'scenePreset.apply' | i18n }}
+        </button>
+        <button type="button" class="btn btn-sm btn-primary" (click)="apply(preset, true)" [disabled]="GuestMode() || !preset.isValid"
+          [title]="'scenePreset.applyKeepTokensTip' | i18n">
+          <i class="material-icons">person_pin_circle</i>{{ 'scenePreset.applyKeepTokens' | i18n }}
+        </button>
+        <button type="button" class="btn btn-sm" (click)="overwrite(preset)" [disabled]="GuestMode()" [title]="'scenePreset.overwrite' | i18n">
+          <i class="material-icons">save</i>
+        </button>
+        <button type="button" class="btn btn-sm" (click)="rebind(preset)" [disabled]="GuestMode()" [title]="'scenePreset.rebind' | i18n">
+          <i class="material-icons">link</i>
+        </button>
+        <button type="button" class="btn btn-sm" (click)="moveUp(preset)" [disabled]="GuestMode()"><i class="material-icons">arrow_upward</i></button>
+        <button type="button" class="btn btn-sm" (click)="moveDown(preset)" [disabled]="GuestMode()"><i class="material-icons">arrow_downward</i></button>
+        <button type="button" class="btn btn-sm" (click)="remove(preset)" [disabled]="GuestMode()"><i class="material-icons">delete</i></button>
+      </span>
+    </div>
+  </section>
+  <p class="empty-hint" *ngIf="!presets.length">{{ 'scenePreset.empty' | i18n }}</p>
+
+  <section class="card card-edit" *ngIf="selected">
+    <header class="card-head"><h3>{{ 'scenePreset.edit' | i18n }}</h3></header>
+    <label class="field">
+      <span>{{ 'scenePreset.fieldTitle' | i18n }}</span>
+      <input type="text" [(ngModel)]="selected.title" [disabled]="GuestMode()" />
+    </label>
+    <label class="field">
+      <span>{{ 'scenePreset.fieldSwitchText' | i18n }}</span>
+      <textarea rows="3" [(ngModel)]="selected.switchText" [disabled]="GuestMode()"></textarea>
+    </label>
+    <p class="hint" *ngIf="!selected.isValid">{{ 'scenePreset.invalidHint' | i18n }}</p>
+    <p class="hint hint-meta" *ngIf="selected.savedAt">{{ 'scenePreset.savedAt' | i18n:{ time: selected.savedAtCompact } }}</p>
+  </section>
+
+  <div class="thumb-preview" *ngIf="thumbPreviewSrc"
+    [style.left.px]="thumbPreviewX" [style.top.px]="thumbPreviewY">
+    <img [src]="thumbPreviewSrc" alt="" />
+  </div>
+</div>

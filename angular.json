@@ -28,8 +28,12 @@
               "src/hktrpg-icon.png",
               "src/assets",
               "src/manifest.webmanifest",
-              "src/card.png",
-              "src/mobile.jpg"
+              "src/mobile.jpg",
+              {
+                "glob": "pdf.worker.min.mjs",
+                "input": "node_modules/pdfjs-dist/build",
+                "output": "/assets"
+              }
             ],
             "styles": [
               "src/styles.css"
@@ -48,7 +52,6 @@
               "lodash",
               "msgpack-lite",
               "pako",
-              "skyway-js",
               "vkbeautify"
             ],
             "main": "src/main.ts"
@@ -115,10 +118,25 @@
               "zone.js/testing"
             ],
             "tsConfig": "tsconfig.spec.json",
+            "karmaConfig": "karma.conf.js",
+            "codeCoverage": true,
+            "include": [
+              "src/testing/**/*.ts",
+              "src/app/class/**/*.spec.ts",
+              "src/app/service/default-room/**/*.spec.ts",
+              "src/app/service/folder-backup-layout.spec.ts",
+              "src/app/service/save-snapshot.flush.spec.ts",
+              "src/app/service/save-xml-remap.spec.ts"
+            ],
             "assets": [
               "src/favicon.ico",
               "src/assets",
-              "src/manifest.webmanifest"
+              "src/manifest.webmanifest",
+              {
+                "glob": "**/*",
+                "input": "src/testing/fixtures",
+                "output": "/testing/fixtures"
+              }
             ],
             "styles": [
               "src/styles.css"
